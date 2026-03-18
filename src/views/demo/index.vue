@@ -49,7 +49,7 @@ const contentList = reactive([
       </div>
       <p class="leading-[24px] my-[6px]">
         🌱 基于 Vue3 全家桶、TypeScript、Vite 构建工具，开箱即用的 H5
-        移动端项目基础模板
+        移动端项目基础模板11
       </p>
     </div>
 

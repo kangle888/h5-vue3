@@ -35,6 +35,15 @@ const routes: Array<RouteRecordRaw> = [
         }
       }
     ]
+  },
+  // 独立页面：不带 Tabbar，有自己的顶部导航栏
+  {
+    path: "/demo-index",
+    name: "DemoIndex",
+    component: () => import("@/views/demo-index/index.vue"),
+    meta: {
+      title: "导航示例"
+    }
   }
 ];
 
