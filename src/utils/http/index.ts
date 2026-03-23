@@ -31,7 +31,7 @@ class Http {
       config => {
         NProgress.start();
         // 发送请求前，可在此携带 token
-        config.headers['token'] = localStorage.getItem('token');
+        config.headers["access-token"] = localStorage.getItem("token");
         return config;
       },
       (error: AxiosError) => {
@@ -48,7 +48,8 @@ class Http {
         NProgress.done();
         // 与后端协定的返回字段（当前后端为 code + message + data）
         const { code, message, data } = response.data ?? {};
-        const isSuccess = Reflect.has(response.data ?? {}, "code") && code === 200;
+        const isSuccess =
+          Reflect.has(response.data ?? {}, "code") && code === 200;
 
         if (isSuccess) {
           return data;

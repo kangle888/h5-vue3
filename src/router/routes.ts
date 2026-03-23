@@ -1,6 +1,6 @@
 import Layout from "@/layout/index.vue";
 import type { RouteRecordRaw } from "vue-router";
-import Demo from "@/views/demo/index.vue";
+import Home from "@/views/home/index.vue";
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -19,11 +19,19 @@ const routes: Array<RouteRecordRaw> = [
     redirect: { name: "Login" },
     children: [
       {
-        path: "demo",
-        name: "Demo",
-        component: Demo,
+        path: "home",
+        name: "Home",
+        component: Home,
         meta: {
           title: "主页"
+        }
+      },
+      {
+        path: "detail",
+        name: "Detail",
+        component: () => import("@/views/home/detail.vue"),
+        meta: {
+          title: "详情"
         }
       },
       {

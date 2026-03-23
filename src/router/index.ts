@@ -34,7 +34,7 @@ router.beforeEach((to: toRouteType, _from, next) => {
 
   // 已登录：访问登录页时跳转首页
   if (token && isLoginPage) {
-    next({ name: "Demo" });
+    next({ name: "Home" });
     return;
   }
 
