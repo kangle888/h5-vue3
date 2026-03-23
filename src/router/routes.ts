@@ -4,10 +4,19 @@ import Demo from "@/views/demo/index.vue";
 
 const routes: Array<RouteRecordRaw> = [
   {
+    path: "/login",
+    name: "Login",
+    component: () => import("@/views/login/index.vue"),
+    meta: {
+      title: "登录",
+      noCache: true
+    }
+  },
+  {
     path: "/",
     name: "root",
     component: Layout,
-    redirect: { name: "Demo" },
+    redirect: { name: "Login" },
     children: [
       {
         path: "demo",
