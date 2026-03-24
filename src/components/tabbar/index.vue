@@ -24,12 +24,12 @@ const tabbarData = reactive([
   {
     icon: "chat-o",
     title: "消息",
-    to: { name: "About" }
+    to: { name: "News" }
   },
   {
     icon: "contact-o",
     title: "我的",
-    to: { name: "About" }
+    to: { name: "My" }
   }
 ]);
 </script>

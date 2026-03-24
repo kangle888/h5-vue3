@@ -1,3 +1,4 @@
+import axios from "axios";
 import { http } from "@/utils/http";
 
 export interface IPlayerItem {
@@ -70,11 +71,11 @@ export const addPlayerCollect = (data: any) => {
 };
 
 // 取消收藏人物
-export const deletePlayerCollect = (data: any) => {
+export const deletePlayerCollect = (id: string) => {
   return http.request<any>({
     url: "/playerCollect/cancelPlayerCollect",
-    method: "post",
-    data
+    method: "get",
+    params: { id }
   });
 };
 
@@ -84,5 +85,70 @@ export const queryByIdPlayerCollect = (id: string) => {
     url: "/playerCollect/queryById",
     method: "get",
     params: { id }
+  });
+};
+
+// 附件下载（返回 Blob，用于 image src=URL.createObjectURL(blob)）
+export const downloadAttachment = async (fileName: string) => {
+  const token = localStorage.getItem("token") || "";
+  return axios.request<Blob>({
+    url: `${import.meta.env.VITE_BASE_API}/attachment/download`,
+    method: "get",
+    params: { fileName },
+    headers: {
+      "access-token": token
+    },
+    responseType: "blob"
+  });
+};
+
+const attachmentUrlCache = new Map<string, string>();
+
+// 下载附件并返回可直接给 <img src> 使用的对象 URL（含简单缓存）
+export const getAttachmentObjectUrl = async (fileName?: string) => {
+  if (!fileName) return "";
+  if (attachmentUrlCache.has(fileName)) {
+    return attachmentUrlCache.get(fileName) as string;
+  }
+  const res = await downloadAttachment(fileName);
+  const blob = res?.data as Blob;
+  if (!blob) return "";
+  const url = URL.createObjectURL(blob);
+  attachmentUrlCache.set(fileName, url);
+  return url;
+};
+
+export interface IPlayerCollectItem {
+  id?: string;
+  playerId?: string;
+  collectPlayerId?: string;
+  isCancel?: string;
+}
+
+export const pagePlayerCollect = (data: IPageParam<Partial<IPlayerCollectItem>>) => {
+  return http.request<IPageResult<IPlayerCollectItem>>({
+    url: "/playerCollect/pagePlayerCollect",
+    method: "post",
+    data
+  });
+};
+
+export interface IPlayerActivityItem {
+  id?: string;
+  content?: string;
+  createTime?: string;
+  city?: string;
+  playerId?: string;
+  image1?: string;
+  image2?: string;
+  image3?: string;
+}
+
+// /playerActivity/page   入参playerId  get
+export const getPlayerActivity = (data: any) => {
+  return http.request<IPageResult<IPlayerActivityItem>>({
+    url: "/playerActivity/page",
+    method: "post",
+    data
   });
 };

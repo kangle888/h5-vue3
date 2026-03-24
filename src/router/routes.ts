@@ -12,6 +12,7 @@ const routes: Array<RouteRecordRaw> = [
       noCache: true
     }
   },
+
   {
     path: "/",
     name: "root",
@@ -43,11 +44,47 @@ const routes: Array<RouteRecordRaw> = [
         }
       },
       {
-        path: "about",
-        name: "About",
-        component: () => import("@/views/about/index.vue"),
+        path: "my",
+        name: "My",
+        component: () => import("@/views/my/index.vue"),
         meta: {
-          title: "关于",
+          title: "我的",
+          noCache: true
+        }
+      },
+      {
+        path: "my/edit",
+        name: "MyEdit",
+        component: () => import("@/views/my/edit.vue"),
+        meta: {
+          title: "编辑资料",
+          noCache: true
+        }
+      },
+      {
+        path: "my/settings",
+        name: "MySettings",
+        component: () => import("@/views/my/settings.vue"),
+        meta: {
+          title: "设置",
+          noCache: true
+        }
+      },
+      {
+        path: "my/change-password",
+        name: "ChangePassword",
+        component: () => import("@/views/my/change-password.vue"),
+        meta: {
+          title: "修改密码",
+          noCache: true
+        }
+      },
+      {
+        path: "news",
+        name: "News",
+        component: () => import("@/views/news/index.vue"),
+        meta: {
+          title: "消息",
           noCache: true
         }
       }
@@ -60,6 +97,23 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("@/views/demo-index/index.vue"),
     meta: {
       title: "导航示例"
+    }
+  },
+  {
+    path: "/home/detail",
+    name: "Detail",
+    component: () => import("@/views/home/detail.vue"),
+    meta: {
+      title: "导航示例"
+    }
+  },
+  {
+    path: "/news/chatPage",
+    name: "NewsChatPage",
+    component: () => import("@/views/news/chatPage.vue"),
+    meta: {
+      title: "聊天",
+      noCache: true
     }
   }
 ];

@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { showFailToast } from "vant";
+import { showFailToast, showSuccessToast } from "vant";
 import { codeToText } from "element-china-area-data";
 import { useRouter } from "vue-router";
-import { listPlayer, type IPlayerItem } from "@/api/home";
+import {
+  addPlayerCollect,
+  deletePlayerCollect,
+  getAttachmentObjectUrl,
+  listPlayer,
+  pagePlayerCollect,
+  type IPlayerItem
+} from "@/api/home";
 
 defineOptions({
   name: "Home"
@@ -19,6 +26,10 @@ const filterForm = reactive({
   name: ""
 });
 
+const coverPreviewMap = ref<Record<string, string>>({});
+const albumPreviewMap = ref<Record<string, string[]>>({});
+const collectIdMap = ref<Record<string, string>>({});
+
 const cardAlbumCount = (item: IPlayerItem) => {
   const list = (item.album || "")
     .split(",")
@@ -27,27 +38,68 @@ const cardAlbumCount = (item: IPlayerItem) => {
   return list.length;
 };
 
-const cardImages = (item: IPlayerItem) => {
-  const list = (item.album || "")
-    .split(",")
-    .map(v => v.trim())
-    .filter(Boolean)
-    .slice(0, 3);
-  return list;
+const buildPreviewMap = async (rows: IPlayerItem[]) => {
+  const nextCoverMap: Record<string, string> = {};
+  const nextAlbumMap: Record<string, string[]> = {};
+
+  for (const item of rows) {
+    const id = item.id;
+    if (!id) continue;
+
+    const albumNames = (item.album || "")
+      .split(",")
+      .map(v => v.trim())
+      .filter(Boolean);
+
+    const coverFile = item.avatar || albumNames[0] || "";
+    const coverUrl = await getAttachmentObjectUrl(coverFile);
+    if (coverUrl) nextCoverMap[id] = coverUrl;
+
+    const firstThree = albumNames.slice(0, 3);
+    const albumUrls: string[] = [];
+    for (const fileName of firstThree) {
+      const url = await getAttachmentObjectUrl(fileName);
+      if (url) albumUrls.push(url);
+    }
+    if (albumUrls.length) nextAlbumMap[id] = albumUrls;
+  }
+
+  coverPreviewMap.value = nextCoverMap;
+  albumPreviewMap.value = nextAlbumMap;
+};
+
+const loadCollectMap = async () => {
+  try {
+    const res = await pagePlayerCollect({
+      pageNum: 1,
+      pageSize: 1000,
+      query: { isCancel: "0" }
+    });
+    const rows = res?.records || [];
+    const map: Record<string, string> = {};
+    for (const row of rows) {
+      if (row.playerId && row.id) {
+        map[row.playerId] = row.id;
+      }
+    }
+    collectIdMap.value = map;
+  } catch {
+    collectIdMap.value = {};
+  }
 };
 
 const coverUrl = (item: IPlayerItem) => {
-  const fileName = item.avatar || cardImages(item)[0] || "";
-  if (!fileName) return "";
-  return `http://localhost:8080/play/attachment/download?fileName=${encodeURIComponent(fileName)}`;
+  if (!item.id) return "";
+  return coverPreviewMap.value[item.id] || "";
 };
 
-const imageUrl = (fileName: string) => {
-  return `http://localhost:8080/play/attachment/download?fileName=${encodeURIComponent(fileName)}`;
+const cardImages = (item: IPlayerItem) => {
+  if (!item.id) return [];
+  return albumPreviewMap.value[item.id] || [];
 };
 
 const playerTag = (item: IPlayerItem) => {
-  return item.occupation || "优质陪玩";
+  return item.occupation_dictText || item.occupation || "优质陪玩";
 };
 
 const distanceText = (_item: IPlayerItem, index: number) => {
@@ -66,6 +118,31 @@ const formatCityText = (city?: string) => {
 
 const cardList = computed(() => players.value);
 
+const isCollected = (item: IPlayerItem) => {
+  if (!item.id) return false;
+  return Boolean(collectIdMap.value[item.id]);
+};
+
+const toggleCollect = async (item: IPlayerItem) => {
+  if (!item.id) return;
+  try {
+    const collectId = collectIdMap.value[item.id];
+    if (collectId) {
+      await deletePlayerCollect(collectId);
+      delete collectIdMap.value[item.id];
+      showSuccessToast("已取消收藏");
+    } else {
+      const res = await addPlayerCollect({ playerId: item.id });
+      if (res) {
+        collectIdMap.value[item.id] = res;
+      }
+      showSuccessToast("收藏成功");
+    }
+  } catch {
+    showFailToast("操作失败，请稍后重试");
+  }
+};
+
 const loadPlayers = async () => {
   loading.value = true;
   try {
@@ -77,7 +154,9 @@ const loadPlayers = async () => {
       }
     });
     players.value = res?.records || [];
-  } catch (e) {
+    await buildPreviewMap(players.value);
+    await loadCollectMap();
+  } catch {
     showFailToast("加载人物失败");
   } finally {
     loading.value = false;
@@ -103,8 +182,13 @@ onMounted(() => {
   <div class="home-page">
     <div class="sticky-header">
       <div class="top-tabs">
-        <div v-for="(tab, index) in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === index }"
-          @click="onTabChange(index)">
+        <div
+          v-for="(tab, index) in tabs"
+          :key="tab"
+          class="tab-item"
+          :class="{ active: activeTab === index }"
+          @click="onTabChange(index)"
+        >
           {{ tab }}
         </div>
       </div>
@@ -134,7 +218,12 @@ onMounted(() => {
         <div class="info-wrap">
           <div class="name-row">
             <div class="name">{{ item.name || "匿名" }}</div>
-            <van-icon name="like-o" size="18" color="#8a8a8a" />
+            <van-icon
+              :name="isCollected(item) ? 'like' : 'like-o'"
+              size="18"
+              :color="isCollected(item) ? '#ff4d6d' : '#8a8a8a'"
+              @click.stop="toggleCollect(item)"
+            />
           </div>
 
           <div class="meta-row">
@@ -146,8 +235,8 @@ onMounted(() => {
           <div class="city-row">📍 {{ formatCityText(item.city) }} · {{ distanceText(item, index) }}</div>
 
           <div class="album-row">
-            <template v-for="(img, imgIndex) in cardImages(item)" :key="img + imgIndex">
-              <img class="mini" :src="imageUrl(img)" alt="album" />
+            <template v-for="img in cardImages(item)" :key="img">
+              <img class="mini" :src="img" alt="album" />
             </template>
             <div v-if="cardAlbumCount(item) > 3" class="more">+{{ cardAlbumCount(item) - 3 }}</div>
             <van-icon name="arrow" size="14" color="#9a9a9a" />

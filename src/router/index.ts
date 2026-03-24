@@ -23,7 +23,7 @@ export interface toRouteType extends RouteLocationNormalized {
 router.beforeEach((to: toRouteType, _from, next) => {
   NProgress.start();
 
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("c_access_token") || localStorage.getItem("token");
   const isLoginPage = to.name === "Login";
 
   // 未登录：仅允许访问登录页

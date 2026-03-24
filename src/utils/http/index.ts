@@ -31,7 +31,7 @@ class Http {
       config => {
         NProgress.start();
         // 发送请求前，可在此携带 token
-        config.headers["access-token"] = localStorage.getItem("token");
+        config.headers["access-token"] = localStorage.getItem("c_access_token") || localStorage.getItem("token");
         return config;
       },
       (error: AxiosError) => {
