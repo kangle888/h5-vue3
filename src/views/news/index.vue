@@ -80,142 +80,285 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="news-index-page">
-    <div class="top-tabs">
-      <div class="tab" :class="{ active: activeTab === 'chat' }" @click="activeTab = 'chat'">聊天</div>
-      <div class="tab" :class="{ active: activeTab === 'system' }" @click="activeTab = 'system'">系统消息</div>
-      <div class="icons">
-        <van-icon name="chat-o" size="20" />
-        <van-icon name="delete-o" size="20" />
-      </div>
-    </div>
+  <div class="news-page-wrapper relative min-h-screen w-full overflow-hidden">
+    <!-- Animated background elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
 
-    <div class="notice-bar">
-      <span class="notice-left">× 收不到新消息？点击开启通知</span>
-      <span class="notice-btn">开启通知</span>
-    </div>
-
-    <div v-if="activeTab === 'chat'" class="list-wrap">
-      <div class="chat-item" @click="openChat">
-        <img class="avatar" :src="avatarUrl" alt="avatar" />
-        <div class="main">
-          <div class="name">客服消息</div>
-          <div class="msg">{{ latestText }}</div>
+    <div class="relative z-10 box-border min-h-screen pb-20">
+      <div class="top-bar glass-nav">
+        <div class="tabs">
+          <div class="tab" :class="{ 'active-tab': activeTab === 'chat' }" @click="activeTab = 'chat'">
+            消息
+            <div class="indicator"></div>
+          </div>
+          <div class="tab" :class="{ 'active-tab': activeTab === 'system' }" @click="activeTab = 'system'">
+            系统
+            <div class="indicator"></div>
+          </div>
         </div>
-        <div class="right">
-          <div class="time">{{ latestTime || "--:--" }}</div>
-          <div v-if="unreadCount > 0" class="badge">{{ unreadCount > 99 ? "99+" : unreadCount }}</div>
+        <div class="icons">
+          <van-icon name="chat-o" size="22" />
+          <van-icon name="delete-o" size="22" />
         </div>
       </div>
 
-      <div v-if="!loading && !records.length" class="empty">暂无会话，去详情页点击“联系管理员”开始聊天</div>
-    </div>
+      <div class="content-container">
+        <div class="notice-card glass-panel flex justify-between items-center mb-4">
+          <span class="text-xs text-white/70 flex items-center gap-1">
+            <van-icon name="bell" color="#fcd34d" />
+            收不到新消息？点击开启通知
+          </span>
+          <button class="open-notify-btn">立即开启</button>
+        </div>
 
-    <div v-else class="system-wrap">
-      <div class="empty">暂无系统消息</div>
+        <div v-if="activeTab === 'chat'" class="list-wrap">
+          <div class="chat-card glass-panel" @click="openChat">
+            <div class="avatar-wrap">
+              <img class="avatar" :src="avatarUrl" alt="avatar" />
+            </div>
+            <div class="main">
+              <div class="name-row">
+                <span class="name">系统客服 <span class="official-tag">官方</span></span>
+                <span class="time">{{ latestTime || "--:--" }}</span>
+              </div>
+              <div class="msg-row">
+                <span class="msg">{{ latestText }}</span>
+                <div v-if="unreadCount > 0" class="badge">
+                  {{ unreadCount > 99 ? "99+" : unreadCount }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="!loading && !records.length" class="empty-state">
+            <van-icon name="chat" size="48" class="mb-2 opacity-20" />
+            <p>暂无会话，去详情页点击“联系Ta”开始聊天</p>
+          </div>
+        </div>
+
+        <div v-else class="system-wrap">
+          <div class="empty-state">
+            <van-icon name="bell" size="48" class="mb-2 opacity-20" />
+            <p>暂无系统消息</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.news-index-page {
-  min-height: calc(100vh - 50px);
-  background: #000;
+.news-page-wrapper {
+  background-color: #0f0c29;
+  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
   color: #fff;
 }
 
-.top-tabs {
-  height: 52px;
+/* Background floating shapes */
+.bg-shape {
+  position: absolute;
+  filter: blur(80px);
+  border-radius: 50%;
+  z-index: 1;
+  opacity: 0.55;
+  animation: float 10s infinite ease-in-out alternate;
+  pointer-events: none;
+}
+.shape-1 { width: 300px; height: 300px; background: rgba(236, 72, 153, 0.35); top: -50px; right: -50px; }
+.shape-2 { width: 350px; height: 350px; background: rgba(139, 92, 246, 0.35); top: 40%; left: -100px; animation-delay: -3s; }
+.shape-3 { width: 250px; height: 250px; background: rgba(56, 189, 248, 0.25); bottom: 50px; right: 20%; animation-delay: -5s; }
+
+@keyframes float {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(30px) scale(1.05); }
+}
+
+.glass-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(15, 12, 41, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.top-bar {
+  height: 54px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
-  border-bottom: 1px solid #151515;
+  justify-content: space-between;
+  padding: 0 16px;
+
+  .tabs {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+  }
 
   .tab {
-    margin-right: 16px;
-    color: #8f8f8f;
-    font-size: 24px;
-    font-weight: 700;
+    position: relative;
+    display: flex;
+    align-items: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s;
+    cursor: pointer;
 
-    &.active {
+    &.active-tab {
       color: #fff;
+      font-size: 22px;
+      font-weight: 800;
+
+      .indicator {
+        opacity: 1;
+        transform: scaleX(1);
+      }
+    }
+
+    .indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 10%;
+      width: 80%;
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #ec4899, #8b5cf6);
+      opacity: 0;
+      transform: scaleX(0);
+      transition: all 0.3s;
+      box-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
     }
   }
 
   .icons {
-    margin-left: auto;
     display: flex;
-    gap: 12px;
-    color: #d0d0d0;
+    gap: 16px;
+    color: rgba(255, 255, 255, 0.8);
   }
 }
 
-.notice-bar {
-  height: 36px;
-  background: #2b2b2b;
-  color: #bdbdbd;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
-  font-size: 12px;
+.content-container {
+  padding: 16px;
+}
 
-  .notice-btn {
-    background: #857040;
-    color: #fff;
-    border-radius: 12px;
-    padding: 2px 8px;
-  }
+/* Glassmorphism Panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+}
+
+.notice-card {
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.open-notify-btn {
+  background: linear-gradient(90deg, #fcd34d, #f59e0b);
+  border: none;
+  color: #451a03;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
 }
 
 .list-wrap {
-  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.chat-item {
+.chat-card {
+  padding: 14px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 0;
-  border-bottom: 1px solid #121212;
+  gap: 14px;
+  transition: background 0.2s;
+  cursor: pointer;
+  
+  &:active {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  padding: 2px;
+  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  flex-shrink: 0;
 }
 
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
+  background: #111;
+  border: 2px solid #1a1a1a;
 }
 
 .main {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
   .name {
-    font-size: 17px;
-    font-weight: 600;
-    color: #f2f2f2;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  .msg {
-    margin-top: 4px;
-    font-size: 14px;
-    color: #979797;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .official-tag {
+    font-size: 10px;
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .time {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
   }
 }
 
-.right {
+.msg-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
 
-  .time {
-    color: #8a8a8a;
-    font-size: 12px;
+  .msg {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 10px;
   }
 
   .badge {
@@ -223,19 +366,23 @@ onBeforeUnmount(() => {
     height: 18px;
     line-height: 18px;
     border-radius: 9px;
-    background: #ff4d5d;
+    background: linear-gradient(135deg, #f43f5e, #e11d48);
     text-align: center;
     color: #fff;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: bold;
     padding: 0 5px;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.4);
   }
 }
 
-.system-wrap,
-.empty {
-  color: #8f8f8f;
-  text-align: center;
-  padding: 34px 12px;
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: rgba(255, 255, 255, 0.4);
   font-size: 14px;
 }
 </style>

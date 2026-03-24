@@ -176,128 +176,187 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="detail-page">
-    <div class="top-bar">
-      <van-icon name="arrow-left" size="20" @click="router.back()" />
-    </div>
+  <div class="detail-page-wrapper relative min-h-screen w-full overflow-hidden">
+    <!-- Animated background elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
 
-    <div v-if="loading" class="loading-wrap">
-      <van-loading color="#d4b076" />
-    </div>
+    <div class="relative z-10 box-border min-h-screen">
+      <div class="top-bar">
+        <div class="back-btn" @click="router.back()">
+          <van-icon name="arrow-left" size="20" color="#fff" />
+        </div>
+      </div>
 
-    <div v-else class="content-wrap">
-      <div v-if="player" class="hero-section">
-        <img
-          v-if="coverPreview"
-          :src="coverPreview"
-          class="hero-cover"
-          alt="cover"
-        />
-        <div v-else class="hero-empty">暂无图片</div>
+      <div v-if="loading" class="loading-wrap">
+        <van-loading color="#fbcfe8" />
+      </div>
 
-        <div class="base-card">
-          <div class="name-row">
-            <div class="name-wrap">
-              <span class="name">{{ player.name || "匿名" }}</span>
-              <span class="auth-badge">真人</span>
+      <div v-else class="content-wrap">
+        <div v-if="player" class="hero-section">
+          <div class="hero-img-box">
+            <img v-if="coverPreview" :src="coverPreview" class="hero-cover" alt="cover" />
+            <div v-else class="hero-empty">暂无图片</div>
+            <div class="hero-gradient"></div>
+          </div>
+
+          <div class="base-card-wrapper px-4">
+            <div class="base-card glass-panel">
+              <div class="name-row">
+                <div class="name-wrap">
+                  <span class="name">{{ player.name || "神秘玩家" }}</span>
+                  <span class="auth-badge">
+                    <span class="badge-text">真人</span>
+                  </span>
+                </div>
+                <div class="like-btn" :class="{ 'is-liked': collectId }" @click.stop="toggleCollect">
+                  <van-icon
+                    :name="collectId ? 'like' : 'like-o'"
+                    size="22"
+                    :color="collectId ? '#ec4899' : '#a1a1aa'"
+                  />
+                </div>
+              </div>
+
+              <div class="id-row">ID {{ player.id || "-" }}</div>
+              
+              <div class="city-row mt-3 flex items-center">
+                <van-icon name="location-o" class="mr-1 text-white/50" />
+                <span>{{ cityText }} · 397m</span>
+              </div>
+              <div class="occupation-row mt-1 ml-4">{{ occupationText }}</div>
+
+              <div class="tag-row">
+                <span v-for="(tag, idx) in profileBadges" :key="tag" class="tag-pill" :class="`type-${idx % 3}`">
+                  {{ tag }}
+                </span>
+              </div>
+
+              <div v-if="player.signature_dictText || player.signature" class="single-tag-row mt-3">
+                <span class="tag-pill type-signature">
+                  "{{ player.signature_dictText || player.signature }}"
+                </span>
+              </div>
             </div>
-            <van-icon
-              :name="collectId ? 'like' : 'like-o'"
-              size="20"
-              :color="collectId ? '#ff4d6d' : '#7c7c7c'"
-              @click.stop="toggleCollect"
-            />
           </div>
+        </div>
 
-          <div class="id-row">ID {{ player.id || "-" }}</div>
-          <div class="city-row">{{ cityText }} · 397m</div>
-          <div class="occupation-row">{{ occupationText }}</div>
-
-          <div class="tag-row">
-            <span v-for="tag in profileBadges" :key="tag" class="tag-pill">{{
-              tag
-            }}</span>
-          </div>
-
-          <div
-            v-if="player.signature_dictText || player.signature"
-            class="single-tag-row"
+        <div v-else class="empty-wrap z-10 relative">
+          <div class="empty">暂无数据</div>
+          <van-button 
+            round
+            class="back-home-btn"
+            @click="router.replace({ name: 'Home' })"
           >
-            <span class="tag-pill">{{
-              player.signature_dictText || player.signature
-            }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="empty-wrap">
-        <div class="empty">暂无数据</div>
-        <van-button type="default" @click="router.replace({ name: 'Home' })"
-          >返回首页</van-button
-        >
-      </div>
-
-      <template v-if="player">
-        <div class="section">
-          <div class="section-title">相册</div>
-          <div class="album-grid">
-            <img
-              v-for="(img, idx) in albumPreviewList"
-              :key="img + idx"
-              class="album-item"
-              :src="img"
-              alt="album"
-              @click="openAlbumPreview(idx)"
-            />
-          </div>
+            返回首页
+          </van-button>
         </div>
 
-        <div class="section">
-          <div class="section-title">动态</div>
-          <div v-if="activities.length" class="activity-list">
-            <div v-for="act in activities" :key="act.id" class="activity-item">
-              <div class="activity-content">
-                {{ act.content || "[无内容]" }}
-              </div>
-              <div class="activity-meta">
-                {{ act.city || cityText }} ·
-                {{ formatDateTime(act.createTime) || "刚刚" }}
-              </div>
-              <div
-                v-if="(activityImageMap[act.id || ''] || []).length"
-                class="activity-image-grid"
-              >
-                <img
-                  v-for="(img, idx) in activityImageMap[act.id || '']"
-                  :key="img + idx"
-                  class="activity-image"
-                  :src="img"
-                  alt="activity-image"
-                  @click="openActivityPreview(act.id || '', idx)"
-                />
-              </div>
+        <template v-if="player">
+          <div class="section">
+            <div class="section-title">相册</div>
+            <div class="album-grid">
+              <img
+                v-for="(img, idx) in albumPreviewList"
+                :key="img + idx"
+                class="album-item"
+                :src="img"
+                alt="album"
+                @click="openAlbumPreview(idx)"
+              />
             </div>
           </div>
-          <div v-else class="intro-text">
-            {{ player.introduction || "这个人很懒，暂时还没有发布动态。" }}
-          </div>
-        </div>
-      </template>
-    </div>
 
-    <div v-if="player" class="bottom-action">
-      <button class="btn-chat" @click="goContactAdmin">联系管理员</button>
-      <!-- <button class="btn-wechat">微信</button> -->
+          <div class="section">
+            <div class="section-title">动态</div>
+            <div v-if="activities.length" class="activity-list">
+              <div v-for="act in activities" :key="act.id" class="activity-item glass-panel">
+                <div class="activity-content">
+                  {{ act.content || "[无内容]" }}
+                </div>
+                <div class="activity-meta">
+                  {{ act.city || cityText }} ·
+                  {{ formatDateTime(act.createTime) || "刚刚" }}
+                </div>
+                <div
+                  v-if="(activityImageMap[act.id || ''] || []).length"
+                  class="activity-image-grid"
+                >
+                  <img
+                    v-for="(img, idx) in activityImageMap[act.id || '']"
+                    :key="img + idx"
+                    class="activity-image"
+                    :src="img"
+                    alt="activity-image"
+                    @click="openActivityPreview(act.id || '', idx)"
+                  />
+                </div>
+              </div>
+            </div>
+            <div v-else class="intro-text">
+              {{ player.introduction || "这个人很懒，暂时还没有发布动态。" }}
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div v-if="player" class="bottom-action">
+        <button class="btn-chat" @click="goContactAdmin">
+          <span>联系 Ta</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.detail-page {
-  min-height: 100vh;
-  background: #000;
+.detail-page-wrapper {
+  background-color: #0f0c29;
+  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
   color: #fff;
-  position: relative;
+}
+
+/* Background floating shapes */
+.bg-shape {
+  position: absolute;
+  filter: blur(80px);
+  border-radius: 50%;
+  z-index: 1;
+  opacity: 0.55;
+  animation: float 10s infinite ease-in-out alternate;
+  pointer-events: none;
+}
+
+.shape-1 {
+  width: 300px;
+  height: 300px;
+  background: rgba(236, 72, 153, 0.35); /* Pink */
+  top: -50px;
+  right: -50px;
+}
+
+.shape-2 {
+  width: 350px;
+  height: 350px;
+  background: rgba(139, 92, 246, 0.35); /* Violet */
+  top: 40%;
+  left: -100px;
+  animation-delay: -3s;
+}
+
+.shape-3 {
+  width: 250px;
+  height: 250px;
+  background: rgba(56, 189, 248, 0.25); /* Sky Blue */
+  bottom: 50px;
+  right: 20%;
+  animation-delay: -5s;
+}
+
+@keyframes float {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(30px) scale(1.05); }
 }
 
 .top-bar {
@@ -305,15 +364,26 @@ onMounted(() => {
   left: 0;
   top: 0;
   right: 0;
-  z-index: 20;
-  height: 44px;
+  z-index: 30;
+  height: 54px;
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 16px;
+}
+
+.back-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .loading-wrap {
-  min-height: 300px;
+  min-height: 400px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -327,12 +397,18 @@ onMounted(() => {
   position: relative;
 }
 
+.hero-img-box {
+  position: relative;
+  width: 100%;
+  height: 420px;
+}
+
 .hero-cover,
 .hero-empty {
   width: 100%;
-  height: 360px;
+  height: 100%;
   object-fit: cover;
-  background: #181818;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .hero-empty {
@@ -342,13 +418,33 @@ onMounted(() => {
   color: #9f9f9f;
 }
 
+.hero-gradient {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 140px;
+  background: linear-gradient(to top, rgba(15, 12, 41, 1) 0%, rgba(15, 12, 41, 0) 100%);
+  pointer-events: none;
+}
+
+.base-card-wrapper {
+  margin-top: -60px;
+  position: relative;
+  z-index: 10;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
 .base-card {
-  margin-top: -22px;
-  background: #050505;
-  border-radius: 16px 16px 0 0;
-  padding: 14px 14px 10px;
-  border-top: 1px solid #151515;
-  border-bottom: 1px solid #151515;
+  border-radius: 24px;
+  padding: 24px 20px;
 }
 
 .name-row {
@@ -360,104 +456,163 @@ onMounted(() => {
 .name-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .name {
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1.1;
   font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.5px;
 }
 
 .auth-badge {
-  font-size: 11px;
-  color: #fff;
-  background: #ef5479;
-  padding: 2px 6px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, #fcd34d, #f59e0b);
+  padding: 2px 8px;
+  border-radius: 6px 10px 10px 2px;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
+  
+  .badge-text {
+    font-size: 11px;
+    color: #451a03;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
 }
 
-.id-row,
-.city-row,
+.like-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
+  &.is-liked {
+    background: rgba(236, 72, 153, 0.15);
+    box-shadow: 0 0 12px rgba(236, 72, 153, 0.4);
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+.id-row {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 13px;
+}
+
+.city-row {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
 .occupation-row {
-  margin-top: 10px;
-  color: #9a9a9a;
+  color: rgba(255, 255, 255, 0.5);
   font-size: 14px;
 }
 
 .tag-row,
 .single-tag-row {
-  margin-top: 12px;
+  margin-top: 16px;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
 .tag-pill {
-  height: 28px;
-  line-height: 28px;
-  padding: 0 10px;
-  border-radius: 14px;
-  background: #27231d;
-  color: #d8bc8b;
-  font-size: 13px;
+  height: 26px;
+  line-height: 26px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.type-0 {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+  }
+  &.type-1 {
+    background: rgba(167, 139, 250, 0.15);
+    color: #a78bfa;
+  }
+  &.type-2 {
+    background: rgba(236, 72, 153, 0.15);
+    color: #f472b6;
+  }
+  &.type-signature {
+    background: linear-gradient(90deg, rgba(236, 72, 153, 0.1), rgba(167, 139, 250, 0.1));
+    border: 1px solid rgba(236, 72, 153, 0.2);
+    color: #fbcfe8;
+    font-size: 14px;
+    height: auto;
+    line-height: 1.5;
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-style: italic;
+  }
 }
 
 .section {
-  padding: 16px 14px 0;
-  border-bottom: 1px solid #121212;
+  padding: 24px 16px 0;
 }
 
 .section-title {
-  font-size: 30px;
+  font-size: 22px;
   line-height: 1;
   font-weight: 800;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  color: #fff;
 }
 
 .album-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 10px;
   padding-bottom: 16px;
 }
 
 .album-item {
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 10px;
+  border-radius: 12px;
   object-fit: cover;
-  background: #202020;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding-bottom: 16px;
+  gap: 16px;
+  padding-bottom: 20px;
 }
 
 .activity-item {
-  border: 1px solid #1f1f1f;
-  background: #0a0a0a;
-  border-radius: 12px;
-  padding: 10px;
+  border-radius: 16px;
+  padding: 16px;
 }
 
 .activity-content {
-  font-size: 14px;
-  color: #efefef;
-  line-height: 1.7;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
 }
 
 .activity-meta {
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 12px;
-  color: #929292;
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .activity-image-grid {
-  margin-top: 10px;
+  margin-top: 12px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
@@ -466,58 +621,66 @@ onMounted(() => {
 .activity-image {
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 8px;
+  border-radius: 10px;
   object-fit: cover;
-  background: #222;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .intro-text {
-  color: #d3d3d3;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 15px;
   line-height: 1.7;
   padding-bottom: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
 }
 
 .bottom-action {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: 10px;
-  z-index: 30;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.btn-chat,
-.btn-wechat {
-  border: none;
-  height: 48px;
-  border-radius: 14px;
-  font-size: 34px;
-  font-weight: 700;
+  left: 16px;
+  right: 16px;
+  bottom: 20px;
+  z-index: 40;
 }
 
 .btn-chat {
-  background: #f0d4a2;
-  color: #17130d;
+  width: 100%;
+  height: 54px;
+  border-radius: 27px;
+  border: none;
+  background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+  transition: transform 0.2s, box-shadow 0.2s;
+  letter-spacing: 2px;
 }
 
-.btn-wechat {
-  background: #3c3529;
-  color: #f1d5a0;
+.btn-chat:active {
+  transform: scale(0.97);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
 }
 
 .empty-wrap {
-  min-height: 260px;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   align-items: center;
   justify-content: center;
 }
 
 .empty {
-  color: #a4a4a4;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+:deep(.back-home-btn) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  backdrop-filter: blur(4px);
 }
 </style>

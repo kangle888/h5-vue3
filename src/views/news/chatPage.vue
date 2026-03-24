@@ -196,204 +196,290 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="chat-page">
-    <div class="chat-header">
-      <van-icon name="arrow-left" size="20" @click="router.back()" />
-      <span class="title">客服聊天</span>
-      <div class="right-placeholder"></div>
-    </div>
+  <div class="chat-page-wrapper relative min-h-screen w-full overflow-hidden">
+    <!-- Animated background elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
 
-    <div v-if="loading" class="loading-wrap">
-      <van-loading size="20" />
-    </div>
+    <div class="chat-container relative z-10 box-border flex flex-col h-screen">
+      <div class="chat-header glass-nav">
+        <div class="back-btn" @click="router.back()">
+          <van-icon name="arrow-left" size="20" color="#fff" />
+        </div>
+        <span class="title">客服聊天</span>
+        <div class="right-placeholder"></div>
+      </div>
 
-    <div v-else ref="listRef" class="chat-list">
-      <div
-        v-for="msg in records"
-        :key="msg.id"
-        class="chat-row"
-        :class="{ mine: msg.senderId === myUserId }"
-      >
-        <template v-if="msg.messageType === 'file'">
-          <img
-            v-if="imagePreviewMap[msg.id || '']"
-            class="image-bubble"
-            :src="imagePreviewMap[msg.id || '']"
-            alt="chat-image"
-            @click="previewImage(msg.id)"
-          />
-          <div v-else class="bubble">[图片加载中]</div>
-        </template>
-        <div v-else class="bubble">{{ msg.content }}</div>
-        <div class="meta-row">
-          <span v-if="msg.senderId === myUserId" class="read-flag" :class="{ read: msg.readStatus === '1' }">
-            {{ msg.readStatus === "1" ? "已读" : "未读" }}
-          </span>
-          <span class="time">{{ (msg.createTime || "").replace("T", " ") }}</span>
+      <div v-if="loading" class="loading-wrap flex-1 flex items-center justify-center">
+        <van-loading size="24" color="#fbcfe8" />
+      </div>
+
+      <div v-else ref="listRef" class="chat-list flex-1 overflow-auto">
+        <div
+          v-for="msg in records"
+          :key="msg.id"
+          class="chat-row"
+          :class="{ mine: msg.senderId === myUserId }"
+        >
+          <div class="msg-content">
+            <template v-if="msg.messageType === 'file'">
+              <img
+                v-if="imagePreviewMap[msg.id || '']"
+                class="image-bubble"
+                :src="imagePreviewMap[msg.id || '']"
+                alt="chat-image"
+                @click="previewImage(msg.id)"
+              />
+              <div v-else class="bubble loading-bubble">[图片加载中...]</div>
+            </template>
+            <div v-else class="bubble">{{ msg.content }}</div>
+            
+            <div class="meta-row">
+              <span v-if="msg.senderId === myUserId" class="read-flag" :class="{ read: msg.readStatus === '1' }">
+                {{ msg.readStatus === "1" ? "已读" : "未读" }}
+              </span>
+              <span class="time">{{ (msg.createTime || "").replace("T", " ") }}</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="chat-input-wrap">
-      <input
-        v-model="messageText"
-        class="chat-input"
-        placeholder="请输入消息"
-        @keyup.enter="sendMessage"
-      />
-      <button class="image-btn" :disabled="sendingImage" @click="triggerChooseImage">📷</button>
-      <button class="send-btn" @click="sendMessage">发送</button>
-      <input
-        ref="fileInputRef"
-        type="file"
-        accept="image/*"
-        class="hidden-file"
-        @change="onChooseImage"
-      />
+      <div class="chat-input-wrap glass-nav-bottom">
+        <input
+          v-model="messageText"
+          class="chat-input"
+          placeholder="给Ta发消息..."
+          @keyup.enter="sendMessage"
+        />
+        <button class="icon-btn image-btn" :disabled="sendingImage" @click="triggerChooseImage">
+          <van-icon name="photograph" size="20" />
+        </button>
+        <button class="send-btn" @click="sendMessage">发送</button>
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept="image/*"
+          class="hidden-file"
+          @change="onChooseImage"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.chat-page {
-  min-height: 100vh;
-  height: 100vh;
-  background: #0f0f10;
+.chat-page-wrapper {
+  background-color: #0f0c29;
+  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
   color: #fff;
-  position: relative;
-  overflow: hidden;
+}
+
+/* Background floating shapes */
+.bg-shape {
+  position: absolute;
+  filter: blur(80px);
+  border-radius: 50%;
+  z-index: 1;
+  opacity: 0.55;
+  animation: float 10s infinite ease-in-out alternate;
+  pointer-events: none;
+}
+.shape-1 { width: 300px; height: 300px; background: rgba(236, 72, 153, 0.25); top: -50px; right: -50px; }
+.shape-2 { width: 350px; height: 350px; background: rgba(139, 92, 246, 0.25); top: 30%; left: -100px; animation-delay: -3s; }
+.shape-3 { width: 250px; height: 250px; background: rgba(56, 189, 248, 0.15); bottom: 50px; right: 20%; animation-delay: -5s; }
+
+@keyframes float {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(30px) scale(1.05); }
+}
+
+.glass-nav {
+  background: rgba(15, 12, 41, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .chat-header {
-  height: 48px;
-  border-bottom: 1px solid #1d1d1d;
+  height: 54px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  justify-content: space-between;
+  padding: 0 16px;
 
   .title {
-    flex: 1;
-    text-align: center;
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
-  }
-
-  .right-placeholder {
-    width: 20px;
+    letter-spacing: 1px;
   }
 }
 
-.loading-wrap {
-  height: calc(100vh - 48px - 60px);
+.back-btn, .right-placeholder {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
 .chat-list {
-  height: calc(100vh - 48px - 60px);
-  overflow: auto;
-  padding: 12px;
+  padding: 16px;
+  padding-bottom: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+  width: 100%;
+
+  .msg-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    max-width: 80%;
+  }
+
+  /* Remote User Bubble styling */
+  .bubble {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px 20px 20px 4px;
+    padding: 10px 14px;
+    font-size: 15px;
+    line-height: 1.5;
+    word-break: break-word;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
 
   &.mine {
-    align-items: flex-end;
+    justify-content: flex-end;
+
+    .msg-content {
+      align-items: flex-end;
+    }
 
     .bubble {
-      background: #2f7fff;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
       color: #fff;
+      border: 1px solid rgba(236, 72, 153, 0.3);
+      border-radius: 20px 20px 4px 20px;
+      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
     }
   }
 }
 
-.bubble {
-  max-width: 80%;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: #1e1e20;
-  color: #e9e9e9;
-  font-size: 14px;
-  line-height: 1.6;
+.loading-bubble {
+  opacity: 0.6;
+  font-style: italic;
+  font-size: 13px !important;
 }
 
 .image-bubble {
-  width: 140px;
-  max-height: 180px;
+  max-width: 200px;
+  max-height: 240px;
   object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid #2a2a2d;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .meta-row {
-  margin-top: 4px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 0 4px;
 }
 
 .read-flag {
   font-size: 11px;
-  color: #8f8f8f;
+  color: rgba(255, 255, 255, 0.4);
 
   &.read {
-    color: #4e89ff;
+    color: #38bdf8; /* Sky blue when read */
   }
 }
 
 .time {
   font-size: 11px;
-  color: #8f8f8f;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.glass-nav-bottom {
+  background: rgba(15, 12, 41, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .chat-input-wrap {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 60px;
+  min-height: 64px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px;
-  border-top: 1px solid #1d1d1d;
-  background: #151515;
+  gap: 10px;
+  padding: 10px 16px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
 }
 
 .chat-input {
   flex: 1;
-  height: 36px;
-  border-radius: 18px;
-  border: 1px solid #3b3b3d;
-  background: #1f1f20;
+  height: 40px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
   color: #fff;
-  padding: 0 12px;
+  padding: 0 16px;
+  font-size: 14px;
   outline: none;
+  transition: all 0.3s;
+  
+  &:focus {
+    border-color: rgba(236, 72, 153, 0.5);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+  }
 }
 
-.image-btn {
+.icon-btn {
   width: 40px;
-  height: 36px;
-  border: none;
-  border-radius: 18px;
-  background: #2a2a2d;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
-  font-size: 16px;
+  transition: background 0.2s;
+  
+  &:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
 }
 
 .send-btn {
-  width: 64px;
-  height: 36px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
   border: none;
-  border-radius: 18px;
-  background: #2f7fff;
+  background: linear-gradient(90deg, #ec4899, #8b5cf6);
   color: #fff;
   font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+  transition: transform 0.2s;
+  
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 .hidden-file {

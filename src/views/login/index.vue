@@ -138,120 +138,234 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="login-page">
-    <!-- <div class="hero-card">
-      <div class="slogan">附近高颜值 · 真人在线</div>
-      <h1 class="title">陪玩匹配平台</h1>
-      <p class="desc">首次登录：手机号 + 验证码 + 密码；后续手机号 + 密码</p>
-    </div> -->
+  <div class="login-wrapper relative min-h-screen w-full overflow-hidden">
+    <!-- Animated background elements -->
+    <div class="bg-shape shape-1"></div>
+    <div class="bg-shape shape-2"></div>
+    <div class="bg-shape shape-3"></div>
 
-    <div class="form-card">
-      <div class="form-title">
-        {{ mode === "password" ? "手机号密码登录" : "手机号验证码验证" }}
+    <div class="relative z-10 box-border min-h-screen px-6 py-10 flex flex-col justify-center">
+      <!-- Hero Section -->
+      <div class="hero-section mb-10">
+        <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-4 border border-white/20 backdrop-blur-md">
+          <span class="text-[12px] font-medium text-pink-300">🎉 新手福利</span>
+          <span class="text-[12px] text-white/80">注册即可首单免费体验</span>
+        </div>
+        <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 via-purple-300 to-indigo-400 leading-tight tracking-wide">
+          遇见心动<br />专属陪玩
+        </h1>
+        <p class="mt-3 text-[14px] text-white/60 leading-relaxed">
+          高颜值真人在线，随时随地开启你的专属游戏派对
+        </p>
       </div>
 
-      <van-form @submit="onSubmit">
-        <van-cell-group inset>
-          <van-field v-model="form.mobile" name="mobile" label="手机号" placeholder="请输入手机号" clearable />
-
-          <van-field
-            v-if="mode === 'verify'"
-            v-model="form.code"
-            name="code"
-            label="验证码"
-            placeholder="请输入验证码"
-            clearable
-          >
-            <template #button>
-              <van-button size="small" type="primary" :loading="codeLoading" @click="sendCode">获取验证码</van-button>
-            </template>
-          </van-field>
-
-          <van-field
-            v-model="form.password"
-            name="password"
-            type="password"
-            label="密码"
-            :placeholder="mode === 'verify' ? '请设置登录密码' : '请输入密码'"
-            clearable
-          />
-        </van-cell-group>
-
-        <div class="mt-[20px]">
-          <van-button round block type="primary" native-type="submit" :loading="loading" :disabled="loading">
-            {{ mode === "password" ? "登录" : "验证并登录" }}
-          </van-button>
+      <!-- Form Card -->
+      <div class="glass-card">
+        <div class="mb-6 flex items-center justify-between">
+          <h2 class="text-xl font-bold text-white tracking-wide">
+            {{ mode === "password" ? "密码登录" : "快捷登录" }}
+          </h2>
         </div>
-      </van-form>
 
-      <div class="switch-row">
-        <span v-if="mode === 'password'" @click="switchMode('verify')">首次登录/忘记密码？去验证码验证</span>
-        <span v-else @click="switchMode('password')">返回手机号密码登录</span>
+        <van-form @submit="onSubmit" class="space-y-4">
+          <van-cell-group inset class="!m-0 !bg-transparent">
+            <!-- Mobile Field -->
+            <van-field
+              v-model="form.mobile"
+              name="mobile"
+              placeholder="请输入手机号"
+              clearable
+              class="custom-input"
+            />
+
+            <!-- Code Field -->
+            <van-field
+              v-if="mode === 'verify'"
+              v-model="form.code"
+              name="code"
+              placeholder="请输入验证码"
+              clearable
+              class="custom-input mt-4"
+            >
+              <template #button>
+                <div
+                   class="get-code-btn"
+                   :class="{ 'opacity-50 pointer-events-none': codeLoading }"
+                   @click="sendCode"
+                >
+                  {{ codeLoading ? '获取中...' : '短信验证码' }}
+                </div>
+              </template>
+            </van-field>
+
+            <!-- Password Field -->
+            <van-field
+               v-model="form.password"
+               name="password"
+               type="password"
+               :placeholder="mode === 'verify' ? '请设置6位以上登录密码' : '请输入密码'"
+               clearable
+               class="custom-input mt-4"
+            />
+          </van-cell-group>
+
+          <div class="pt-6">
+            <van-button
+              round
+              block
+              native-type="submit"
+              :loading="loading"
+              :disabled="loading"
+              class="submit-btn"
+            >
+              <span class="text-base font-bold tracking-widest text-white">
+                {{ mode === "password" ? "立即登录" : "验证并登录" }}
+              </span>
+            </van-button>
+          </div>
+        </van-form>
+
+        <div class="mt-6 text-center">
+          <span
+            class="text-[13px] text-white/50 hover:text-pink-300 transition-colors cursor-pointer inline-block border-b border-transparent hover:border-pink-300/50 pb-0.5"
+            @click="switchMode(mode === 'password' ? 'verify' : 'password')"
+          >
+            {{ mode === "password" ? "免密快捷登录 / 注册" : "使用已有密码登录" }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-auto pt-10 text-center text-[12px] text-white/40">
+        登录即代表同意 <span class="text-white/70">用户协议</span> 和 <span class="text-white/70">隐私政策</span>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="less">
-.login-page {
-  min-height: 100vh;
-  padding: 26px 16px;
-  background:
-    radial-gradient(120% 60% at 50% 0%, rgba(234, 193, 122, 0.22), transparent 65%),
-    linear-gradient(180deg, #0d0d0e 0%, #121214 46%, #171717 100%);
+.login-wrapper {
+  background-color: #0f0c29;
+  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
 }
 
-.hero-card {
-  margin-top: 14px;
-  padding: 24px 18px;
+/* Base shape for energetic aesthetic */
+.bg-shape {
+  position: absolute;
+  filter: blur(80px);
+  border-radius: 50%;
+  z-index: 1;
+  opacity: 0.55;
+  animation: float 10s infinite ease-in-out alternate;
+}
+
+.shape-1 {
+  width: 320px;
+  height: 320px;
+  background: rgba(236, 72, 153, 0.4); /* Pink */
+  top: -60px;
+  left: -80px;
+}
+
+.shape-2 {
+  width: 250px;
+  height: 250px;
+  background: rgba(139, 92, 246, 0.4); /* Violet */
+  bottom: 80px;
+  right: -80px;
+  animation-delay: -3s;
+}
+
+.shape-3 {
+  width: 200px;
+  height: 200px;
+  background: rgba(56, 189, 248, 0.3); /* Sky Blue */
+  top: 40%;
+  left: 20%;
+  animation-delay: -5s;
+}
+
+@keyframes float {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(40px) scale(1.1); }
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 32px 24px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Deep overwrite of Vant Field */
+:deep(.custom-input) {
+  background: rgba(255, 255, 255, 0.08) !important;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(4px);
+  padding: 14px 18px;
+  color: #fff;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
 
-  .slogan {
-    display: inline-block;
-    font-size: 12px;
-    color: #23190b;
-    background: #dcbc83;
-    border-radius: 10px;
-    padding: 4px 10px;
-  }
-
-  .title {
-    margin: 12px 0 8px;
-    color: #fff;
-    font-size: 30px;
-    font-weight: 800;
-    line-height: 1.15;
-  }
-
-  .desc {
-    margin: 0;
-    color: #c3c3c3;
-    font-size: 14px;
-    line-height: 1.7;
+  /* Use modern transparent clear icon if possible, or force color */
+  .van-field__clear {
+    color: rgba(255, 255, 255, 0.5);
   }
 }
 
-.form-card {
-  margin-top: 18px;
-  padding: 18px 14px 20px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
+:deep(.custom-input:focus-within) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(236, 72, 153, 0.5);
+  box-shadow: 0 0 12px rgba(236, 72, 153, 0.2);
+}
 
-  .form-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #1f1f1f;
-    margin-bottom: 14px;
+:deep(.custom-input .van-field__control) {
+  color: #fff !important;
+  font-size: 15px;
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
   }
 }
 
-.switch-row {
-  margin-top: 12px;
-  text-align: center;
-  color: #1777ff;
+:deep(.custom-input .van-cell__value) {
+  overflow: visible;
+}
+
+.get-code-btn {
   font-size: 13px;
+  color: #fbcfe8; /* pink-200 */
+  padding: 6px 14px;
+  background: rgba(236, 72, 153, 0.15);
+  border-radius: 99px;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.get-code-btn:active {
+  background: rgba(236, 72, 153, 0.25);
+  transform: scale(0.95);
+}
+
+/* Gradient Button */
+:deep(.submit-btn) {
+  background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%) !important;
+  border: none !important;
+  height: 48px;
+  border-radius: 24px !important;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+  transition: all 0.3s ease;
+}
+
+:deep(.submit-btn:active) {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+:deep(.submit-btn::before) {
+  display: none;
 }
 </style>
