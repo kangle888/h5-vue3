@@ -68,12 +68,24 @@ const buildPreviewMap = async (rows: IPlayerItem[]) => {
   albumPreviewMap.value = nextAlbumMap;
 };
 
+const currentUserId = () => {
+  try {
+    const cUser = JSON.parse(localStorage.getItem("c_user_info") || "{}");
+    return cUser?.id || "";
+  } catch {
+    return "";
+  }
+};
+
 const loadCollectMap = async () => {
   try {
     const res = await pagePlayerCollect({
       pageNum: 1,
       pageSize: 1000,
-      query: { isCancel: "0" }
+      query: {
+        isCancel: "0",
+        collectPlayerId: currentUserId() || undefined
+      }
     });
     const rows = res?.records || [];
     const map: Record<string, string> = {};
@@ -179,13 +191,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home-wrapper relative min-h-screen w-full overflow-hidden">
-    <!-- Animated background elements -->
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-    <div class="bg-shape shape-3"></div>
-
-    <div class="relative z-10 box-border min-h-screen pb-10">
+  <div class="home-wrapper min-h-screen w-full">
+    <div class="box-border min-h-screen pb-10">
       <div class="sticky-header">
         <div class="top-tabs">
           <div
@@ -196,25 +203,23 @@ onMounted(() => {
             @click="onTabChange(index)"
           >
             {{ tab }}
-            <!-- Glowing underline for active tab -->
-            <div v-if="activeTab === index" class="tab-indicator"></div>
           </div>
         </div>
         <div class="top-actions">
-          <van-icon name="search" size="22" color="#fff" />
-          <van-icon name="filter-o" size="22" color="#fff" />
+          <van-icon name="search" size="22" color="#ccc" />
+          <van-icon name="filter-o" size="22" color="#ccc" />
         </div>
       </div>
 
       <div v-if="loading" class="loading-wrap">
-        <van-loading color="#fbcfe8" />
+        <van-loading color="#ccc" />
       </div>
 
       <div v-else class="list-wrap">
         <div
           v-for="(item, index) in cardList"
           :key="item.id || index"
-          class="player-card glass-card"
+          class="player-card"
           @click="goDetail(item)"
         >
           <div class="cover-wrap">
@@ -228,19 +233,19 @@ onMounted(() => {
           <div class="info-wrap">
             <div class="name-row">
               <div class="name">{{ item.name || "神秘玩家" }}</div>
-              <div class="like-btn" :class="{ 'is-liked': isCollected(item) }" @click.stop="toggleCollect(item)">
+              <div class="like-btn" @click.stop="toggleCollect(item)">
                 <van-icon
                   :name="isCollected(item) ? 'like' : 'like-o'"
-                  size="18"
-                  :color="isCollected(item) ? '#ec4899' : '#a1a1aa'"
+                  size="20"
+                  :color="isCollected(item) ? '#ff4d4f' : '#666'"
                 />
               </div>
             </div>
 
             <div class="meta-row">
-              <span class="pill tag-age">{{ item.age || "20" }}岁</span>
-              <span class="pill tag-height">{{ item.height || "165" }}CM</span>
-              <span class="pill tag-game">{{ playerTag(item) }}</span>
+              <span class="pill">{{ item.age || "20" }}岁</span>
+              <span class="pill">{{ item.height || "165" }}CM</span>
+              <span v-if="playerTag(item)" class="pill">{{ playerTag(item) }}</span>
             </div>
 
             <div class="city-row">
@@ -248,12 +253,17 @@ onMounted(() => {
               <span>{{ formatCityText(item.city) }} · {{ distanceText(item, index) }}</span>
             </div>
 
-            <div class="album-row">
-              <template v-for="img in cardImages(item)" :key="img">
+            <div class="album-row" v-if="cardImages(item).length > 0">
+              <div
+                v-for="(img, imgIdx) in cardImages(item)"
+                :key="img"
+                class="mini-wrap"
+              >
                 <img class="mini" :src="img" alt="album" />
-              </template>
-              <div v-if="cardAlbumCount(item) > 3" class="more">+{{ cardAlbumCount(item) - 3 }}</div>
-              <van-icon name="arrow" size="14" color="rgba(255,255,255,0.4)" class="ml-auto" />
+                <div v-if="imgIdx === 2 && cardAlbumCount(item) > 3" class="more">
+                  +{{ cardAlbumCount(item) - 3 }} >
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -264,51 +274,8 @@ onMounted(() => {
 
 <style scoped lang="less">
 .home-wrapper {
-  background-color: #0f0c29;
-  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
+  background-color: #000000;
   color: #fff;
-}
-
-/* Base shape for energetic aesthetic */
-.bg-shape {
-  position: absolute;
-  filter: blur(80px);
-  border-radius: 50%;
-  z-index: 1;
-  opacity: 0.55;
-  animation: float 10s infinite ease-in-out alternate;
-  pointer-events: none;
-}
-
-.shape-1 {
-  width: 300px;
-  height: 300px;
-  background: rgba(236, 72, 153, 0.35); /* Pink */
-  top: -50px;
-  right: -50px;
-}
-
-.shape-2 {
-  width: 350px;
-  height: 350px;
-  background: rgba(139, 92, 246, 0.35); /* Violet */
-  top: 40%;
-  left: -100px;
-  animation-delay: -3s;
-}
-
-.shape-3 {
-  width: 250px;
-  height: 250px;
-  background: rgba(56, 189, 248, 0.25); /* Sky Blue */
-  bottom: -50px;
-  right: 20%;
-  animation-delay: -5s;
-}
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(30px) scale(1.05); }
 }
 
 .sticky-header {
@@ -320,46 +287,27 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  
-  /* Glassmorphism for header */
-  background: rgba(15, 12, 41, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  background: #000000;
 }
 
 .top-tabs {
   display: flex;
-  align-items: center;
-  gap: 24px;
+  align-items: baseline;
+  gap: 16px;
 
   .tab-item {
     font-size: 16px;
-    color: rgba(255, 255, 255, 0.5);
-    font-weight: 500;
+    color: #666;
+    font-weight: normal;
     position: relative;
-    padding: 8px 0;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.2s;
 
     &.active {
       color: #fff;
-      font-weight: 700;
-      font-size: 18px;
+      font-weight: 600;
+      font-size: 22px;
     }
-  }
-
-  .tab-indicator {
-    position: absolute;
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 3px;
-    border-radius: 2px;
-    background: linear-gradient(90deg, #ec4899, #8b5cf6);
-    box-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
   }
 }
 
@@ -377,52 +325,41 @@ onMounted(() => {
 }
 
 .list-wrap {
-  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s, box-shadow 0.2s;
-
-  &:active {
-    transform: scale(0.98);
-  }
 }
 
 .player-card {
   display: flex;
   gap: 14px;
-  padding: 14px;
+  padding: 16px;
+  border-bottom: 1px solid #1a1a1a;
+  background: #000000;
+  
+  &:active {
+    background: #0a0a0a;
+  }
 }
 
 .cover-wrap {
-  width: 96px;
+  width: 86px;
   position: relative;
   flex-shrink: 0;
 
   .cover,
   .cover-empty {
-    width: 96px;
-    height: 124px;
+    width: 86px;
+    height: 86px;
     border-radius: 12px;
     object-fit: cover;
-    background: rgba(255,255,255,0.08);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    background: #111;
   }
 
   .cover-empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255,255,255,0.3);
+    color: #333;
     font-size: 12px;
   }
 
@@ -430,15 +367,14 @@ onMounted(() => {
     position: absolute;
     left: 0;
     bottom: 0;
-    background: linear-gradient(135deg, #fcd34d, #f59e0b);
-    padding: 2px 8px;
+    background: linear-gradient(135deg, #fae2a5, #dbb56f);
+    padding: 3px 8px;
     border-radius: 0 8px 0 12px;
-    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
     
     .badge-text {
-      font-size: 10px;
-      color: #451a03;
-      font-weight: 800;
+      font-size: 11px;
+      color: #382402;
+      font-weight: 600;
       letter-spacing: 0.5px;
     }
   }
@@ -449,7 +385,8 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-bottom: 4px;
 }
 
 .name-row {
@@ -458,67 +395,42 @@ onMounted(() => {
   justify-content: space-between;
 
   .name {
-    font-size: 18px;
-    font-weight: 800;
+    font-size: 16px;
+    font-weight: 600;
     color: #fff;
-    max-width: 160px;
+    max-width: 180px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: 0.5px;
   }
 
   .like-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.06);
+    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     
-    &.is-liked {
-      background: rgba(236, 72, 153, 0.15);
-      box-shadow: 0 0 12px rgba(236, 72, 153, 0.3);
-      transform: scale(1.1);
-    }
-
     &:active {
-      transform: scale(0.9);
+      opacity: 0.6;
     }
   }
 }
 
 .meta-row {
-  margin-top: 10px;
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 
   .pill {
     font-size: 11px;
-    border-radius: 8px;
-    height: 22px;
-    line-height: 22px;
-    padding: 0 8px;
-    font-weight: 600;
-  }
-
-  .tag-age {
-    background: rgba(56, 189, 248, 0.15);
-    color: #38bdf8;
-  }
-
-  .tag-height {
-    background: rgba(167, 139, 250, 0.15);
-    color: #a78bfa;
-  }
-
-  .tag-game {
-    background: linear-gradient(90deg, rgba(236,72,153,0.15), rgba(139,92,246,0.15));
-    border: 1px solid rgba(236,72,153,0.2);
-    color: #fbcfe8;
+    border-radius: 4px;
+    height: 20px;
+    line-height: 20px;
+    padding: 0 6px;
+    background: #1c1813;
+    color: #dfc293;
+    font-weight: normal;
   }
 }
 
@@ -526,7 +438,7 @@ onMounted(() => {
   margin-top: 10px;
   display: flex;
   align-items: center;
-  color: rgba(255, 255, 255, 0.5);
+  color: #666;
   font-size: 12px;
 }
 
@@ -534,28 +446,32 @@ onMounted(() => {
   margin-top: 10px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 
-  .mini {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    object-fit: cover;
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.05);
-  }
+  .mini-wrap {
+    position: relative;
+    width: 32px;
+    height: 32px;
 
-  .more {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.8);
-    background: rgba(255,255,255,0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
+    .mini {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+      object-fit: cover;
+      background: #111;
+    }
+
+    .more {
+      position: absolute;
+      inset: 0;
+      border-radius: 4px;
+      font-size: 10px;
+      color: #fff;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
 }
 </style>

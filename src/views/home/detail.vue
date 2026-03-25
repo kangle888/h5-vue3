@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ImagePreview, showFailToast } from "vant";
+import { showImagePreview, showFailToast } from "vant";
 import { codeToText } from "element-china-area-data";
 import {
   addPlayerCollect,
@@ -74,13 +74,13 @@ const formatDateTime = (value?: string) => {
 
 const openAlbumPreview = (start: number) => {
   if (!albumPreviewList.value.length) return;
-  ImagePreview({ images: albumPreviewList.value, startPosition: start });
+  showImagePreview({ images: albumPreviewList.value, startPosition: start });
 };
 
 const openActivityPreview = (activityId: string, start: number) => {
   const list = activityImageMap.value[activityId] || [];
   if (!list.length) return;
-  ImagePreview({ images: list, startPosition: start });
+  showImagePreview({ images: list, startPosition: start });
 };
 
 const goContactAdmin = () => {
@@ -188,21 +188,20 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="detail-page-wrapper relative min-h-screen w-full overflow-hidden">
-    <!-- Animated background elements -->
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-    <div class="bg-shape shape-3"></div>
-
+  <div class="detail-page-wrapper min-h-screen w-full">
     <div class="relative z-10 box-border min-h-screen">
+      <!-- Top Actions Over Image -->
       <div class="top-bar">
-        <div class="back-btn" @click="router.back()">
+        <div class="icon-btn" @click="router.back()">
           <van-icon name="arrow-left" size="20" color="#fff" />
+        </div>
+        <div class="icon-btn">
+          <van-icon name="ellipsis" size="20" color="#fff" />
         </div>
       </div>
 
       <div v-if="loading" class="loading-wrap">
-        <van-loading color="#fbcfe8" />
+        <van-loading color="#ccc" />
       </div>
 
       <div v-else class="content-wrap">
@@ -210,51 +209,102 @@ onMounted(() => {
           <div class="hero-img-box">
             <img v-if="coverPreview" :src="coverPreview" class="hero-cover" alt="cover" />
             <div v-else class="hero-empty">暂无图片</div>
-            <div class="hero-gradient"></div>
           </div>
 
-          <div class="base-card-wrapper px-4">
-            <div class="base-card glass-panel">
+          <!-- Bottom Base Card -->
+          <div class="base-card-wrapper">
+            <div class="base-card">
               <div class="name-row">
                 <div class="name-wrap">
                   <span class="name">{{ player.name || "神秘玩家" }}</span>
                   <span class="auth-badge">
-                    <span class="badge-text">真人</span>
+                    <span class="badge-text">真颜</span>
                   </span>
                 </div>
                 <div class="like-btn" :class="{ 'is-liked': collectId }" @click.stop="toggleCollect">
                   <van-icon
                     :name="collectId ? 'like' : 'like-o'"
-                    size="22"
-                    :color="collectId ? '#ec4899' : '#a1a1aa'"
+                    size="20"
+                    :color="collectId ? '#ff4d4f' : '#888'"
                   />
                 </div>
               </div>
 
-              <div class="id-row">ID {{ player.id || "-" }}</div>
-              
-              <div class="city-row mt-3 flex items-center">
-                <van-icon name="location-o" class="mr-1 text-white/50" />
-                <span>{{ cityText }} · 397m</span>
+              <div class="meta-list mt-1">
+                <div class="meta-item">
+                  <van-icon name="idcard" class="mr-1" />
+                  ID {{ player.id || "-" }}
+                </div>
+                <div class="meta-item">
+                  <van-icon name="location-o" class="mr-1" />
+                  {{ cityText }} · 397m
+                </div>
+                <div class="meta-item">
+                  <van-icon name="contact-o" class="mr-1" />
+                  {{ occupationText }}
+                </div>
               </div>
-              <div class="occupation-row mt-1 ml-4">{{ occupationText }}</div>
 
-              <div class="tag-row">
-                <span v-for="(tag, idx) in profileBadges" :key="tag" class="tag-pill" :class="`type-${idx % 3}`">
-                  {{ tag }}
-                </span>
+              <div class="tag-row mt-4">
+                <span class="tag-pill">🎂 {{ player.age || "25" }}岁</span>
+                <span class="tag-pill" v-if="player.constellation">⭐ {{ player.constellation }}</span>
+                <span class="tag-pill" v-if="player.height">🧍 {{ player.height }}CM</span>
+                <span class="tag-pill" v-if="player.weight">⚖️ {{ player.weight }}KG</span>
+                <span class="tag-pill">💼 {{ occupationText }}</span>
               </div>
 
-              <div v-if="player.signature_dictText || player.signature" class="single-tag-row mt-3">
-                <span class="tag-pill type-signature">
-                  "{{ player.signature_dictText || player.signature }}"
-                </span>
+              <!-- Content Sections -->
+              <div class="section">
+                <div class="section-title">
+                  <div class="divider"></div>相册
+                </div>
+                <div class="album-grid" v-if="albumPreviewList.length > 0">
+                  <div 
+                    v-for="(img, idx) in albumPreviewList.slice(0, 8)"
+                    :key="img + idx"
+                    class="album-item-wrap"
+                    @click="openAlbumPreview(idx)"
+                  >
+                    <img class="album-item" :src="img" alt="album" />
+                    <div class="overlay-more" v-if="idx === 7 && albumPreviewList.length > 8">
+                      +{{ albumPreviewList.length - 8 }}
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="empty-hint">暂无相册</div>
+              </div>
+
+              <div class="section">
+                <div class="section-title">
+                  <div class="divider"></div>动态
+                </div>
+                <div v-if="activities.length" class="activity-list">
+                  <div v-for="act in activities.slice(0, 2)" :key="act.id" class="activity-item">
+                    <div class="activity-date">
+                      <span class="date-day">14</span>
+                    </div>
+                    <div class="activity-body">
+                      <div class="activity-content">{{ act.content || "半夜睡醒了咋整" }}</div>
+                      <div class="activity-image-grid" v-if="(activityImageMap[act.id || ''] || []).length">
+                         <img
+                          v-for="(img, idx) in activityImageMap[act.id || ''].slice(0, 2)"
+                          :key="img + idx"
+                          class="activity-image"
+                          :src="img"
+                          alt="activity-image"
+                          @click="openActivityPreview(act.id || '', idx)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="empty-hint">暂无动态</div>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-else class="empty-wrap z-10 relative">
+        <div v-else class="empty-wrap">
           <div class="empty">暂无数据</div>
           <van-button 
             round
@@ -264,58 +314,15 @@ onMounted(() => {
             返回首页
           </van-button>
         </div>
-
-        <template v-if="player">
-          <div class="section">
-            <div class="section-title">相册</div>
-            <div class="album-grid">
-              <img
-                v-for="(img, idx) in albumPreviewList"
-                :key="img + idx"
-                class="album-item"
-                :src="img"
-                alt="album"
-                @click="openAlbumPreview(idx)"
-              />
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">动态</div>
-            <div v-if="activities.length" class="activity-list">
-              <div v-for="act in activities" :key="act.id" class="activity-item glass-panel">
-                <div class="activity-content">
-                  {{ act.content || "[无内容]" }}
-                </div>
-                <div class="activity-meta">
-                  {{ act.city || cityText }} ·
-                  {{ formatDateTime(act.createTime) || "刚刚" }}
-                </div>
-                <div
-                  v-if="(activityImageMap[act.id || ''] || []).length"
-                  class="activity-image-grid"
-                >
-                  <img
-                    v-for="(img, idx) in activityImageMap[act.id || '']"
-                    :key="img + idx"
-                    class="activity-image"
-                    :src="img"
-                    alt="activity-image"
-                    @click="openActivityPreview(act.id || '', idx)"
-                  />
-                </div>
-              </div>
-            </div>
-            <div v-else class="intro-text">
-              {{ player.introduction || "这个人很懒，暂时还没有发布动态。" }}
-            </div>
-          </div>
-        </template>
       </div>
 
+      <!-- Detail bottom actions -->
       <div v-if="player" class="bottom-action">
         <button class="btn-chat" @click="goContactAdmin">
-          <span>联系 Ta</span>
+          <van-icon name="chat-o" size="18" class="mr-1" /> 私聊她
+        </button>
+        <button class="btn-wechat" @click="goContactAdmin">
+          <van-icon name="wechat" size="18" class="mr-1" /> 微信
         </button>
       </div>
     </div>
@@ -324,51 +331,9 @@ onMounted(() => {
 
 <style scoped lang="less">
 .detail-page-wrapper {
-  background-color: #0f0c29;
-  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
+  background-color: #000000;
   color: #fff;
-}
-
-/* Background floating shapes */
-.bg-shape {
-  position: absolute;
-  filter: blur(80px);
-  border-radius: 50%;
-  z-index: 1;
-  opacity: 0.55;
-  animation: float 10s infinite ease-in-out alternate;
-  pointer-events: none;
-}
-
-.shape-1 {
-  width: 300px;
-  height: 300px;
-  background: rgba(236, 72, 153, 0.35); /* Pink */
-  top: -50px;
-  right: -50px;
-}
-
-.shape-2 {
-  width: 350px;
-  height: 350px;
-  background: rgba(139, 92, 246, 0.35); /* Violet */
-  top: 40%;
-  left: -100px;
-  animation-delay: -3s;
-}
-
-.shape-3 {
-  width: 250px;
-  height: 250px;
-  background: rgba(56, 189, 248, 0.25); /* Sky Blue */
-  bottom: 50px;
-  right: 20%;
-  animation-delay: -5s;
-}
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(30px) scale(1.05); }
+  min-height: 100vh;
 }
 
 .top-bar {
@@ -380,15 +345,13 @@ onMounted(() => {
   height: 54px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 16px;
 }
 
-.back-btn {
+.icon-btn {
   width: 36px;
   height: 36px;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -402,7 +365,7 @@ onMounted(() => {
 }
 
 .content-wrap {
-  padding-bottom: 94px;
+  padding-bottom: 90px;
 }
 
 .hero-section {
@@ -410,9 +373,9 @@ onMounted(() => {
 }
 
 .hero-img-box {
-  position: relative;
   width: 100%;
-  height: 420px;
+  height: 460px; /* Large cover */
+  position: relative;
 }
 
 .hero-cover,
@@ -420,43 +383,27 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.05);
+  background: #111;
 }
 
 .hero-empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9f9f9f;
-}
-
-.hero-gradient {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 140px;
-  background: linear-gradient(to top, rgba(15, 12, 41, 1) 0%, rgba(15, 12, 41, 0) 100%);
-  pointer-events: none;
+  color: #333;
 }
 
 .base-card-wrapper {
-  margin-top: -60px;
+  margin-top: -30px;
   position: relative;
   z-index: 10;
 }
 
-.glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-}
-
 .base-card {
-  border-radius: 24px;
-  padding: 24px 20px;
+  background: #000000;
+  border-radius: 24px 24px 0 0;
+  padding: 24px 16px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
 }
 
 .name-row {
@@ -468,212 +415,229 @@ onMounted(() => {
 .name-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .name {
-  font-size: 26px;
-  line-height: 1.1;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   color: #fff;
-  letter-spacing: 0.5px;
 }
 
 .auth-badge {
-  background: linear-gradient(135deg, #fcd34d, #f59e0b);
-  padding: 2px 8px;
-  border-radius: 6px 10px 10px 2px;
-  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.4);
+  background: #ff4d6a; /* Reddish badge for "真颜" */
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
   
   .badge-text {
-    font-size: 11px;
-    color: #451a03;
-    font-weight: 800;
-    letter-spacing: 0.5px;
+    font-size: 10px;
+    color: #fff;
+    font-weight: 500;
   }
 }
 
 .like-btn {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.08);
+  background: #1a1a1a;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid #222;
   
-  &.is-liked {
-    background: rgba(236, 72, 153, 0.15);
-    box-shadow: 0 0 12px rgba(236, 72, 153, 0.4);
-    transform: scale(1.1);
-  }
-
   &:active {
-    transform: scale(0.9);
+    background: #0d0d0d;
   }
 }
 
-.id-row {
-  margin-top: 6px;
-  color: rgba(255, 255, 255, 0.4);
+.meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #888;
   font-size: 13px;
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+  }
 }
 
-.city-row {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-}
-
-.occupation-row {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
-}
-
-.tag-row,
-.single-tag-row {
-  margin-top: 16px;
+.tag-row {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
 .tag-pill {
-  height: 26px;
-  line-height: 26px;
-  padding: 0 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-
-  &.type-0 {
-    background: rgba(56, 189, 248, 0.15);
-    color: #38bdf8;
-  }
-  &.type-1 {
-    background: rgba(167, 139, 250, 0.15);
-    color: #a78bfa;
-  }
-  &.type-2 {
-    background: rgba(236, 72, 153, 0.15);
-    color: #f472b6;
-  }
-  &.type-signature {
-    background: linear-gradient(90deg, rgba(236, 72, 153, 0.1), rgba(167, 139, 250, 0.1));
-    border: 1px solid rgba(236, 72, 153, 0.2);
-    color: #fbcfe8;
-    font-size: 14px;
-    height: auto;
-    line-height: 1.5;
-    padding: 8px 14px;
-    border-radius: 12px;
-    font-style: italic;
-  }
+  height: 24px;
+  line-height: 24px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #1c1813;
+  color: #dfc293;
 }
 
 .section {
-  padding: 24px 16px 0;
+  margin-top: 32px;
 }
 
 .section-title {
-  font-size: 22px;
-  line-height: 1;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 600;
   margin-bottom: 16px;
   color: #fff;
+  display: flex;
+  align-items: center;
+  
+  .divider {
+    width: 3px;
+    height: 14px;
+    background: #dfc293;
+    margin-right: 6px;
+    border-radius: 2px;
+  }
+}
+
+.empty-hint {
+  font-size: 13px;
+  color: #666;
 }
 
 .album-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  padding-bottom: 16px;
+  gap: 8px;
+}
+
+.album-item-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+  cursor: pointer;
 }
 
 .album-item {
   width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 12px;
+  height: 100%;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.overlay-more {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .activity-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding-bottom: 20px;
+  gap: 24px;
 }
 
 .activity-item {
-  border-radius: 16px;
-  padding: 16px;
+  display: flex;
+  gap: 12px;
+}
+
+.activity-date {
+  width: 40px;
+  flex-shrink: 0;
+  
+  .date-day {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+}
+
+.activity-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .activity-content {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.6;
-}
-
-.activity-meta {
-  margin-top: 10px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+  color: #ccc;
+  line-height: 1.5;
+  margin-bottom: 8px;
 }
 
 .activity-image-grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 8px;
-}
-
-.activity-image {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 10px;
-  object-fit: cover;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.intro-text {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 15px;
-  line-height: 1.7;
-  padding-bottom: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
-  border-radius: 16px;
-  text-align: center;
+  
+  .activity-image {
+    width: 100px;
+    height: 100px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #111;
+  }
 }
 
 .bottom-action {
   position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: 20px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 40;
+  padding: 10px 16px 20px;
+  display: flex;
+  gap: 12px;
+  background: #000000;
+  border-top: 1px solid #1a1a1a;
 }
 
 .btn-chat {
-  width: 100%;
-  height: 54px;
-  border-radius: 27px;
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
   border: none;
-  background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%);
-  color: #fff;
-  font-size: 18px;
-  font-weight: 800;
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
-  transition: transform 0.2s, box-shadow 0.2s;
-  letter-spacing: 2px;
+  background: #dfc293;
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:active {
+    opacity: 0.8;
+  }
 }
 
-.btn-chat:active {
-  transform: scale(0.97);
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+.btn-wechat {
+  width: 100px;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  background: #222;
+  color: #dfc293;
+  font-size: 15px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:active {
+    background: #111;
+  }
 }
 
 .empty-wrap {
@@ -686,13 +650,12 @@ onMounted(() => {
 }
 
 .empty {
-  color: rgba(255, 255, 255, 0.4);
+  color: #666;
 }
 
 :deep(.back-home-btn) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #fff !important;
-  backdrop-filter: blur(4px);
+  background: #222 !important;
+  border: none !important;
+  color: #dfc293 !important;
 }
 </style>

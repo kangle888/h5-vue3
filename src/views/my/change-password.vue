@@ -39,7 +39,7 @@ const onSubmit = async () => {
   <div class="change-page">
     <div class="top-bar">
       <van-icon name="arrow-left" size="20" @click="router.back()" />
-      <span>修改密码</span>
+      <span class="title">修改密码</span>
       <span style="width: 20px"></span>
     </div>
 
@@ -58,18 +58,34 @@ const onSubmit = async () => {
 
 <style scoped lang="less">
 .change-page {
+  --van-cell-background: #111;
+  --van-border-color: #222;
+  --van-cell-text-color: #e5e5e5;
+  --van-field-label-color: #e5e5e5;
+  --van-cell-value-color: #fff;
+  --van-field-input-text-color: #fff;
+  --van-field-placeholder-text-color: #666;
+  --van-button-primary-background: #dfc293;
+  --van-button-primary-border-color: #dfc293;
+  --van-button-primary-color: #000;
+  
   min-height: 100vh;
-  background: #090a0d;
+  background: #000;
   color: #fff;
 }
 
 .top-bar {
-  height: 46px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
-  border-bottom: 1px solid #1f2024;
+  padding: 0 16px;
+  border-bottom: 1px solid #111;
+
+  .title {
+    font-size: 16px;
+    font-weight: 500;
+  }
 }
 
 .form-box {
@@ -77,6 +93,11 @@ const onSubmit = async () => {
 }
 
 .btn-wrap {
-  margin: 18px 14px 0;
+  margin: 24px 16px 0;
+  
+  :deep(.van-button) {
+    font-weight: 600;
+    border-radius: 12px;
+  }
 }
 </style>

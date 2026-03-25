@@ -25,6 +25,15 @@ router.beforeEach((to: toRouteType, _from, next) => {
 
   const token = localStorage.getItem("c_access_token") || localStorage.getItem("token");
   const isLoginPage = to.name === "Login";
+  const isPublicLandingPage = to.name === "LandingPage";
+
+  // 公开页：落地页不受 token 影响
+  if (isPublicLandingPage) {
+    useCachedViewStoreHook().addCachedView(to);
+    setPageTitle(to.meta.title);
+    next();
+    return;
+  }
 
   // 未登录：仅允许访问登录页
   if (!token && !isLoginPage) {

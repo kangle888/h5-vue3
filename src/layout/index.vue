@@ -11,7 +11,7 @@ const cachedViews = computed(() => {
 
 const route = useRoute();
 const router = useRouter();
-const hideNavRouteNames = ["Home", "Tools", "About", "Mine"];
+const hideNavRouteNames = ["Home", "Tools", "News", "My"];
 
 const showNavBar = computed(() => {
   const currentName = route.name as string | undefined;
@@ -29,7 +29,12 @@ const isDetailPage = computed(() => {
 
 <template>
   <div class="app-wrapper">
-    <nav-bar v-if="showNavBar" :title="navBarTitle" :leftArrow="isDetailPage" @click-left="router.back" />
+    <nav-bar
+      v-if="showNavBar"
+      :title="navBarTitle"
+      :leftArrow="isDetailPage"
+      @click-left="router.back"
+    />
     <router-view v-slot="{ Component }">
       <keep-alive :include="cachedViews">
         <component :is="Component" />
@@ -45,7 +50,7 @@ const isDetailPage = computed(() => {
 .app-wrapper {
   .clearfix();
   position: relative;
-  height: 100%;
+  height: calc(100vh - 50px);
   width: 100%;
 }
 </style>

@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { showFailToast, showSuccessToast } from "vant";
 import { useRouter } from "vue-router";
-import { getAttachmentDownloadUrl, getCurrentCUserApi, type ICUserProfile } from "@/api/c-user";
+import {
+  getAttachmentDownloadUrl,
+  getCurrentCUserApi,
+  type ICUserProfile
+} from "@/api/c-user";
 
 defineOptions({ name: "My" });
 
@@ -9,6 +14,35 @@ const router = useRouter();
 const profile = ref<ICUserProfile>({});
 
 const avatarUrl = () => getAttachmentDownloadUrl(profile.value.avatar);
+
+const landingPath = "#/landingPage";
+const landingUrl = computed(
+  () => `${window.location.origin}${window.location.pathname}${landingPath}`
+);
+const qrUrl = computed(() => {
+  const data = encodeURIComponent(landingUrl.value);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}`;
+});
+const showSharePopup = ref(false);
+
+const shareLandingPage = async () => {
+  const shareData = {
+    title: "闪月落地页",
+    text: "扫码或点击链接进入闪月落地页",
+    url: landingUrl.value
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+      return;
+    }
+    await navigator.clipboard.writeText(landingUrl.value);
+    showSuccessToast("落地页链接已复制");
+  } catch {
+    showFailToast("分享失败，请稍后重试");
+  }
+};
 
 const loadProfile = async () => {
   try {
@@ -24,142 +58,139 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="my-page-wrapper relative min-h-screen w-full overflow-hidden">
-    <!-- Animated background elements -->
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-    <div class="bg-shape shape-3"></div>
-
-    <div class="relative z-10 box-border min-h-screen p-4 pb-20">
-      <div class="header-card glass-panel">
-        <div class="avatar-wrap">
-          <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
-          <div v-else class="avatar placeholder"></div>
-        </div>
-        <div class="info">
-          <div class="name-row">
-            <span class="name">{{ profile.nickname || "未设置昵称" }}</span>
-            <span class="id">ID: {{ profile.id || "-" }}</span>
-          </div>
-          <div class="meta">{{ profile.age || "-" }}岁 · {{ profile.constellation || "-" }} · {{ profile.occupation || "-" }}</div>
-          <div class="intro">{{ profile.introduction || "你还没有签名~" }}</div>
-        </div>
-        <button class="edit-btn" @click="router.push({ name: 'MyEdit' })">编辑资料</button>
-      </div>
-
-      <div class="stats-card glass-panel">
-        <div class="stat-item">
-          <div class="num text-gradient">0</div>
-          <div class="label">钱包</div>
-        </div>
-        <div class="divider"></div>
-        <div class="stat-item">
-          <div class="num text-gradient">1</div>
-          <div class="label">心动女生</div>
+  <div class="my-page-wrapper w-full">
+    <div class="header-card">
+      <div class="avatar-wrap">
+        <img
+          v-if="avatarUrl()"
+          :src="avatarUrl()"
+          class="avatar"
+          alt="avatar"
+        />
+        <div v-else class="avatar placeholder">
+          <van-icon name="user-circle-o" size="32" color="#666" />
         </div>
       </div>
-
-      <div class="entry-list glass-panel">
-        <div class="entry" @click="router.push({ name: 'MySettings' })">
-          <div class="entry-left">
-            <van-icon name="setting-o" class="entry-icon" />
-            <span>通用设置</span>
-          </div>
-          <van-icon name="arrow" class="entry-arrow" />
+      <div class="info">
+        <div class="name-row">
+          <span class="name">{{ profile.nickname || "未设置昵称" }}</span>
+          <span class="id">ID: {{ profile.id || "-" }}</span>
         </div>
-        <div class="entry" @click="router.push({ name: 'ChangePassword' })">
-          <div class="entry-left">
-            <van-icon name="lock" class="entry-icon" />
-            <span>修改密码</span>
-          </div>
-          <van-icon name="arrow" class="entry-arrow" />
+        <div class="meta">
+          {{ profile.age || "-" }}岁 · {{ profile.constellation || "-" }} ·
+          {{ profile.occupation || "-" }}
         </div>
+        <div class="intro">{{ profile.introduction || "你还没有签名~" }}</div>
       </div>
-      
-      <!-- Footer or Version -->
-      <div class="mt-8 text-center text-[11px] text-white/30 tracking-widest">
-        探索你的专属陪伴 v1.0.0
+      <button class="edit-btn" @click="router.push({ name: 'MyEdit' })">
+        编辑资料
+      </button>
+    </div>
+
+    <div class="stats-card">
+      <div class="stat-item">
+        <div class="num gold-text">0</div>
+        <div class="label">钱包</div>
+      </div>
+      <div class="divider"></div>
+      <div class="stat-item">
+        <div class="num gold-text">1</div>
+        <div class="label">心动女生</div>
       </div>
     </div>
+
+    <div class="entry-list">
+      <div class="entry" @click="router.push({ name: 'MySettings' })">
+        <div class="entry-left">
+          <van-icon name="setting-o" class="entry-icon" />
+          <span>通用设置</span>
+        </div>
+        <van-icon name="arrow" class="entry-arrow" />
+      </div>
+      <div class="entry" @click="router.push({ name: 'ChangePassword' })">
+        <div class="entry-left">
+          <van-icon name="lock" class="entry-icon" />
+          <span>修改密码</span>
+        </div>
+        <van-icon name="arrow" class="entry-arrow" />
+      </div>
+      <div class="entry" @click="showSharePopup = true">
+        <div class="entry-left">
+          <van-icon name="share-o" class="entry-icon" />
+          <span>App分享</span>
+        </div>
+        <van-icon name="arrow" class="entry-arrow" />
+      </div>
+    </div>
+
+    <div class="mt-12 text-center text-[11px] text-[#666] tracking-widest">
+      探索你的专属陪伴 v1.0.0
+    </div>
+
+    <van-popup
+      v-model:show="showSharePopup"
+      round
+      position="bottom"
+      class="dark-popup"
+    >
+      <div class="share-popup">
+        <div class="popup-header">
+          <span class="popup-title">App 分享</span>
+          <van-icon
+            name="cross"
+            class="close-icon"
+            @click="showSharePopup = false"
+          />
+        </div>
+
+        <div class="share-card">
+          <div class="qr-wrap">
+            <div class="qr-bg">
+              <van-image
+                class="qr-image"
+                fit="cover"
+                :src="qrUrl"
+                alt="landing-qrcode"
+              />
+            </div>
+          </div>
+          <div class="qr-tip">扫码可直接进入落地页（无需登录）</div>
+
+          <button class="share-btn" @click="shareLandingPage">
+            <van-icon name="share-o" size="16" />
+            <span>立即分享链接</span>
+          </button>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
 <style scoped lang="less">
 .my-page-wrapper {
-  background-color: #0f0c29;
-  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
+  background-color: #000000;
   color: #fff;
-}
-
-/* Base shape for energetic aesthetic */
-.bg-shape {
-  position: absolute;
-  filter: blur(80px);
-  border-radius: 50%;
-  z-index: 1;
-  opacity: 0.55;
-  animation: float 10s infinite ease-in-out alternate;
-  pointer-events: none;
-}
-
-.shape-1 {
-  width: 300px;
-  height: 300px;
-  background: rgba(236, 72, 153, 0.3); /* Pink */
-  top: -80px;
-  right: -50px;
-}
-
-.shape-2 {
-  width: 350px;
-  height: 350px;
-  background: rgba(139, 92, 246, 0.3); /* Violet */
-  top: 30%;
-  left: -100px;
-  animation-delay: -3s;
-}
-
-.shape-3 {
-  width: 250px;
-  height: 250px;
-  background: rgba(56, 189, 248, 0.2); /* Sky Blue */
-  bottom: 0px;
-  right: 10%;
-  animation-delay: -5s;
-}
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(30px) scale(1.05); }
-}
-
-/* Glassmorphism Panel Base */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
-  border-radius: 20px;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 16px 16px 24px;
 }
 
 /* Header Card */
 .header-card {
-  padding: 20px 16px;
+  padding: 24px 20px;
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr) auto;
-  gap: 14px;
+  gap: 16px;
   align-items: center;
   margin-top: 10px;
+  background: #111;
+  border-radius: 16px;
 }
 
 .avatar-wrap {
-  position: relative;
   width: 64px;
   height: 64px;
-  border-radius: 50%;
-  padding: 2px;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6, #38bdf8);
+  flex-shrink: 0;
 }
 
 .avatar {
@@ -167,12 +198,13 @@ onMounted(() => {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  background: #111;
-  border: 2px solid #1a1a1a;
+  background: #1a1a1a;
 }
 
 .placeholder {
-  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .info {
@@ -190,8 +222,8 @@ onMounted(() => {
 }
 
 .name {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 20px;
+  font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
@@ -201,17 +233,17 @@ onMounted(() => {
 }
 
 .id {
-  color: rgba(255,255,255,0.4);
+  color: #888;
   font-size: 11px;
   white-space: nowrap;
-  background: rgba(255,255,255,0.1);
+  background: #222;
   padding: 2px 6px;
   border-radius: 4px;
 }
 
 .meta {
   margin-top: 6px;
-  color: rgba(255,255,255,0.7);
+  color: #999;
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -220,7 +252,7 @@ onMounted(() => {
 
 .intro {
   margin-top: 6px;
-  color: rgba(255,255,255,0.4);
+  color: #666;
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -228,34 +260,34 @@ onMounted(() => {
 }
 
 .edit-btn {
-  border: 1px solid rgba(236, 72, 153, 0.4);
-  color: #fbcfe8;
-  background: rgba(236, 72, 153, 0.1);
+  border: 1px solid #dfc293;
+  color: #dfc293;
+  background: transparent;
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-  transition: all 0.3s;
-  
+  font-weight: 500;
+  transition: all 0.2s;
+
   &:active {
-    background: rgba(236, 72, 153, 0.2);
-    transform: scale(0.95);
+    background: rgba(223, 194, 147, 0.1);
   }
 }
 
 /* Stats Card */
 .stats-card {
   margin-top: 16px;
-  padding: 20px 0;
+  padding: 24px 0;
   display: flex;
   align-items: center;
+  background: #111;
+  border-radius: 16px;
 }
 
 .divider {
   width: 1px;
   height: 40px;
-  background: rgba(255,255,255,0.1);
+  background: #222;
 }
 
 .stat-item {
@@ -264,20 +296,17 @@ onMounted(() => {
 
   .num {
     font-size: 28px;
-    font-weight: 800;
+    font-weight: 700;
     line-height: 1.2;
   }
 
-  .text-gradient {
-    background: linear-gradient(135deg, #fcd34d, #f59e0b, #ec4899);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .gold-text {
+    color: #dfc293;
   }
 
   .label {
     margin-top: 6px;
-    color: rgba(255,255,255,0.6);
+    color: #999;
     font-size: 13px;
   }
 }
@@ -285,27 +314,23 @@ onMounted(() => {
 /* Entry List */
 .entry-list {
   margin-top: 16px;
-  padding: 4px 0;
-  overflow: hidden;
+  padding: 8px 0;
+  background: #111;
+  border-radius: 16px;
 }
 
 .entry {
-  height: 54px;
+  height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 20px;
   transition: background 0.2s;
   cursor: pointer;
-  
-  &:active {
-    background: rgba(255,255,255,0.08);
-  }
-}
 
-.entry:last-child {
-  border-bottom: none;
+  &:active {
+    background: #1a1a1a;
+  }
 }
 
 .entry-left {
@@ -313,20 +338,108 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #e5e5e5;
   font-weight: 500;
-  
+
   .entry-icon {
     font-size: 18px;
-    color: #a78bfa;
-    background: rgba(167, 139, 250, 0.15);
+    color: #dfc293;
+    background: rgba(223, 194, 147, 0.1);
     padding: 6px;
     border-radius: 8px;
   }
 }
 
 .entry-arrow {
-  color: rgba(255, 255, 255, 0.3);
+  color: #666;
   font-size: 16px;
+}
+
+:deep(.dark-popup) {
+  background: #111;
+  color: #fff;
+}
+
+.share-popup {
+  padding: 0 0 calc(50px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #222;
+
+  .popup-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .close-icon {
+    font-size: 20px;
+    color: #666;
+    padding: 4px;
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+}
+
+.share-card {
+  padding: 30px 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.qr-bg {
+  padding: 12px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.qr-image {
+  width: 180px;
+  height: 180px;
+  display: block;
+}
+
+.qr-tip {
+  margin-top: 20px;
+  font-size: 13px;
+  color: #999;
+}
+
+.share-btn {
+  margin-top: 32px;
+  width: 100%;
+  height: 48px;
+  border-radius: 24px;
+  background: #dfc293;
+  color: #000;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+
+  &:active {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
 }
 </style>

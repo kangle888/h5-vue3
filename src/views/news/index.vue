@@ -94,40 +94,36 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="news-page-wrapper relative min-h-screen w-full overflow-hidden">
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-    <div class="bg-shape shape-3"></div>
-
-    <div class="relative z-10 box-border min-h-screen pb-20">
-      <div class="top-bar glass-nav">
+  <div class="news-page-wrapper min-h-screen w-full">
+    <div class="box-border min-h-screen pb-20">
+      <div class="top-bar">
         <div class="tabs">
           <div class="tab" :class="{ 'active-tab': activeTab === 'chat' }" @click="activeTab = 'chat'">
-            消息
-            <div class="indicator"></div>
+            聊天
           </div>
           <div class="tab" :class="{ 'active-tab': activeTab === 'system' }" @click="activeTab = 'system'">
-            系统
-            <div class="indicator"></div>
+            系统消息
           </div>
         </div>
         <div class="icons">
-          <van-icon name="chat-o" size="22" />
-          <van-icon name="delete-o" size="22" />
+          <van-icon name="comment-o" size="20" />
+          <van-icon name="delete-o" size="20" />
         </div>
       </div>
 
       <div class="content-container">
-        <div class="notice-card glass-panel flex justify-between items-center mb-4">
-          <span class="text-xs text-white/70 flex items-center gap-1">
-            <van-icon name="bell" color="#fcd34d" />
-            收不到新消息？点击开启通知
-          </span>
-          <button class="open-notify-btn">立即开启</button>
+        <!-- Notify Banner -->
+        <div class="notice-card" v-if="activeTab === 'chat'">
+          <div class="notice-left">
+            <van-icon name="cross" class="close-icon" />
+            <span class="notice-text">收不到新消息？点击开启通知</span>
+          </div>
+          <button class="open-notify-btn">开启通知</button>
         </div>
 
+        <!-- Chat List -->
         <div v-if="activeTab === 'chat'" class="list-wrap">
-          <div v-for="room in roomList" :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`" class="chat-card glass-panel" @click="openChat(room)">
+          <div v-for="room in roomList" :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`" class="chat-card" @click="openChat(room)">
             <div class="avatar-wrap">
               <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
             </div>
@@ -146,14 +142,13 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-if="!loading && !roomList.length" class="empty-state">
-            <van-icon name="chat" size="48" class="mb-2 opacity-20" />
-            <p>暂无会话，去详情页点击“联系Ta”开始聊天</p>
+            <p>暂无消息</p>
           </div>
         </div>
 
+        <!-- System List -->
         <div v-else class="system-wrap">
           <div class="empty-state">
-            <van-icon name="bell" size="48" class="mb-2 opacity-20" />
             <p>暂无系统消息</p>
           </div>
         </div>
@@ -164,41 +159,16 @@ onBeforeUnmount(() => {
 
 <style scoped lang="less">
 .news-page-wrapper {
-  background-color: #0f0c29;
-  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
+  background-color: #000000;
   color: #fff;
 }
 
-.bg-shape {
-  position: absolute;
-  filter: blur(80px);
-  border-radius: 50%;
-  z-index: 1;
-  opacity: 0.55;
-  animation: float 10s infinite ease-in-out alternate;
-  pointer-events: none;
-}
-.shape-1 { width: 300px; height: 300px; background: rgba(236, 72, 153, 0.35); top: -50px; right: -50px; }
-.shape-2 { width: 350px; height: 350px; background: rgba(139, 92, 246, 0.35); top: 40%; left: -100px; animation-delay: -3s; }
-.shape-3 { width: 250px; height: 250px; background: rgba(56, 189, 248, 0.25); bottom: 50px; right: 20%; animation-delay: -5s; }
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(30px) scale(1.05); }
-}
-
-.glass-nav {
+.top-bar {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(15, 12, 41, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.top-bar {
   height: 54px;
+  background: #000000;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -206,108 +176,90 @@ onBeforeUnmount(() => {
 
   .tabs {
     display: flex;
-    gap: 20px;
-    height: 100%;
+    gap: 16px;
+    align-items: baseline;
   }
 
   .tab {
-    position: relative;
-    display: flex;
-    align-items: center;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 18px;
-    font-weight: 600;
-    transition: all 0.3s;
+    color: #666;
+    font-size: 16px;
+    font-weight: normal;
+    transition: all 0.2s;
     cursor: pointer;
 
     &.active-tab {
       color: #fff;
       font-size: 22px;
-      font-weight: 800;
-
-      .indicator {
-        opacity: 1;
-        transform: scaleX(1);
-      }
-    }
-
-    .indicator {
-      position: absolute;
-      bottom: 8px;
-      left: 10%;
-      width: 80%;
-      height: 4px;
-      border-radius: 2px;
-      background: linear-gradient(90deg, #ec4899, #8b5cf6);
-      opacity: 0;
-      transform: scaleX(0);
-      transition: all 0.3s;
-      box-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
+      font-weight: 600;
     }
   }
 
   .icons {
     display: flex;
     gap: 16px;
-    color: rgba(255, 255, 255, 0.8);
+    color: #999;
   }
 }
 
 .content-container {
-  padding: 16px;
-}
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-  border-radius: 16px;
+  padding: 0;
 }
 
 .notice-card {
-  padding: 12px 14px;
-  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1a1a1a;
+  padding: 12px 16px;
+}
+
+.notice-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  .close-icon {
+    color: #666;
+    font-size: 14px;
+  }
+  
+  .notice-text {
+    color: #888;
+    font-size: 13px;
+  }
 }
 
 .open-notify-btn {
-  background: linear-gradient(90deg, #fcd34d, #f59e0b);
   border: none;
-  color: #451a03;
+  background: rgba(223, 194, 147, 0.15);
+  color: #dfc293;
   font-size: 12px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  padding: 6px 12px;
+  border-radius: 14px;
 }
 
 .list-wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 
 .chat-card {
-  padding: 14px;
+  padding: 16px;
   display: flex;
   align-items: center;
   gap: 14px;
-  transition: background 0.2s;
   cursor: pointer;
+  background: #000000;
+  transition: background 0.2s;
 
   &:active {
-    background: rgba(255, 255, 255, 0.08);
+    background: #0a0a0a;
   }
 }
 
 .avatar-wrap {
-  position: relative;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  padding: 2px;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
 }
 
@@ -317,7 +269,6 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   object-fit: cover;
   background: #111;
-  border: 2px solid #1a1a1a;
 }
 
 .main {
@@ -336,7 +287,7 @@ onBeforeUnmount(() => {
 
   .name {
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 500;
     color: #fff;
     white-space: nowrap;
     overflow: hidden;
@@ -345,7 +296,7 @@ onBeforeUnmount(() => {
   }
 
   .time {
-    color: rgba(255, 255, 255, 0.4);
+    color: #666;
     font-size: 12px;
   }
 }
@@ -356,8 +307,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
 
   .msg {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    color: #999;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -369,23 +320,21 @@ onBeforeUnmount(() => {
     height: 18px;
     line-height: 18px;
     border-radius: 9px;
-    background: linear-gradient(135deg, #f43f5e, #e11d48);
+    background: #ff4d4f;
     text-align: center;
     color: #fff;
     font-size: 11px;
-    font-weight: bold;
+    font-weight: 500;
     padding: 0 5px;
-    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.4);
   }
 }
 
 .empty-state {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  color: rgba(255, 255, 255, 0.4);
+  color: #666;
   font-size: 14px;
 }
 </style>

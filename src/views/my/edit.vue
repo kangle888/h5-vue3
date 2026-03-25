@@ -70,13 +70,8 @@ const onSave = async () => {
 </script>
 
 <template>
-  <div class="edit-page-wrapper relative min-h-screen w-full overflow-hidden">
-    <!-- Animated background elements -->
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-    <div class="bg-shape shape-3"></div>
-
-    <div class="relative z-10 box-border min-h-screen pb-10">
+  <div class="edit-page-wrapper min-h-screen w-full">
+    <div class="box-border min-h-screen pb-10">
       <div class="top-bar">
         <div class="back-btn" @click="router.back()">
           <van-icon name="arrow-left" size="20" color="#fff" />
@@ -89,13 +84,13 @@ const onSave = async () => {
 
       <div class="form-container">
         <!-- Avatar Section -->
-        <div class="avatar-section glass-panel">
+        <div class="avatar-section panel">
           <div class="label">头像</div>
           <label class="avatar-uploader">
             <div class="avatar-wrap">
               <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
               <div v-else class="avatar placeholder">
-                 <van-icon name="photograph" size="24" color="#fff" class="opacity-50" />
+                 <van-icon name="photograph" size="24" color="#666" />
               </div>
             </div>
             <input type="file" accept="image/*" class="hidden-file" @change="onChooseAvatar" />
@@ -103,7 +98,7 @@ const onSave = async () => {
         </div>
 
         <!-- Info Section -->
-        <div class="info-section glass-panel">
+        <div class="info-section panel">
           <div class="cell">
             <span class="label">昵称</span>
             <input v-model="form.nickname" placeholder="未设置" />
@@ -131,7 +126,7 @@ const onSave = async () => {
         </div>
 
         <!-- Intro Section -->
-        <div class="intro-section glass-panel">
+        <div class="intro-section panel">
           <div class="label mb-2">个人介绍</div>
           <div class="textarea-wrap">
             <textarea v-model="form.introduction" maxlength="30" placeholder="简单介绍一下自己吧..." />
@@ -145,51 +140,8 @@ const onSave = async () => {
 
 <style scoped lang="less">
 .edit-page-wrapper {
-  background-color: #0f0c29;
-  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
+  background-color: #000;
   color: #fff;
-}
-
-/* Background floating shapes */
-.bg-shape {
-  position: absolute;
-  filter: blur(80px);
-  border-radius: 50%;
-  z-index: 1;
-  opacity: 0.55;
-  animation: float 10s infinite ease-in-out alternate;
-  pointer-events: none;
-}
-
-.shape-1 {
-  width: 300px;
-  height: 300px;
-  background: rgba(236, 72, 153, 0.35); /* Pink */
-  top: -50px;
-  right: -50px;
-}
-
-.shape-2 {
-  width: 350px;
-  height: 350px;
-  background: rgba(139, 92, 246, 0.35); /* Violet */
-  top: 40%;
-  left: -100px;
-  animation-delay: -3s;
-}
-
-.shape-3 {
-  width: 250px;
-  height: 250px;
-  background: rgba(56, 189, 248, 0.25); /* Sky Blue */
-  bottom: -50px;
-  right: 20%;
-  animation-delay: -5s;
-}
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(30px) scale(1.05); }
 }
 
 .top-bar {
@@ -201,16 +153,12 @@ const onSave = async () => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background: rgba(15, 12, 41, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  background: #000;
+  border-bottom: 1px solid #111;
 
   .title {
     font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 1px;
+    font-weight: 500;
   }
 }
 
@@ -223,19 +171,18 @@ const onSave = async () => {
 }
 
 .save-btn {
-  background: linear-gradient(90deg, #ec4899, #8b5cf6);
+  background: #dfc293;
   border: none;
-  color: #fff;
+  color: #000;
   font-size: 13px;
   font-weight: 600;
   padding: 6px 14px;
   border-radius: 14px;
-  box-shadow: 0 2px 10px rgba(236, 72, 153, 0.4);
   transition: all 0.2s;
   
   &:active {
     transform: scale(0.95);
-    background: linear-gradient(90deg, #db2777, #7c3aed);
+    opacity: 0.8;
   }
 }
 
@@ -246,14 +193,11 @@ const onSave = async () => {
   gap: 16px;
 }
 
-/* Glassmorphism Panel Base */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-  border-radius: 20px;
+/* Panel Base */
+.panel {
+  background: #111;
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 /* Avatar Section */
@@ -265,7 +209,7 @@ const onSave = async () => {
 
   .label {
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 500;
   }
 }
 
@@ -277,8 +221,6 @@ const onSave = async () => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  padding: 2px;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6, #38bdf8);
 }
 
 .avatar, .placeholder {
@@ -286,8 +228,8 @@ const onSave = async () => {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  background: #111;
-  border: 2px solid rgba(255,255,255,0.1);
+  background: #1a1a1a;
+  border: 1px solid #222;
 }
 
 .placeholder {
@@ -310,7 +252,7 @@ const onSave = async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid #222;
 
   &.no-border {
     border-bottom: none;
@@ -319,7 +261,7 @@ const onSave = async () => {
   .label {
     font-size: 15px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: #e5e5e5;
   }
 
   input {
@@ -332,7 +274,7 @@ const onSave = async () => {
     font-size: 15px;
 
     &::placeholder {
-      color: rgba(255, 255, 255, 0.3);
+      color: #666;
     }
   }
 }
@@ -344,21 +286,19 @@ const onSave = async () => {
   .label {
     font-size: 15px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.9);
+    color: #e5e5e5;
   }
 }
 
 .textarea-wrap {
   margin-top: 10px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #1a1a1a;
   border-radius: 12px;
   padding: 12px;
   transition: all 0.3s;
 
   &:focus-within {
-    border: 1px solid rgba(236, 72, 153, 0.4);
-    box-shadow: 0 0 10px rgba(236, 72, 153, 0.1);
+    background: #222;
   }
 
   textarea {
@@ -373,13 +313,13 @@ const onSave = async () => {
     outline: none;
 
     &::placeholder {
-      color: rgba(255, 255, 255, 0.3);
+      color: #666;
     }
   }
 
   .counter {
     text-align: right;
-    color: rgba(255, 255, 255, 0.4);
+    color: #666;
     font-size: 12px;
     margin-top: 4px;
   }

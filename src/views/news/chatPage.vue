@@ -241,15 +241,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="chat-page-wrapper relative min-h-screen w-full overflow-hidden">
-    <!-- Animated background elements -->
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-    <div class="bg-shape shape-3"></div>
-
-    <div class="chat-container relative z-10 box-border flex flex-col h-screen">
-      <div class="chat-header glass-nav">
-        <div class="back-btn" @click="router.back()">
+  <div class="chat-page-wrapper min-h-screen w-full">
+    <div class="chat-container box-border flex flex-col h-screen">
+      <div class="chat-header">
+        <div class="icon-btn-header" @click="router.back()">
           <van-icon name="arrow-left" size="20" color="#fff" />
         </div>
         <span class="title">{{ chatTitle }}</span>
@@ -257,7 +252,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-if="loading" class="loading-wrap flex-1 flex items-center justify-center">
-        <van-loading size="24" color="#fbcfe8" />
+        <van-loading size="24" color="#ccc" />
       </div>
 
       <div v-else ref="listRef" class="chat-list flex-1 overflow-auto">
@@ -290,15 +285,15 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="chat-input-wrap glass-nav-bottom">
+      <div class="chat-input-wrap">
         <input
           v-model="messageText"
           class="chat-input"
           placeholder="给Ta发消息..."
           @keyup.enter="sendMessage"
         />
-        <button class="icon-btn image-btn" :disabled="sendingImage" @click="triggerChooseImage">
-          <van-icon name="photograph" size="20" />
+        <button class="action-btn" :disabled="sendingImage" @click="triggerChooseImage">
+          <van-icon name="photograph" size="24" />
         </button>
         <button class="send-btn" @click="sendMessage">发送</button>
         <input
@@ -315,36 +310,8 @@ onBeforeUnmount(() => {
 
 <style scoped lang="less">
 .chat-page-wrapper {
-  background-color: #0f0c29;
-  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
+  background-color: #000000;
   color: #fff;
-}
-
-/* Background floating shapes */
-.bg-shape {
-  position: absolute;
-  filter: blur(80px);
-  border-radius: 50%;
-  z-index: 1;
-  opacity: 0.55;
-  animation: float 10s infinite ease-in-out alternate;
-  pointer-events: none;
-}
-.shape-1 { width: 300px; height: 300px; background: rgba(236, 72, 153, 0.25); top: -50px; right: -50px; }
-.shape-2 { width: 350px; height: 350px; background: rgba(139, 92, 246, 0.25); top: 30%; left: -100px; animation-delay: -3s; }
-.shape-3 { width: 250px; height: 250px; background: rgba(56, 189, 248, 0.15); bottom: 50px; right: 20%; animation-delay: -5s; }
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(30px) scale(1.05); }
-}
-
-.glass-nav {
-  background: rgba(15, 12, 41, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .chat-header {
@@ -353,52 +320,56 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
+  background: #000000;
+  border-bottom: 1px solid #111;
 
   .title {
     font-size: 16px;
-    font-weight: 700;
-    letter-spacing: 1px;
+    font-weight: 500;
+    color: #fff;
   }
 }
 
-.back-btn, .right-placeholder {
-  width: 32px;
-  height: 32px;
+.icon-btn-header {
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+}
+
+.right-placeholder {
+  width: 36px;
+  height: 36px;
 }
 
 .chat-list {
-  padding: 16px;
-  padding-bottom: 20px;
+  padding: 20px 16px;
   display: flex;
   flex-direction: column;
 }
 
 .chat-row {
   display: flex;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   width: 100%;
 
   .msg-content {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    max-width: 80%;
+    max-width: 75%;
   }
 
   /* Remote User Bubble styling */
   .bubble {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px 20px 20px 4px;
-    padding: 10px 14px;
+    background: #1a1a1a;
+    color: #e5e5e5;
+    border-radius: 16px 16px 16px 4px;
+    padding: 12px 16px;
     font-size: 15px;
     line-height: 1.5;
     word-break: break-word;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
 
   &.mine {
@@ -409,18 +380,16 @@ onBeforeUnmount(() => {
     }
 
     .bubble {
-      background: linear-gradient(135deg, #ec4899, #8b5cf6);
-      color: #fff;
-      border: 1px solid rgba(236, 72, 153, 0.3);
-      border-radius: 20px 20px 4px 20px;
-      box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+      background: #dfc293;
+      color: #000000;
+      border-radius: 16px 16px 4px 16px;
+      font-weight: 500;
     }
   }
 }
 
 .loading-bubble {
   opacity: 0.6;
-  font-style: italic;
   font-size: 13px !important;
 }
 
@@ -428,9 +397,8 @@ onBeforeUnmount(() => {
   max-width: 200px;
   max-height: 240px;
   object-fit: cover;
-  border-radius: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid #111;
 }
 
 .meta-row {
@@ -443,70 +411,62 @@ onBeforeUnmount(() => {
 
 .read-flag {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: #666;
 
   &.read {
-    color: #38bdf8; /* Sky blue when read */
+    color: #dfc293;
   }
 }
 
 .time {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.glass-nav-bottom {
-  background: rgba(15, 12, 41, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #666;
 }
 
 .chat-input-wrap {
-  min-height: 64px;
+  min-height: 56px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  gap: 12px;
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: #000000;
+  border-top: 1px solid #111;
 }
 
 .chat-input {
   flex: 1;
   height: 40px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.3);
+  border: none;
+  background: #1a1a1a;
   color: #fff;
   padding: 0 16px;
   font-size: 14px;
   outline: none;
-  transition: all 0.3s;
   
   &:focus {
-    border-color: rgba(236, 72, 153, 0.5);
-    background: rgba(255, 255, 255, 0.05);
+    background: #222;
   }
 
   &::placeholder {
-    color: rgba(255, 255, 255, 0.3);
+    color: #666;
   }
 }
 
-.icon-btn {
+.action-btn {
   width: 40px;
   height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-  transition: background 0.2s;
+  background: transparent;
+  border: none;
+  color: #999;
   
   &:active {
-    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
   }
 }
 
@@ -515,15 +475,13 @@ onBeforeUnmount(() => {
   padding: 0 16px;
   border-radius: 20px;
   border: none;
-  background: linear-gradient(90deg, #ec4899, #8b5cf6);
-  color: #fff;
+  background: #dfc293;
+  color: #000;
   font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
-  transition: transform 0.2s;
+  font-weight: 600;
   
   &:active {
-    transform: scale(0.95);
+    opacity: 0.8;
   }
 }
 

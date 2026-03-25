@@ -92,11 +92,11 @@ const routes: Array<RouteRecordRaw> = [
   },
   // 独立页面：不带 Tabbar，有自己的顶部导航栏
   {
-    path: "/demo-index",
-    name: "DemoIndex",
-    component: () => import("@/views/demo-index/index.vue"),
+    path: "/landingPage",
+    name: "LandingPage",
+    component: () => import("@/views/landingPage/index.vue"),
     meta: {
-      title: "导航示例"
+      title: "落地页"
     }
   },
   {

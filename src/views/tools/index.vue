@@ -114,14 +114,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="dynamic-page-wrapper relative min-h-screen w-full overflow-hidden">
-    <!-- Animated background elements -->
-    <div class="bg-shape shape-1"></div>
-    <div class="bg-shape shape-2"></div>
-    <div class="bg-shape shape-3"></div>
-
-    <div class="relative z-10 box-border min-h-screen pb-20">
-      <div class="top-tabs glass-nav">
+  <div class="dynamic-page-wrapper min-h-screen w-full">
+    <div class="box-border min-h-screen pb-20">
+      <div class="top-tabs">
         <div class="tabs-container">
           <div
             v-for="tab in tabs"
@@ -131,22 +126,22 @@ onMounted(() => {
             @click="activeTab = tab.key"
           >
             {{ tab.label }}
-            <div class="indicator"></div>
           </div>
         </div>
       </div>
 
       <div v-if="loading" class="loading-wrap">
-        <van-loading size="24" color="#fbcfe8" />
+        <van-loading size="24" color="#ccc" />
       </div>
 
       <div v-else class="feed-wrap">
-        <div v-for="item in currentList" :key="item.id" class="feed-card glass-panel">
+        <div v-for="item in currentList" :key="item.id" class="feed-card">
           <div class="author-row">
-            <div class="avatar-wrap">
-              <img v-if="getPlayerAvatar(item)" :src="getPlayerAvatar(item)" class="avatar" alt="avatar" />
-              <div v-else class="avatar placeholder"></div>
+            <img v-if="getPlayerAvatar(item)" :src="getPlayerAvatar(item)" class="avatar" alt="avatar" />
+            <div v-else class="avatar placeholder">
+              <van-icon name="user-circle-o" size="24" color="#333" />
             </div>
+            
             <div class="author-info">
               <div class="name">{{ item.player?.name || "神秘玩家" }}</div>
               <div class="sub">{{ getPlayerBrief(item) }}</div>
@@ -160,7 +155,7 @@ onMounted(() => {
 
           <img v-if="item.imageUrl" :src="item.imageUrl" class="cover" alt="cover" />
           <div v-else class="cover-empty">
-             <van-icon name="photo-o" size="32" class="opacity-20" />
+             <van-icon name="photo-o" size="32" color="#333" />
           </div>
 
           <div class="city">
@@ -195,47 +190,21 @@ onMounted(() => {
 
 <style scoped lang="less">
 .dynamic-page-wrapper {
-  background-color: #0f0c29;
-  background: linear-gradient(to bottom right, #0f0c29, #302b63, #24243e);
+  background-color: #000000;
   color: #fff;
 }
 
-/* Background floating shapes */
-.bg-shape {
-  position: absolute;
-  filter: blur(80px);
-  border-radius: 50%;
-  z-index: 1;
-  opacity: 0.55;
-  animation: float 10s infinite ease-in-out alternate;
-  pointer-events: none;
-}
-.shape-1 { width: 300px; height: 300px; background: rgba(236, 72, 153, 0.35); top: -50px; right: -50px; }
-.shape-2 { width: 350px; height: 350px; background: rgba(139, 92, 246, 0.35); top: 40%; left: -100px; animation-delay: -3s; }
-.shape-3 { width: 250px; height: 250px; background: rgba(56, 189, 248, 0.25); bottom: 50px; right: 20%; animation-delay: -5s; }
-
-@keyframes float {
-  0% { transform: translateY(0) scale(1); }
-  100% { transform: translateY(30px) scale(1.05); }
-}
-
-.glass-nav {
+.top-tabs {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(15, 12, 41, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.top-tabs {
   height: 54px;
+  background: #000000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 16px;
+  border-bottom: 1px solid #111;
 
   .tabs-container {
     display: flex;
@@ -248,35 +217,15 @@ onMounted(() => {
   position: relative;
   display: flex;
   align-items: center;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 18px;
-  font-weight: 600;
-  transition: all 0.3s;
+  color: #666;
+  font-size: 16px;
+  transition: all 0.2s;
   cursor: pointer;
 
   &.active {
     color: #fff;
     font-size: 20px;
-    font-weight: 800;
-
-    .indicator {
-      opacity: 1;
-      transform: scaleX(1);
-    }
-  }
-
-  .indicator {
-    position: absolute;
-    bottom: 8px;
-    left: 10%;
-    width: 80%;
-    height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(90deg, #ec4899, #8b5cf6);
-    opacity: 0;
-    transform: scaleX(0);
-    transition: all 0.3s;
-    box-shadow: 0 0 8px rgba(236, 72, 153, 0.6);
+    font-weight: 600;
   }
 }
 
@@ -288,23 +237,19 @@ onMounted(() => {
 }
 
 .feed-wrap {
-  padding: 16px 12px 80px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-  border-radius: 20px;
+  padding-bottom: 80px;
 }
 
 .feed-card {
-  padding: 16px 16px 20px;
+  padding: 16px;
+  background: #000000;
+  border-bottom: 8px solid #0a0a0a;
+  
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .author-row {
@@ -312,23 +257,13 @@ onMounted(() => {
   align-items: center;
 }
 
-.avatar-wrap {
-  position: relative;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  padding: 2px;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6, #38bdf8);
-  flex-shrink: 0;
-}
-
-.avatar, .placeholder {
-  width: 100%;
-  height: 100%;
+.avatar {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
   background: #111;
-  border: 2px solid #1a1a1a;
+  flex-shrink: 0;
 }
 
 .placeholder {
@@ -345,7 +280,7 @@ onMounted(() => {
 
 .name {
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 600;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -354,12 +289,12 @@ onMounted(() => {
 
 .sub {
   margin-top: 4px;
-  color: rgba(255,255,255,0.5);
+  color: #999;
   font-size: 12px;
 }
 
 .more {
-  color: rgba(255,255,255,0.4);
+  color: #666;
   padding: 4px;
 }
 
@@ -367,7 +302,7 @@ onMounted(() => {
   margin-top: 14px;
   font-size: 15px;
   line-height: 1.6;
-  color: rgba(255,255,255,0.9);
+  color: #e5e5e5;
   word-break: break-word;
 }
 
@@ -375,9 +310,8 @@ onMounted(() => {
 .cover-empty {
   margin-top: 14px;
   width: 100%;
-  border-radius: 12px;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  background: #0a0a0a;
 }
 
 .cover {
@@ -399,11 +333,11 @@ onMounted(() => {
 .city-tag {
   display: inline-flex;
   align-items: center;
-  background: rgba(56, 189, 248, 0.15);
-  color: #38bdf8;
-  font-size: 12px;
+  background: #1c1813;
+  color: #dfc293;
+  font-size: 11px;
   padding: 4px 10px;
-  border-radius: 12px;
+  border-radius: 4px;
   font-weight: 500;
 }
 
@@ -412,12 +346,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  padding-top: 14px;
 }
 
 .time {
-  color: rgba(255,255,255,0.3);
+  color: #666;
   font-size: 12px;
 }
 
@@ -430,13 +362,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: rgba(255,255,255,0.5);
+  color: #999;
   font-size: 13px;
   font-weight: 500;
   transition: all 0.2s;
   
   &:active {
-    color: #fbcfe8;
+    color: #dfc293;
     transform: scale(0.95);
   }
 }
@@ -453,9 +385,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+  background: #dfc293;
+  color: #000;
+  box-shadow: 0 4px 16px rgba(223, 194, 147, 0.3);
   transition: transform 0.2s;
   z-index: 50;
 
