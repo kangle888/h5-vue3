@@ -16,6 +16,16 @@ const loading = ref(false);
 const pollTimer = ref<number | null>(null);
 const roomList = ref<IChatRoomItem[]>([]);
 
+const BASE_POLL_INTERVAL = 8000;
+const MAX_POLL_INTERVAL = 60000;
+const FAILURE_BACKOFF_FACTOR = 2;
+const MIN_UNREAD_REFRESH_INTERVAL = 30000;
+
+let destroyed = false;
+let polling = false;
+let failCount = 0;
+let lastUnreadFetchAt = 0;
+
 const roomTitle = (room: IChatRoomItem) => {
   const userName = room.targetUserName || room.targetUserId || "用户";
   if (room.scene === "player") {
@@ -41,8 +51,50 @@ const avatarUrl = (_room: IChatRoomItem) => {
   return fallbackAvatar;
 };
 
+const mergeUnreadCount = async (rows: IChatRoomItem[]) => {
+  const now = Date.now();
+  const shouldRefreshUnread = now - lastUnreadFetchAt >= MIN_UNREAD_REFRESH_INTERVAL;
+  if (!shouldRefreshUnread) {
+    return rows.map(room => {
+      const oldRoom = roomList.value.find(
+        item => item.targetUserId === room.targetUserId && (item.sessionKey || "service_default") === (room.sessionKey || "service_default")
+      );
+      return {
+        ...room,
+        unreadCount: oldRoom?.unreadCount || 0
+      } as IChatRoomItem;
+    });
+  }
+
+  const withUnread = await Promise.all(
+    rows.map(async room => {
+      try {
+        const unread = await countUnreadApi(room.targetUserId, room.sessionKey || "service_default");
+        return {
+          ...room,
+          unreadCount: unread || 0
+        } as IChatRoomItem;
+      } catch {
+        const oldRoom = roomList.value.find(
+          item => item.targetUserId === room.targetUserId && (item.sessionKey || "service_default") === (room.sessionKey || "service_default")
+        );
+        return {
+          ...room,
+          unreadCount: oldRoom?.unreadCount || 0
+        } as IChatRoomItem;
+      }
+    })
+  );
+
+  lastUnreadFetchAt = now;
+  return withUnread;
+};
+
 const loadData = async () => {
+  if (polling) return false;
+  polling = true;
   loading.value = true;
+
   try {
     const res = await pageChatRoomApi({
       pageNum: 1,
@@ -51,22 +103,32 @@ const loadData = async () => {
     });
 
     const rows = res?.records || [];
-    const withUnread = await Promise.all(
-      rows.map(async room => {
-        const unread = await countUnreadApi(room.targetUserId, room.sessionKey || "service_default");
-        return {
-          ...room,
-          unreadCount: unread || 0
-        } as IChatRoomItem;
-      })
-    );
-
-    roomList.value = withUnread;
+    roomList.value = await mergeUnreadCount(rows);
+    failCount = 0;
+    return true;
   } catch {
-    showFailToast("加载消息失败");
+    failCount += 1;
+    if (failCount <= 1) {
+      showFailToast("加载消息失败");
+    }
+    return false;
   } finally {
     loading.value = false;
+    polling = false;
   }
+};
+
+const scheduleNextPoll = () => {
+  if (destroyed) return;
+  const delay = Math.min(
+    BASE_POLL_INTERVAL * Math.pow(FAILURE_BACKOFF_FACTOR, failCount),
+    MAX_POLL_INTERVAL
+  );
+
+  pollTimer.value = window.setTimeout(async () => {
+    await loadData();
+    scheduleNextPoll();
+  }, delay);
 };
 
 const openChat = (room: IChatRoomItem) => {
@@ -83,19 +145,18 @@ const openChat = (room: IChatRoomItem) => {
 
 onMounted(async () => {
   await loadData();
-  pollTimer.value = window.setInterval(async () => {
-    await loadData();
-  }, 4000);
+  scheduleNextPoll();
 });
 
 onBeforeUnmount(() => {
-  if (pollTimer.value) clearInterval(pollTimer.value);
+  destroyed = true;
+  if (pollTimer.value) clearTimeout(pollTimer.value);
 });
 </script>
 
 <template>
-  <div class="news-page-wrapper min-h-screen w-full">
-    <div class="box-border min-h-screen pb-20">
+  <div class="news-page-wrapper  w-full">
+    <div class="box-border  pb-20">
       <div class="top-bar">
         <div class="tabs">
           <div class="tab" :class="{ 'active-tab': activeTab === 'chat' }" @click="activeTab = 'chat'">
@@ -161,6 +222,8 @@ onBeforeUnmount(() => {
 .news-page-wrapper {
   background-color: #000000;
   color: #fff;
+  box-sizing: border-box;
+  height: 100%;
 }
 
 .top-bar {

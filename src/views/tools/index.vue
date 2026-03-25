@@ -114,8 +114,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="dynamic-page-wrapper min-h-screen w-full">
-    <div class="box-border min-h-screen pb-20">
+  <div class="dynamic-page-wrapper">
+    <div class="box-border">
       <div class="top-tabs">
         <div class="tabs-container">
           <div
@@ -192,6 +192,8 @@ onMounted(() => {
 .dynamic-page-wrapper {
   background-color: #000000;
   color: #fff;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .top-tabs {
@@ -239,7 +241,6 @@ onMounted(() => {
 .feed-wrap {
   display: flex;
   flex-direction: column;
-  padding-bottom: 80px;
 }
 
 .feed-card {
@@ -309,13 +310,13 @@ onMounted(() => {
 .cover,
 .cover-empty {
   margin-top: 14px;
-  width: 100%;
+  width: 50%;
   border-radius: 8px;
   background: #0a0a0a;
 }
 
 .cover {
-  max-height: 400px;
+  max-height: 150px;
   object-fit: cover;
 }
 

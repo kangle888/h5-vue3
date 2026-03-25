@@ -191,8 +191,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home-wrapper min-h-screen w-full">
-    <div class="box-border min-h-screen pb-10">
+  <div class="home-wrapper  w-full">
+    <div class="box-border  pb-10">
       <div class="sticky-header">
         <div class="top-tabs">
           <div
@@ -276,6 +276,7 @@ onMounted(() => {
 .home-wrapper {
   background-color: #000000;
   color: #fff;
+  height: 100%;
 }
 
 .sticky-header {
@@ -331,8 +332,8 @@ onMounted(() => {
 
 .player-card {
   display: flex;
-  gap: 14px;
-  padding: 16px;
+  gap: 1px;
+  padding: 8px;
   border-bottom: 1px solid #1a1a1a;
   background: #000000;
   
@@ -342,14 +343,15 @@ onMounted(() => {
 }
 
 .cover-wrap {
-  width: 86px;
+  width: 120px;
+  height: 100%;
   position: relative;
   flex-shrink: 0;
 
   .cover,
   .cover-empty {
-    width: 86px;
-    height: 86px;
+    width: 120px;
+    height: 120px;
     border-radius: 12px;
     object-fit: cover;
     background: #111;
@@ -435,7 +437,7 @@ onMounted(() => {
 }
 
 .city-row {
-  margin-top: 10px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
   color: #666;
@@ -443,7 +445,7 @@ onMounted(() => {
 }
 
 .album-row {
-  margin-top: 10px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
   gap: 6px;

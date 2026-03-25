@@ -7,6 +7,12 @@ export interface ISysBannerItem {
   imageUrl?: string;
   link?: string;
   sort?: number;
+  status?: string;
+  banner1?: string;
+  banner2?: string;
+  banner3?: string;
+  banner4?: string;
+  banner5?: string;
 }
 
 export const getSysBannerInfoApi = () => {

@@ -22,7 +22,9 @@ const clearImageCache = () => {
 
 const onLogout = async () => {
   await showConfirmDialog({ title: "提示", message: "确定退出登录吗？" });
-  await logoutApi({ deviceId: localStorage.getItem("c_device_id") || "default_device" });
+  await logoutApi({
+    deviceId: localStorage.getItem("c_device_id") || "default_device"
+  });
   localStorage.removeItem("c_access_token");
   localStorage.removeItem("c_refresh_token");
   localStorage.removeItem("c_user_info");
@@ -32,24 +34,31 @@ const onLogout = async () => {
 </script>
 
 <template>
-  <div class="settings-page-wrapper min-h-screen w-full">
-    <div class="box-border min-h-screen pb-10">
-      <div class="top-bar">
+  <div class="settings-page-wrapper w-full">
+    <div class="box-border pb-10">
+      <!-- <div class="top-bar">
         <div class="back-btn" @click="router.back()">
           <van-icon name="arrow-left" size="20" color="#fff" />
         </div>
         <span class="title">设置</span>
         <span class="placeholder-spacer"></span>
-      </div>
+      </div> -->
+      <nav-bar :title="'设置'" :leftArrow="true" @click-left="router.back()" />
 
       <div class="content-container">
         <!-- Group 1 -->
         <div class="group group-panel">
           <div class="cell">
             <span class="label">手机号码</span>
-            <span class="value">{{ mobile || "-" }} <span class="text-xs opacity-50 ml-1">(仅自己可见)</span></span>
+            <span class="value"
+              >{{ mobile || "-" }}
+              <span class="text-xs opacity-50 ml-1">(仅自己可见)</span></span
+            >
           </div>
-          <div class="cell clickable" @click="router.push({ name: 'ChangePassword' })">
+          <div
+            class="cell clickable"
+            @click="router.push({ name: 'ChangePassword' })"
+          >
             <span class="label">修改密码</span>
             <van-icon name="arrow" class="arrow-icon" />
           </div>
@@ -121,6 +130,9 @@ const onLogout = async () => {
 .settings-page-wrapper {
   background-color: #000;
   color: #fff;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 16px 16px 24px;
 }
 
 .top-bar {
@@ -153,7 +165,7 @@ const onLogout = async () => {
   width: 32px;
 }
 
-.content-container {
+.box-border {
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -213,7 +225,7 @@ const onLogout = async () => {
   font-weight: 600;
   border: 1px solid #331111;
   transition: all 0.2s;
-  
+
   &:active {
     transform: scale(0.97);
     background: #2a1111;

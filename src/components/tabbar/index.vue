@@ -22,7 +22,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { onBeforeUnmount, onMounted, ref, reactive } from "vue";
+import { countUnreadApi } from "@/api/news";
 
 interface TabItem {
   icon: string;
@@ -32,6 +33,7 @@ interface TabItem {
 }
 
 const active = ref(0);
+const pollTimer = ref<number | null>(null);
 const tabbarData = reactive<TabItem[]>([
   {
     icon: "home-o",
@@ -47,7 +49,7 @@ const tabbarData = reactive<TabItem[]>([
     icon: "chat-o",
     title: "消息",
     to: { name: "News" },
-    badge: 14
+    badge: ""
   },
   {
     icon: "user-o",
@@ -55,6 +57,27 @@ const tabbarData = reactive<TabItem[]>([
     to: { name: "My" }
   }
 ]);
+
+const loadUnreadBadge = async () => {
+  try {
+    const unread = await countUnreadApi();
+    const value = unread || 0;
+    tabbarData[2].badge = value > 99 ? "99+" : value > 0 ? value : "";
+  } catch {
+    tabbarData[2].badge = "";
+  }
+};
+
+onMounted(async () => {
+  await loadUnreadBadge();
+  pollTimer.value = window.setInterval(async () => {
+    await loadUnreadBadge();
+  }, 4000);
+});
+
+onBeforeUnmount(() => {
+  if (pollTimer.value) clearInterval(pollTimer.value);
+});
 </script>
 
 <style scoped>

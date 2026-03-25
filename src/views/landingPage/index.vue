@@ -26,26 +26,45 @@ const normalizeList = (res: ISysBannerItem[] | ISysBannerItem) => {
   return [res];
 };
 
+const getBannerFiles = (item: ISysBannerItem) => {
+  const list = [item.banner1, item.banner2, item.banner3, item.banner4, item.banner5];
+  return list.map(v => (v || "").trim()).filter(Boolean);
+};
+
 const loadBanners = async () => {
   loading.value = true;
   try {
     const res = await getSysBannerInfoApi();
-    const list = normalizeList(res);
+    const list = normalizeList(res).filter(item => item.status !== "0");
 
-    const mapped = await Promise.all(
-      list.map(async item => {
-        let imageSrc = "";
-        const raw = item.imageUrl || item.image || "";
-        if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("blob:")) {
-          imageSrc = raw;
-        } else if (raw) {
-          imageSrc = await getAttachmentObjectUrl(raw);
+    const rows: (ISysBannerItem & { imageSrc: string })[] = [];
+
+    for (const item of list) {
+      const files = getBannerFiles(item);
+
+      if (!files.length) {
+        const fallback = item.imageUrl || item.image || "";
+        if (fallback) {
+          let imageSrc = "";
+          if (fallback.startsWith("http://") || fallback.startsWith("https://") || fallback.startsWith("blob:")) {
+            imageSrc = fallback;
+          } else {
+            imageSrc = await getAttachmentObjectUrl(fallback);
+          }
+          if (imageSrc) rows.push({ ...item, imageSrc });
         }
-        return { ...item, imageSrc };
-      })
-    );
+        continue;
+      }
 
-    banners.value = mapped.filter(i => i.imageSrc);
+      for (const fileName of files) {
+        const imageSrc = await getAttachmentObjectUrl(fileName);
+        if (imageSrc) {
+          rows.push({ ...item, imageSrc });
+        }
+      }
+    }
+
+    banners.value = rows;
   } catch {
     showFailToast("落地页加载失败");
   } finally {

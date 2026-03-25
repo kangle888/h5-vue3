@@ -188,8 +188,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="detail-page-wrapper min-h-screen w-full">
-    <div class="relative z-10 box-border min-h-screen">
+  <div class="detail-page-wrappern w-full">
+    <div class="relative z-10 box-border">
       <!-- Top Actions Over Image -->
       <div class="top-bar">
         <div class="icon-btn" @click="router.back()">
@@ -333,7 +333,7 @@ onMounted(() => {
 .detail-page-wrapper {
   background-color: #000000;
   color: #fff;
-  min-height: 100vh;
+  height: 100%;
 }
 
 .top-bar {
@@ -365,7 +365,7 @@ onMounted(() => {
 }
 
 .content-wrap {
-  padding-bottom: 90px;
+  padding-bottom: 77px;
 }
 
 .hero-section {
@@ -374,7 +374,7 @@ onMounted(() => {
 
 .hero-img-box {
   width: 100%;
-  height: 460px; /* Large cover */
+  height: 300px; /* Large cover */
   position: relative;
 }
 

@@ -38,7 +38,6 @@ const myUserId = computed(() => {
   }
 });
 
-
 const playerId = computed(() => {
   const raw = route.query.playerId;
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -75,15 +74,21 @@ const chatTitle = computed(() => {
 });
 
 const wsUrl = () => {
+  console.log("VITE_BASE_API:----", import.meta.env.VITE_BASE_API);
   const base = (import.meta.env.VITE_BASE_API || "").replace(/^http/, "ws");
   const token = encodeURIComponent(
-    localStorage.getItem("c_access_token") || localStorage.getItem("token") || ""
+    localStorage.getItem("c_access_token") ||
+      localStorage.getItem("token") ||
+      ""
   );
   return `${base}/websocket/register?access-token=${token}`;
 };
 
 const connectSocket = () => {
-  const token = localStorage.getItem("c_access_token") || localStorage.getItem("token") || "";
+  const token =
+    localStorage.getItem("c_access_token") ||
+    localStorage.getItem("token") ||
+    "";
   if (!token) return;
   try {
     socketIns.value = new WebSocket(wsUrl());
@@ -251,7 +256,10 @@ onBeforeUnmount(() => {
         <div class="right-placeholder"></div>
       </div>
 
-      <div v-if="loading" class="loading-wrap flex-1 flex items-center justify-center">
+      <div
+        v-if="loading"
+        class="loading-wrap flex-1 flex items-center justify-center"
+      >
         <van-loading size="24" color="#ccc" />
       </div>
 
@@ -274,12 +282,18 @@ onBeforeUnmount(() => {
               <div v-else class="bubble loading-bubble">[图片加载中...]</div>
             </template>
             <div v-else class="bubble">{{ msg.content }}</div>
-            
+
             <div class="meta-row">
-              <span v-if="msg.senderId === myUserId" class="read-flag" :class="{ read: msg.readStatus === '1' }">
+              <span
+                v-if="msg.senderId === myUserId"
+                class="read-flag"
+                :class="{ read: msg.readStatus === '1' }"
+              >
                 {{ msg.readStatus === "1" ? "已读" : "未读" }}
               </span>
-              <span class="time">{{ (msg.createTime || "").replace("T", " ") }}</span>
+              <span class="time">{{
+                (msg.createTime || "").replace("T", " ")
+              }}</span>
             </div>
           </div>
         </div>
@@ -292,7 +306,11 @@ onBeforeUnmount(() => {
           placeholder="给Ta发消息..."
           @keyup.enter="sendMessage"
         />
-        <button class="action-btn" :disabled="sendingImage" @click="triggerChooseImage">
+        <button
+          class="action-btn"
+          :disabled="sendingImage"
+          @click="triggerChooseImage"
+        >
           <van-icon name="photograph" size="24" />
         </button>
         <button class="send-btn" @click="sendMessage">发送</button>
@@ -444,7 +462,7 @@ onBeforeUnmount(() => {
   padding: 0 16px;
   font-size: 14px;
   outline: none;
-  
+
   &:focus {
     background: #222;
   }
@@ -464,7 +482,7 @@ onBeforeUnmount(() => {
   background: transparent;
   border: none;
   color: #999;
-  
+
   &:active {
     color: #fff;
   }
@@ -479,7 +497,7 @@ onBeforeUnmount(() => {
   color: #000;
   font-size: 14px;
   font-weight: 600;
-  
+
   &:active {
     opacity: 0.8;
   }
