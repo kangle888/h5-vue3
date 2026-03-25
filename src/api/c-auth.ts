@@ -32,9 +32,9 @@ export const sendCodeApi = (data: ICAuthDTO) => {
   });
 };
 
-export const registerOrBindApi = (data: ICAuthDTO) => {
+export const codeLoginApi = (data: ICAuthDTO) => {
   return http.request<ICAuthLoginResult>({
-    url: "/c-auth/register-or-bind",
+    url: "/c-auth/code-login",
     method: "post",
     data
   });
@@ -56,13 +56,6 @@ export const refreshTokenApi = (data: ICAuthDTO) => {
   });
 };
 
-export const forgotPasswordApi = (data: ICAuthDTO) => {
-  return http.request<string>({
-    url: "/c-auth/forgot-password",
-    method: "post",
-    data
-  });
-};
 
 export const changePasswordApi = (data: ICAuthDTO) => {
   return http.request<string>({

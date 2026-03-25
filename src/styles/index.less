@@ -6,15 +6,80 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-family:
-    Helvetica Neue,
+    -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    "Helvetica Neue",
     Helvetica,
-    PingFang SC,
-    Hiragino Sans GB,
-    Microsoft YaHei,
     Arial,
+    "Noto Sans",
+    "Microsoft YaHei",
     sans-serif;
+  font-size: 14px;
+  font-weight: 400;
   color: var(--van-text-color);
   background-color: var(--color-background-2);
+}
+
+/* Typography system (applies to all views) */
+:root {
+  --font-title-lg-size: 22px;
+  --font-title-lg-weight: 600;
+  --font-title-sm-size: 17px;
+  --font-title-sm-weight: 500;
+  --font-body-size: 14px;
+  --font-body-weight: 400;
+  --font-assist-size: 12px;
+  --font-assist-weight: 400;
+  --font-button-size: 14px;
+  --font-button-weight: 500;
+}
+
+h1,
+.text-title-lg {
+  font-size: var(--font-title-lg-size);
+  font-weight: var(--font-title-lg-weight);
+  line-height: 1.35;
+}
+
+h2,
+h3,
+.text-title-sm {
+  font-size: var(--font-title-sm-size);
+  font-weight: var(--font-title-sm-weight);
+  line-height: 1.4;
+}
+
+p,
+span,
+li,
+label,
+input,
+textarea,
+select,
+.van-cell__title,
+.van-cell__value,
+.van-field__control,
+.text-body {
+  font-size: var(--font-body-size);
+  font-weight: var(--font-body-weight);
+}
+
+small,
+.text-assist,
+.van-tabbar-item__text,
+.van-empty__description,
+.van-cell__label {
+  font-size: var(--font-assist-size);
+  font-weight: var(--font-assist-weight);
+}
+
+button,
+.van-button,
+.van-button__text,
+.text-button {
+  font-size: var(--font-button-size);
+  font-weight: var(--font-button-weight);
 }
 
 html {

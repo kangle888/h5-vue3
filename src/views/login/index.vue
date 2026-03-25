@@ -2,12 +2,7 @@
 import { onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { showFailToast, showSuccessToast } from "vant";
-import {
-  loginPasswordApi,
-  registerOrBindApi,
-  sendCodeApi,
-  type ICAuthLoginResult
-} from "@/api/c-auth";
+import { codeLoginApi, loginPasswordApi, sendCodeApi, type ICAuthLoginResult } from "@/api/c-auth";
 
 defineOptions({ name: "Login" });
 
@@ -50,11 +45,11 @@ const sendCode = async () => {
   }
   codeLoading.value = true;
   try {
-    const code = await sendCodeApi({
+    await sendCodeApi({
       mobile: form.mobile,
-      bizType: "REGISTER"
+      bizType: "LOGIN"
     });
-    showSuccessToast(`验证码已发送（模拟）: ${code}`);
+    showSuccessToast("验证码已发送");
   } catch {
     showFailToast("发送失败，请稍后重试");
   } finally {
@@ -99,14 +94,10 @@ const submitVerify = async () => {
     showFailToast("请输入验证码");
     return;
   }
-  if (form.password.length < 6) {
-    showFailToast("密码至少6位");
-    return;
-  }
 
   loading.value = true;
   try {
-    const res = await registerOrBindApi({
+    const res = await codeLoginApi({
       mobile: form.mobile,
       code: form.code,
       password: form.password,
@@ -203,7 +194,7 @@ onMounted(() => {
                v-model="form.password"
                name="password"
                type="password"
-               :placeholder="mode === 'verify' ? '请设置6位以上登录密码' : '请输入密码'"
+               :placeholder="mode === 'verify' ? '首次登录请设置密码(非必填，存在用户可不填)' : '请输入密码'"
                clearable
                class="custom-input mt-4"
             />

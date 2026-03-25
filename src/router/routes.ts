@@ -40,7 +40,7 @@ const routes: Array<RouteRecordRaw> = [
         name: "Tools",
         component: () => import("@/views/tools/index.vue"),
         meta: {
-          title: "工具"
+          title: "动态"
         }
       },
       {

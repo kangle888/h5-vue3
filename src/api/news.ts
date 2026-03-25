@@ -20,8 +20,15 @@ export interface IChatRoomItem {
   receiveUserName?: string;
   targetUserId?: string;
   targetUserName?: string;
+  targetUserAvatar?: string;
+  targetUserMobile?: string;
   lastContent?: string;
   lastTime?: string;
+  unreadCount?: number;
+  sessionKey?: string;
+  scene?: "player" | "service";
+  playerId?: string;
+  playerName?: string;
 }
 
 export interface IPlayMessageItem {
@@ -34,6 +41,10 @@ export interface IPlayMessageItem {
   messageStatus?: string;
   isCancel?: string;
   readStatus?: string;
+  scene?: string;
+  playerId?: string;
+  playerName?: string;
+  sessionKey?: string;
 }
 
 // /playMessage/pageMessage 分页查询消息列表
@@ -62,21 +73,26 @@ export function getAdminUserApi(): Promise<string> {
   });
 }
 
-// 统计未读数（senderId 可选，不传统计总未读）
-export function countUnreadApi(senderId?: string): Promise<number> {
+// 统计未读数（senderId/sessionKey 可选，不传统计总未读）
+export function countUnreadApi(senderId?: string, sessionKey?: string): Promise<number> {
+  const params: Record<string, string> = {};
+  if (senderId) params.senderId = senderId;
+  if (sessionKey) params.sessionKey = sessionKey;
   return http.request({
     url: "/playMessage/countUnread",
     method: "get",
-    params: senderId ? { senderId } : {}
+    params
   });
 }
 
-// 标记某会话为已读
-export function markReadApi(senderId: string): Promise<number> {
+// 标记某会话为已读（sessionKey 可选）
+export function markReadApi(senderId: string, sessionKey?: string): Promise<number> {
+  const params: Record<string, string> = { senderId };
+  if (sessionKey) params.sessionKey = sessionKey;
   return http.request({
     url: "/playMessage/markRead",
     method: "post",
-    params: { senderId }
+    params
   });
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <van-tabbar v-model="active" :placeholder="true" :route="true" fixed>
+  <van-tabbar v-model="active" class="app-tabbar" :placeholder="true" :route="true" fixed>
     <van-tabbar-item v-for="(item, index) in tabbarData" :key="index" :icon="item.icon" :to="item.to">
       {{ item.title }}
     </van-tabbar-item>
@@ -33,3 +33,13 @@ const tabbarData = reactive([
   }
 ]);
 </script>
+
+<style scoped>
+.app-tabbar {
+  z-index: 3000;
+}
+
+:deep(.van-tabbar) {
+  z-index: 3000 !important;
+}
+</style>

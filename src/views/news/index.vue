@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import { showFailToast } from "vant";
 import { useRouter } from "vue-router";
 import {
   countUnreadApi,
-  getAdminUserApi,
-  pageMessageApi,
-  type IPlayMessageItem
+  pageChatRoomApi,
+  type IChatRoomItem
 } from "@/api/news";
 
 defineOptions({ name: "News" });
@@ -14,48 +13,55 @@ defineOptions({ name: "News" });
 const router = useRouter();
 const activeTab = ref<"chat" | "system">("chat");
 const loading = ref(false);
-const unreadCount = ref(0);
-const adminUserId = ref("");
-const records = ref<IPlayMessageItem[]>([]);
 const pollTimer = ref<number | null>(null);
+const roomList = ref<IChatRoomItem[]>([]);
 
-const latestMessage = computed(() => {
-  if (!records.value.length) return null;
-  return records.value[records.value.length - 1];
-});
+const roomTitle = (room: IChatRoomItem) => {
+  const userName = room.targetUserName || room.targetUserId || "用户";
+  if (room.scene === "player") {
+    return `${userName}（${room.playerName || room.playerId || "卡片会话"}）`;
+  }
+  return `${userName}（客服会话）`;
+};
 
-const latestTime = computed(() => {
-  const value = latestMessage.value?.createTime;
-  if (!value) return "";
-  return value.replace("T", " ").slice(11, 16);
-});
+const roomSubText = (room: IChatRoomItem) => {
+  return room.lastContent || "点击进入聊天";
+};
 
-const latestText = computed(() => {
-  const txt = latestMessage.value?.content;
-  if (!txt) return "点击进入聊天";
-  return txt;
-});
+const roomTime = (room: IChatRoomItem) => {
+  const value = room.lastTime;
+  if (!value) return "--:--";
+  const text = value.replace("T", " ");
+  return text.length >= 16 ? text.slice(11, 16) : text;
+};
 
-const avatarUrl = computed(() => {
-  return "https://picsum.photos/seed/admin-chat/120/120";
-});
+const fallbackAvatar = "https://picsum.photos/seed/admin-chat/120/120";
+
+const avatarUrl = (_room: IChatRoomItem) => {
+  return fallbackAvatar;
+};
 
 const loadData = async () => {
   loading.value = true;
   try {
-    const adminId = await getAdminUserApi();
-    adminUserId.value = adminId || "";
-    if (!adminUserId.value) return;
-
-    const res = await pageMessageApi({
+    const res = await pageChatRoomApi({
       pageNum: 1,
-      pageSize: 50,
-      query: {
-        receiverId: adminUserId.value
-      }
+      pageSize: 200,
+      query: {}
     });
-    records.value = res?.records || [];
-    unreadCount.value = await countUnreadApi(adminUserId.value);
+
+    const rows = res?.records || [];
+    const withUnread = await Promise.all(
+      rows.map(async room => {
+        const unread = await countUnreadApi(room.targetUserId, room.sessionKey || "service_default");
+        return {
+          ...room,
+          unreadCount: unread || 0
+        } as IChatRoomItem;
+      })
+    );
+
+    roomList.value = withUnread;
   } catch {
     showFailToast("加载消息失败");
   } finally {
@@ -63,8 +69,16 @@ const loadData = async () => {
   }
 };
 
-const openChat = () => {
-  router.push({ name: "NewsChatPage" });
+const openChat = (room: IChatRoomItem) => {
+  router.push({
+    name: "NewsChatPage",
+    query: {
+      scene: room.scene || "service",
+      playerId: room.playerId,
+      playerName: room.playerName,
+      sessionKey: room.sessionKey || "service_default"
+    }
+  });
 };
 
 onMounted(async () => {
@@ -81,7 +95,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="news-page-wrapper relative min-h-screen w-full overflow-hidden">
-    <!-- Animated background elements -->
     <div class="bg-shape shape-1"></div>
     <div class="bg-shape shape-2"></div>
     <div class="bg-shape shape-3"></div>
@@ -114,25 +127,25 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="activeTab === 'chat'" class="list-wrap">
-          <div class="chat-card glass-panel" @click="openChat">
+          <div v-for="room in roomList" :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`" class="chat-card glass-panel" @click="openChat(room)">
             <div class="avatar-wrap">
-              <img class="avatar" :src="avatarUrl" alt="avatar" />
+              <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
             </div>
             <div class="main">
               <div class="name-row">
-                <span class="name">系统客服 <span class="official-tag">官方</span></span>
-                <span class="time">{{ latestTime || "--:--" }}</span>
+                <span class="name">{{ roomTitle(room) }}</span>
+                <span class="time">{{ roomTime(room) }}</span>
               </div>
               <div class="msg-row">
-                <span class="msg">{{ latestText }}</span>
-                <div v-if="unreadCount > 0" class="badge">
-                  {{ unreadCount > 99 ? "99+" : unreadCount }}
+                <span class="msg">{{ roomSubText(room) }}</span>
+                <div v-if="(room.unreadCount || 0) > 0" class="badge">
+                  {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
                 </div>
               </div>
             </div>
           </div>
 
-          <div v-if="!loading && !records.length" class="empty-state">
+          <div v-if="!loading && !roomList.length" class="empty-state">
             <van-icon name="chat" size="48" class="mb-2 opacity-20" />
             <p>暂无会话，去详情页点击“联系Ta”开始聊天</p>
           </div>
@@ -156,7 +169,6 @@ onBeforeUnmount(() => {
   color: #fff;
 }
 
-/* Background floating shapes */
 .bg-shape {
   position: absolute;
   filter: blur(80px);
@@ -245,7 +257,6 @@ onBeforeUnmount(() => {
   padding: 16px;
 }
 
-/* Glassmorphism Panel */
 .glass-panel {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -284,7 +295,7 @@ onBeforeUnmount(() => {
   gap: 14px;
   transition: background 0.2s;
   cursor: pointer;
-  
+
   &:active {
     background: rgba(255, 255, 255, 0.08);
   }
@@ -327,18 +338,10 @@ onBeforeUnmount(() => {
     font-size: 16px;
     font-weight: 700;
     color: #fff;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .official-tag {
-    font-size: 10px;
-    background: rgba(56, 189, 248, 0.2);
-    color: #38bdf8;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid rgba(56, 189, 248, 0.3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 240px;
   }
 
   .time {

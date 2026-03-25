@@ -84,7 +84,19 @@ const openActivityPreview = (activityId: string, start: number) => {
 };
 
 const goContactAdmin = () => {
-  router.push({ name: "NewsChatPage" });
+  if (!player.value?.id) {
+    showFailToast("缺少人物信息");
+    return;
+  }
+
+  router.push({
+    name: "NewsChatPage",
+    query: {
+      scene: "player",
+      playerId: player.value.id,
+      playerName: player.value.name || "神秘玩家"
+    }
+  });
 };
 
 const loadCollectStatus = async (id: string) => {

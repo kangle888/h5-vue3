@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { showImagePreview, showFailToast, showSuccessToast } from "vant";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import {
   getAdminUserApi,
   markReadApi,
@@ -11,11 +11,11 @@ import {
   type IPlayMessageItem
 } from "@/api/news";
 import { getAttachmentObjectUrl } from "@/api/home";
-import { getAttachmentDownloadUrl } from "@/api/c-user";
 
 defineOptions({ name: "NewsChatPage" });
 
 const router = useRouter();
+const route = useRoute();
 const adminUserId = ref("");
 const records = ref<IPlayMessageItem[]>([]);
 const messageText = ref("");
@@ -38,17 +38,41 @@ const myUserId = computed(() => {
   }
 });
 
-const myAvatarUrl = computed(() => {
-  try {
-    const cUser = JSON.parse(localStorage.getItem("c_user_info") || "{}");
-    if (!cUser?.avatar) return "https://dummyimage.com/80x80/5f6470/ffffff.png&text=ME";
-    return getAttachmentDownloadUrl(cUser.avatar);
-  } catch {
-    return "https://dummyimage.com/80x80/5f6470/ffffff.png&text=ME";
-  }
+
+const playerId = computed(() => {
+  const raw = route.query.playerId;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === "string" ? value : "";
 });
 
-const adminAvatarUrl = "https://dummyimage.com/80x80/2f7fff/ffffff.png&text=KF";
+const playerName = computed(() => {
+  const raw = route.query.playerName;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === "string" && value.trim() ? value : "TA";
+});
+
+const chatScene = computed(() => {
+  const raw = route.query.scene;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return value === "player" ? "player" : "service";
+});
+
+const sessionKey = computed(() => {
+  const raw = route.query.sessionKey;
+  const fromQuery = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof fromQuery === "string" && fromQuery.trim()) {
+    return fromQuery;
+  }
+  return chatScene.value === "player" && playerId.value
+    ? `player_${playerId.value}`
+    : "service_default";
+});
+
+const chatTitle = computed(() => {
+  return chatScene.value === "player"
+    ? `联系客服（${playerName.value}）`
+    : "客服聊天";
+});
 
 const wsUrl = () => {
   const base = (import.meta.env.VITE_BASE_API || "").replace(/^http/, "ws");
@@ -66,7 +90,7 @@ const connectSocket = () => {
     socketIns.value.onmessage = async () => {
       await loadMessages();
       if (adminUserId.value) {
-        await markReadApi(adminUserId.value);
+        await markReadApi(adminUserId.value, sessionKey.value);
       }
     };
   } catch {
@@ -103,10 +127,18 @@ const loadMessages = async () => {
     pageNum: 1,
     pageSize: 200,
     query: {
-      receiverId: adminUserId.value
+      receiverId: adminUserId.value,
+      sessionKey: sessionKey.value
     }
   });
-  records.value = (res?.records || []).slice().reverse();
+  const all = (res?.records || []).slice();
+  records.value = all
+    .filter(item => {
+      if (item.sessionKey) return item.sessionKey === sessionKey.value;
+      // 兼容后端未返回 sessionKey 的老数据：默认归到客服总会话
+      return sessionKey.value === "service_default";
+    })
+    .reverse();
   await buildImagePreviewMap();
   await scrollToBottom();
 };
@@ -121,7 +153,7 @@ const initData = async () => {
       return;
     }
     await loadMessages();
-    await markReadApi(adminUserId.value);
+    await markReadApi(adminUserId.value, sessionKey.value);
   } catch {
     showFailToast("加载聊天失败");
   } finally {
@@ -135,7 +167,14 @@ const sendMessage = async () => {
   if (!adminUserId.value) return;
 
   try {
-    await sendTextApi({ receiverId: adminUserId.value, content: text });
+    await sendTextApi({
+      receiverId: adminUserId.value,
+      content: text,
+      scene: chatScene.value,
+      playerId: playerId.value || undefined,
+      playerName: playerName.value,
+      sessionKey: sessionKey.value
+    });
     messageText.value = "";
     showSuccessToast("发送成功");
     await loadMessages();
@@ -161,6 +200,12 @@ const onChooseImage = async (event: Event) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("receiverId", adminUserId.value);
+  formData.append("scene", chatScene.value);
+  formData.append("sessionKey", sessionKey.value);
+  if (playerId.value) {
+    formData.append("playerId", playerId.value);
+    formData.append("playerName", playerName.value);
+  }
 
   sendingImage.value = true;
   try {
@@ -207,7 +252,7 @@ onBeforeUnmount(() => {
         <div class="back-btn" @click="router.back()">
           <van-icon name="arrow-left" size="20" color="#fff" />
         </div>
-        <span class="title">客服聊天</span>
+        <span class="title">{{ chatTitle }}</span>
         <div class="right-placeholder"></div>
       </div>
 
