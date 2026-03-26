@@ -61,12 +61,7 @@ onMounted(() => {
   <div class="my-page-wrapper w-full">
     <div class="header-card">
       <div class="avatar-wrap">
-        <img
-          v-if="avatarUrl()"
-          :src="avatarUrl()"
-          class="avatar"
-          alt="avatar"
-        />
+        <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
         <div v-else class="avatar placeholder">
           <van-icon name="user-circle-o" size="32" color="#666" />
         </div>
@@ -88,11 +83,11 @@ onMounted(() => {
     </div>
 
     <div class="stats-card">
-      <div class="stat-item">
+      <!-- <div class="stat-item">
         <div class="num gold-text">0</div>
         <div class="label">钱包</div>
       </div>
-      <div class="divider"></div>
+      <div class="divider"></div> -->
       <div class="stat-item">
         <div class="num gold-text">1</div>
         <div class="label">心动女生</div>
@@ -127,31 +122,17 @@ onMounted(() => {
       探索你的专属陪伴 v1.0.0
     </div>
 
-    <van-popup
-      v-model:show="showSharePopup"
-      round
-      position="bottom"
-      class="dark-popup"
-    >
+    <van-popup v-model:show="showSharePopup" round position="bottom" class="dark-popup">
       <div class="share-popup">
         <div class="popup-header">
           <span class="popup-title">App 分享</span>
-          <van-icon
-            name="cross"
-            class="close-icon"
-            @click="showSharePopup = false"
-          />
+          <van-icon name="cross" class="close-icon" @click="showSharePopup = false" />
         </div>
 
         <div class="share-card">
           <div class="qr-wrap">
             <div class="qr-bg">
-              <van-image
-                class="qr-image"
-                fit="cover"
-                :src="qrUrl"
-                alt="landing-qrcode"
-              />
+              <van-image class="qr-image" fit="cover" :src="qrUrl" alt="landing-qrcode" />
             </div>
           </div>
           <div class="qr-tip">扫码可直接进入落地页（无需登录）</div>

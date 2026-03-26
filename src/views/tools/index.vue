@@ -56,7 +56,7 @@ const formatDateText = (value?: string) => {
 
 const getPlayerBrief = (item: FeedItem) => {
   const p = item.player;
-  return `${p?.age || "20"}岁 · ${p?.occupation || "模特"}`;
+  return `${p?.age || "20"}岁 · ${p?.occupation_dictText || "模特"}`;
 };
 
 const getImageFileName = (item: IPlayerActivityItem) => {
@@ -168,47 +168,21 @@ const onTabChange = async (name: string | number) => {
   <div class="dynamic-page-wrapper">
     <div class="box-border">
       <div class="top-tabs">
-        <van-tabs
-          :active="activeTab"
-          background="#000"
-          color="#dfc293"
-          title-inactive-color="#666"
-          title-active-color="#fff"
-          line-width="30"
-          shrink
-          @change="onTabChange"
-        >
+        <van-tabs :active="activeTab" background="#000" color="#dfc293" title-inactive-color="#666"
+          title-active-color="#fff" line-width="30" shrink @change="onTabChange">
           <van-tab v-for="tab in tabs" :key="tab.key" :name="tab.key" :title="tab.label" />
         </van-tabs>
       </div>
 
       <van-pull-refresh v-model="refreshing" success-text="刷新成功" @refresh="onRefresh">
-        <van-list
-          v-model:loading="loading"
-          v-model:error="error"
-          :finished="finished"
-          loading-text="加载中..."
-          finished-text="没有更多了"
-          error-text="加载失败，点击重试"
-          @load="onLoad"
-        >
-          <van-empty
-            v-if="!loading && !currentList.length"
-            image="search"
-            description="暂无动态"
-            class="empty-wrap"
-          />
+        <van-list v-model:loading="loading" v-model:error="error" :finished="finished" loading-text="加载中..."
+          finished-text="没有更多了" error-text="加载失败，点击重试" @load="onLoad">
+          <van-empty v-if="!loading && !currentList.length" image="search" description="暂无动态" class="empty-wrap" />
 
           <div v-for="item in currentList" :key="item.id" class="feed-card">
             <div class="author-row">
-              <van-image
-                v-if="getPlayerAvatar(item)"
-                :src="getPlayerAvatar(item)"
-                width="44"
-                height="44"
-                round
-                fit="cover"
-              />
+              <van-image v-if="getPlayerAvatar(item)" :src="getPlayerAvatar(item)" width="44" height="44" round
+                fit="cover" />
               <div v-else class="avatar placeholder">
                 <van-icon name="user-circle-o" size="24" color="#333" />
               </div>
@@ -217,20 +191,15 @@ const onTabChange = async (name: string | number) => {
                 <div class="name">{{ item.player?.name || "神秘玩家" }}</div>
                 <div class="sub">{{ getPlayerBrief(item) }}</div>
               </div>
-              <div class="more">
+              <!-- <div class="more">
                 <van-icon name="ellipsis" size="20" />
-              </div>
+              </div> -->
             </div>
 
             <div class="content">{{ item.content || "今天也是元气满满的一天~" }}</div>
 
-            <van-image
-              v-if="item.imageUrl"
-              :src="item.imageUrl"
-              class="cover"
-              fit="cover"
-              @click="previewImage(item)"
-            />
+            <van-image v-if="item.imageUrl" :src="item.imageUrl" class="cover" fit="cover"
+              @click="previewImage(item)" />
             <div v-else class="cover-empty">
               <van-icon name="photo-o" size="32" color="#333" />
             </div>
@@ -240,15 +209,16 @@ const onTabChange = async (name: string | number) => {
                 <van-icon name="location-o" class="mr-1" />
                 {{ item.city || "成都市" }}
               </span>
+              <span class="time">{{ formatDateText(item.createTime) }}</span>
             </div>
 
-            <div class="bottom-row">
+            <!-- <div class="bottom-row">
               <div class="time">{{ formatDateText(item.createTime) }}</div>
               <div class="actions">
                 <van-button class="action-btn" size="mini" plain hairline type="default" icon="like-o">0</van-button>
                 <van-button class="action-btn" size="mini" plain hairline type="default" icon="chat-o">评论</van-button>
               </div>
-            </div>
+            </div> -->
           </div>
         </van-list>
       </van-pull-refresh>
@@ -316,8 +286,8 @@ const onTabChange = async (name: string | number) => {
 .feed-card {
   padding: 16px;
   background: #000000;
-  border-bottom: 8px solid #0a0a0a;
-  
+  border-bottom: 1px solid #0a0a0a;
+
   &:last-child {
     border-bottom: none;
   }
@@ -398,7 +368,7 @@ const onTabChange = async (name: string | number) => {
 }
 
 .city {
-  margin-top: 12px;
+  margin-top: 45px;
 }
 
 .city-tag {
@@ -422,6 +392,7 @@ const onTabChange = async (name: string | number) => {
 .time {
   color: #666;
   font-size: 12px;
+  margin-left: 12px;
 }
 
 .actions {
@@ -437,7 +408,7 @@ const onTabChange = async (name: string | number) => {
   font-size: 13px;
   font-weight: 500;
   transition: all 0.2s;
-  
+
   &:active {
     color: #dfc293;
     transform: scale(0.95);

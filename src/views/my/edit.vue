@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from "vue";
-import { showFailToast, showSuccessToast } from "vant";
+import { showFailToast, showSuccessToast, type UploaderAfterRead } from "vant";
 import { useRouter } from "vue-router";
 import {
   getAttachmentDownloadUrl,
@@ -40,18 +40,32 @@ const loadProfile = async () => {
 
 loadProfile();
 
-const onChooseAvatar = async (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  input.value = "";
-  if (!file) return;
+const avatarUploading = ref(false);
+
+const onAvatarAfterRead: UploaderAfterRead = async file => {
+  const target = Array.isArray(file) ? file[0] : file;
+  const rawFile = target?.file as File | undefined;
+  if (!rawFile) {
+    showFailToast("未获取到图片文件");
+    return;
+  }
+
+  avatarUploading.value = true;
+  target.status = "uploading";
+  target.message = "上传中...";
 
   try {
-    const fileName = await uploadAttachmentApi(file);
+    const fileName = await uploadAttachmentApi(rawFile);
     form.avatar = fileName || "";
+    target.status = "done";
+    target.message = "";
     showSuccessToast("头像上传成功");
   } catch {
+    target.status = "failed";
+    target.message = "上传失败";
     showFailToast("头像上传失败");
+  } finally {
+    avatarUploading.value = false;
   }
 };
 
@@ -77,15 +91,15 @@ const onSave = async () => {
         <!-- Avatar Section -->
         <div class="avatar-section panel">
           <div class="label">头像</div>
-          <label class="avatar-uploader">
+          <van-uploader :after-read="onAvatarAfterRead" accept="image/*" :capture="'camera'" :max-count="1"
+            :disabled="avatarUploading" class="avatar-uploader">
             <div class="avatar-wrap">
               <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
               <div v-else class="avatar placeholder">
-                 <van-icon name="photograph" size="24" color="#666" />
+                <van-icon name="photograph" size="24" color="#666" />
               </div>
             </div>
-            <input type="file" accept="image/*" class="hidden-file" @change="onChooseAvatar" />
-          </label>
+          </van-uploader>
         </div>
 
         <van-cell-group inset class="field-group">
@@ -95,19 +109,11 @@ const onSave = async () => {
           <van-field v-model="form.height" label="身高(cm)" placeholder="未设置" type="digit" />
           <van-field v-model="form.weight" label="体重(kg)" placeholder="未设置" type="digit" />
           <van-field v-model="form.constellation" label="星座" placeholder="未设置" />
-        <!-- </van-cell-group> -->
+          <!-- </van-cell-group> -->
 
-        <!-- <van-cell-group inset class="field-group"> -->
-          <van-field
-            v-model="form.introduction"
-            label="个人介绍"
-            rows="2"
-            autosize
-            maxlength="30"
-            show-word-limit
-            type="textarea"
-            placeholder="简单介绍一下自己吧..."
-          />
+          <!-- <van-cell-group inset class="field-group"> -->
+          <van-field v-model="form.introduction" label="个人介绍" rows="2" autosize maxlength="30" show-word-limit
+            type="textarea" placeholder="简单介绍一下自己吧..." />
         </van-cell-group>
 
         <div class="action-wrap">
@@ -141,7 +147,7 @@ const onSave = async () => {
   padding: 6px 14px;
   border-radius: 14px;
   transition: all 0.2s;
-  
+
   &:active {
     transform: scale(0.95);
     opacity: 0.8;
@@ -198,7 +204,8 @@ const onSave = async () => {
   border-radius: 50%;
 }
 
-.avatar, .placeholder {
+.avatar,
+.placeholder {
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -222,7 +229,7 @@ const onSave = async () => {
     margin: 0 !important;
     background: #111;
   }
- 
+
   :deep(.van-cell) {
     background: #111;
     color: #fff;
