@@ -192,8 +192,12 @@ const fetchPlayers = async (reset = false) => {
     if (reset) {
       players.value = rows;
     } else {
-      const existIds = new Set(players.value.map(item => item.id).filter(Boolean));
-      const appendRows = rows.filter(item => !item.id || !existIds.has(item.id));
+      const existIds = new Set(
+        players.value.map(item => item.id).filter(Boolean)
+      );
+      const appendRows = rows.filter(
+        item => !item.id || !existIds.has(item.id)
+      );
       players.value = [...players.value, ...appendRows];
     }
 
@@ -239,12 +243,10 @@ const goDetail = (item: IPlayerItem) => {
   if (!item.id) return;
   router.push({ name: "Detail", query: { playerId: item.id } });
 };
-
-
 </script>
 
 <template>
-  <div class="home-wrapper  w-full">
+  <div class="home-wrapper w-full">
     <div class="box-border">
       <div class="sticky-header">
         <div class="top-tabs">
@@ -281,7 +283,12 @@ const goDetail = (item: IPlayerItem) => {
               @click="goDetail(item)"
             >
               <div class="cover-wrap">
-                <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" />
+                <img
+                  v-if="coverUrl(item)"
+                  :src="coverUrl(item)"
+                  class="cover"
+                  alt="cover"
+                />
                 <div v-else class="cover-empty">暂无照片</div>
                 <div class="badge">
                   <span class="badge-text">真人认证</span>
@@ -303,12 +310,17 @@ const goDetail = (item: IPlayerItem) => {
                 <div class="meta-row">
                   <span class="pill">{{ item.age || "20" }}岁</span>
                   <span class="pill">{{ item.height || "165" }}CM</span>
-                  <span v-if="playerTag(item)" class="pill">{{ playerTag(item) }}</span>
+                  <span v-if="playerTag(item)" class="pill">{{
+                    playerTag(item)
+                  }}</span>
                 </div>
 
                 <div class="city-row">
                   <van-icon name="location-o" class="mr-1" />
-                  <span>{{ formatCityText(item.city) }} · {{ distanceText(item, index) }}</span>
+                  <span
+                    >{{ formatCityText(item.city) }} ·
+                    {{ distanceText(item, index) }}</span
+                  >
                 </div>
 
                 <div class="album-row" v-if="cardImages(item).length > 0">
@@ -318,7 +330,10 @@ const goDetail = (item: IPlayerItem) => {
                     class="mini-wrap"
                   >
                     <img class="mini" :src="img" alt="album" />
-                    <div v-if="imgIdx === 2 && cardAlbumCount(item) > 3" class="more">
+                    <div
+                      v-if="imgIdx === 2 && cardAlbumCount(item) > 3"
+                      class="more"
+                    >
                       +{{ cardAlbumCount(item) - 3 }} >
                     </div>
                   </div>
@@ -326,7 +341,10 @@ const goDetail = (item: IPlayerItem) => {
               </div>
             </div>
 
-            <van-empty v-if="!loading && !cardList.length" description="暂无数据" />
+            <van-empty
+              v-if="!loading && !cardList.length"
+              description="暂无数据"
+            />
           </div>
         </van-list>
       </van-pull-refresh>
@@ -337,10 +355,19 @@ const goDetail = (item: IPlayerItem) => {
 </template>
 
 <style scoped lang="less">
+:deep(.van-pull-refresh) {
+  min-height: calc(100% - 54px);
+}
+
+:deep(.van-list) {
+  min-height: calc(100% - 54px);
+}
+
 .home-wrapper {
   background-color: #000000;
   color: #fff;
   height: 100%;
+  min-height: 100%;
 }
 
 .sticky-header {
@@ -385,7 +412,7 @@ const goDetail = (item: IPlayerItem) => {
 .list-wrap {
   display: flex;
   flex-direction: column;
-  padding-bottom: 72px;
+  padding-bottom: 12px;
 }
 
 .player-card {
@@ -394,7 +421,7 @@ const goDetail = (item: IPlayerItem) => {
   padding: 8px;
   border-bottom: 1px solid #1a1a1a;
   background: #000000;
-  
+
   &:active {
     background: #0a0a0a;
   }
@@ -430,7 +457,7 @@ const goDetail = (item: IPlayerItem) => {
     background: linear-gradient(135deg, #fae2a5, #dbb56f);
     padding: 3px 8px;
     border-radius: 0 8px 0 12px;
-    
+
     .badge-text {
       font-size: 11px;
       color: #382402;
@@ -469,7 +496,7 @@ const goDetail = (item: IPlayerItem) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    
+
     &:active {
       opacity: 0.6;
     }
@@ -527,7 +554,7 @@ const goDetail = (item: IPlayerItem) => {
       border-radius: 4px;
       font-size: 10px;
       color: #fff;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.6);
       display: flex;
       align-items: center;
       justify-content: center;

@@ -2,7 +2,12 @@
 import tabbar from "@/components/tabbar/index.vue";
 import NavBar from "@/components/nav-bar/index.vue";
 import { useCachedViewStoreHook } from "@/store/modules/cached-view";
-import { computed } from "vue";
+import {
+  getCurrentLocation,
+  getLocationCache,
+  saveLocationCache
+} from "@/utils/location";
+import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const cachedViews = computed(() => {
@@ -29,6 +34,33 @@ const navBarTitle = computed(() => {
 const showTabBar = computed(() => {
   return route.meta?.hideTabBar !== true;
 });
+
+const LOCATION_REFRESH_INTERVAL = 10 * 60;
+
+const shouldRefreshLocation = () => {
+  const cache = getLocationCache();
+  if (!cache) return true;
+  return Date.now() - cache.timestamp > LOCATION_REFRESH_INTERVAL;
+};
+
+const refreshLocationIfNeeded = async () => {
+  if (!shouldRefreshLocation()) return;
+  try {
+    const location = await getCurrentLocation({
+      timeout: 10000,
+      enableHighAccuracy: true,
+      maximumAge: 0
+    });
+    console.log("获取到位置信息：", location);
+    saveLocationCache(location);
+  } catch {
+    // 定位失败不影响主流程
+  }
+};
+
+onMounted(() => {
+  refreshLocationIfNeeded();
+});
 </script>
 
 <template>
@@ -39,11 +71,15 @@ const showTabBar = computed(() => {
       :leftArrow="true"
       @click-left="router.back"
     />
-    <router-view v-slot="{ Component }">
-      <keep-alive :include="cachedViews">
-        <component :is="Component" />
-      </keep-alive>
-    </router-view>
+
+    <main class="app-content">
+      <router-view v-slot="{ Component }">
+        <keep-alive :include="cachedViews">
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
+    </main>
+
     <tabbar v-if="showTabBar" />
   </div>
 </template>
@@ -54,7 +90,19 @@ const showTabBar = computed(() => {
 .app-wrapper {
   .clearfix();
   position: relative;
-  height: calc(100vh - 50px);
   width: 100%;
+  min-height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 </style>

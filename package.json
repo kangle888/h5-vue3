@@ -27,9 +27,9 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "element-china-area-data": "^6.1.0",
     "axios": "^1.7.7",
     "clsx": "^2.1.1",
+    "element-china-area-data": "^6.1.0",
     "normalize.css": "^8.0.1",
     "nprogress": "^0.2.0",
     "pinia": "^2.2.5",
@@ -48,6 +48,7 @@
     "@types/nprogress": "^0.2.3",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
     "@vitejs/plugin-vue": "^5.1.4",
     "@vitejs/plugin-vue-jsx": "^4.0.1",
     "@vue/eslint-config-typescript": "^14.1.3",
