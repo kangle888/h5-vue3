@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { showFailToast, showSuccessToast } from "vant";
 import { codeToText } from "element-china-area-data";
 import { useRouter } from "vue-router";
@@ -162,7 +162,12 @@ const toggleCollect = async (item: IPlayerItem) => {
   }
 };
 
+let inFlight = false;
+
 const fetchPlayers = async (reset = false) => {
+  if (inFlight) return;
+  inFlight = true;
+
   if (reset) {
     pageNum.value = 1;
     finished.value = false;
@@ -172,6 +177,7 @@ const fetchPlayers = async (reset = false) => {
     albumPreviewMap.value = {};
   }
 
+  loading.value = true;
   try {
     const res = await listPlayer({
       pageNum: pageNum.value,
@@ -182,7 +188,14 @@ const fetchPlayers = async (reset = false) => {
     });
 
     const rows = res?.records || [];
-    players.value = reset ? rows : [...players.value, ...rows];
+
+    if (reset) {
+      players.value = rows;
+    } else {
+      const existIds = new Set(players.value.map(item => item.id).filter(Boolean));
+      const appendRows = rows.filter(item => !item.id || !existIds.has(item.id));
+      players.value = [...players.value, ...appendRows];
+    }
 
     await buildPreviewMap(rows);
     if (pageNum.value === 1) {
@@ -200,15 +213,19 @@ const fetchPlayers = async (reset = false) => {
   } finally {
     loading.value = false;
     refreshing.value = false;
+    inFlight = false;
   }
 };
 
 const onLoad = async () => {
+  if (refreshing.value) return;
   error.value = false;
   await fetchPlayers(false);
 };
 
 const onRefresh = async () => {
+  if (inFlight) return;
+  refreshing.value = true;
   await fetchPlayers(true);
 };
 
@@ -223,9 +240,7 @@ const goDetail = (item: IPlayerItem) => {
   router.push({ name: "Detail", query: { playerId: item.id } });
 };
 
-onMounted(async () => {
-  await onRefresh();
-});
+
 </script>
 
 <template>
