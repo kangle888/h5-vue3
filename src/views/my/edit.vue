@@ -70,17 +70,8 @@ const onSave = async () => {
 </script>
 
 <template>
-  <div class="edit-page-wrapper min-h-screen w-full">
-    <div class="box-border min-h-screen pb-10">
-      <div class="top-bar">
-        <div class="back-btn" @click="router.back()">
-          <van-icon name="arrow-left" size="20" color="#fff" />
-        </div>
-        <span class="title">编辑资料</span>
-        <button class="save-btn" @click="onSave">
-          {{ saving ? "..." : "保存" }}
-        </button>
-      </div>
+  <div class="edit-page-wrapper w-full">
+    <div class="box-border">
 
       <div class="form-container">
         <!-- Avatar Section -->
@@ -97,43 +88,33 @@ const onSave = async () => {
           </label>
         </div>
 
-        <!-- Info Section -->
-        <div class="info-section panel">
-          <div class="cell">
-            <span class="label">昵称</span>
-            <input v-model="form.nickname" placeholder="未设置" />
-          </div>
-          <div class="cell">
-            <span class="label">年龄</span>
-            <input v-model="form.age" placeholder="未设置" />
-          </div>
-          <div class="cell">
-            <span class="label">职业</span>
-            <input v-model="form.occupation" placeholder="未设置" />
-          </div>
-          <div class="cell">
-            <span class="label">身高(cm)</span>
-            <input v-model="form.height" placeholder="未设置" type="number" />
-          </div>
-          <div class="cell">
-            <span class="label">体重(kg)</span>
-            <input v-model="form.weight" placeholder="未设置" type="number" />
-          </div>
-          <div class="cell no-border">
-            <span class="label">星座</span>
-            <input v-model="form.constellation" placeholder="未设置" />
-          </div>
-        </div>
+        <van-cell-group inset class="field-group">
+          <van-field v-model="form.nickname" label="昵称" placeholder="未设置" />
+          <van-field v-model="form.age" label="年龄" placeholder="未设置" type="digit" />
+          <van-field v-model="form.occupation" label="职业" placeholder="未设置" />
+          <van-field v-model="form.height" label="身高(cm)" placeholder="未设置" type="digit" />
+          <van-field v-model="form.weight" label="体重(kg)" placeholder="未设置" type="digit" />
+          <van-field v-model="form.constellation" label="星座" placeholder="未设置" />
+        <!-- </van-cell-group> -->
 
-        <!-- Intro Section -->
-        <div class="intro-section panel">
-          <div class="label mb-2">个人介绍</div>
-          <div class="textarea-wrap">
-            <textarea v-model="form.introduction" maxlength="30" placeholder="简单介绍一下自己吧..." />
-            <div class="counter">{{ form.introduction.length }}/30</div>
-          </div>
+        <!-- <van-cell-group inset class="field-group"> -->
+          <van-field
+            v-model="form.introduction"
+            label="个人介绍"
+            rows="2"
+            autosize
+            maxlength="30"
+            show-word-limit
+            type="textarea"
+            placeholder="简单介绍一下自己吧..."
+          />
+        </van-cell-group>
+
+        <div class="action-wrap">
+          <van-button block round type="primary" :loading="saving" @click="onSave">保存</van-button>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -142,32 +123,13 @@ const onSave = async () => {
 .edit-page-wrapper {
   background-color: #000;
   color: #fff;
+  height: 100%;
 }
 
-.top-bar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  height: 54px;
+.box-border {
+  height: 100%;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  background: #000;
-  border-bottom: 1px solid #111;
-
-  .title {
-    font-size: 16px;
-    font-weight: 500;
-  }
-}
-
-.back-btn {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  flex-direction: column;
 }
 
 .save-btn {
@@ -187,10 +149,23 @@ const onSave = async () => {
 }
 
 .form-container {
-  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 16px 72px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.action-wrap {
+  margin-top: 4px;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .form-container {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
 }
 
 /* Panel Base */
@@ -242,86 +217,44 @@ const onSave = async () => {
   display: none;
 }
 
-/* Info Section */
-.info-section {
-  padding: 0 20px;
-}
-
-.cell {
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #222;
-
-  &.no-border {
-    border-bottom: none;
+.field-group {
+  :deep(.van-cell-group) {
+    margin: 0 !important;
+    background: #111;
+  }
+ 
+  :deep(.van-cell) {
+    background: #111;
+    color: #fff;
+    padding: 12px 16px;
   }
 
-  .label {
-    font-size: 15px;
-    font-weight: 500;
+  :deep(.van-cell::after) {
+    border-bottom-color: #222;
+  }
+
+  :deep(.van-field__label) {
     color: #e5e5e5;
+    width: 88px;
   }
 
-  input {
-    width: 60%;
-    background: transparent;
-    border: none;
+  :deep(.van-field__control) {
     color: #fff;
     text-align: right;
-    outline: none;
-    font-size: 15px;
-
-    &::placeholder {
-      color: #666;
-    }
-  }
-}
-
-/* Intro Section */
-.intro-section {
-  padding: 16px 20px;
-
-  .label {
-    font-size: 15px;
-    font-weight: 500;
-    color: #e5e5e5;
-  }
-}
-
-.textarea-wrap {
-  margin-top: 10px;
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 12px;
-  transition: all 0.3s;
-
-  &:focus-within {
-    background: #222;
   }
 
-  textarea {
-    width: 100%;
-    min-height: 80px;
-    background: transparent;
-    border: none;
-    color: #fff;
-    font-size: 14px;
-    line-height: 1.5;
-    resize: none;
-    outline: none;
-
-    &::placeholder {
-      color: #666;
-    }
+  :deep(textarea.van-field__control) {
+    text-align: left;
+    line-height: 1.6;
+    min-height: 120px;
   }
 
-  .counter {
-    text-align: right;
+  :deep(.van-field__control::placeholder) {
     color: #666;
-    font-size: 12px;
-    margin-top: 4px;
+  }
+
+  :deep(.van-field__word-limit) {
+    color: #777;
   }
 }
 </style>

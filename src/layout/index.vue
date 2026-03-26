@@ -22,8 +22,12 @@ const navBarTitle = computed(() => {
   return typeof route.meta?.title === "string" ? route.meta.title : "";
 });
 
-const isDetailPage = computed(() => {
-  return route.name === "Detail";
+// const isDetailPage = computed(() => {
+//   return route.name === "Detail";
+// });
+
+const showTabBar = computed(() => {
+  return route.meta?.hideTabBar !== true;
 });
 </script>
 
@@ -32,7 +36,7 @@ const isDetailPage = computed(() => {
     <nav-bar
       v-if="showNavBar"
       :title="navBarTitle"
-      :leftArrow="isDetailPage"
+      :leftArrow="true"
       @click-left="router.back"
     />
     <router-view v-slot="{ Component }">
@@ -40,7 +44,7 @@ const isDetailPage = computed(() => {
         <component :is="Component" />
       </keep-alive>
     </router-view>
-    <tabbar />
+    <tabbar v-if="showTabBar" />
   </div>
 </template>
 

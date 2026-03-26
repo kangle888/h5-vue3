@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { showFailToast, showSuccessToast } from "vant";
 import {
@@ -15,6 +15,8 @@ const router = useRouter();
 const loading = ref(false);
 const codeLoading = ref(false);
 const mode = ref<"password" | "verify">("password");
+const codeCountDown = ref(0);
+let codeTimer: number | null = null;
 
 const form = reactive({
   mobile: "",
@@ -43,7 +45,30 @@ const switchMode = (nextMode: "password" | "verify") => {
   form.code = "";
 };
 
+const clearCodeTimer = () => {
+  if (codeTimer) {
+    clearInterval(codeTimer);
+    codeTimer = null;
+  }
+};
+
+const startCodeCountDown = () => {
+  clearCodeTimer();
+  codeCountDown.value = 60;
+  codeTimer = window.setInterval(() => {
+    if (codeCountDown.value <= 1) {
+      codeCountDown.value = 0;
+      clearCodeTimer();
+      return;
+    }
+    codeCountDown.value -= 1;
+  }, 1000);
+};
+
 const sendCode = async () => {
+  if (codeCountDown.value > 0 || codeLoading.value) {
+    return;
+  }
   if (!/^1\d{10}$/.test(form.mobile)) {
     showFailToast("请输入正确手机号");
     return;
@@ -55,6 +80,7 @@ const sendCode = async () => {
       bizType: "LOGIN"
     });
     showSuccessToast("验证码已发送");
+    startCodeCountDown();
   } catch {
     showFailToast("发送失败，请稍后重试");
   } finally {
@@ -131,6 +157,10 @@ onMounted(() => {
   form.mobile = lastMobile;
   mode.value = lastMobile ? "password" : "verify";
 });
+
+onBeforeUnmount(() => {
+  clearCodeTimer();
+});
 </script>
 
 <template>
@@ -177,10 +207,10 @@ onMounted(() => {
           <template #button>
             <span
               class="get-code-text"
-              :class="{ 'opacity-50 pointer-events-none': codeLoading }"
+              :class="{ 'opacity-50 pointer-events-none': codeLoading || codeCountDown > 0 }"
               @click="sendCode"
             >
-              {{ codeLoading ? "获取中..." : "获取验证码" }}
+              {{ codeLoading ? "获取中..." : codeCountDown > 0 ? `${codeCountDown}s后重试` : "获取验证码" }}
             </span>
           </template>
         </van-field>

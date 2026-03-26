@@ -19,8 +19,14 @@ defineOptions({
 const tabs = ["附近", "活跃", "新人"] as const;
 const activeTab = ref(0);
 const loading = ref(false);
+const refreshing = ref(false);
+const finished = ref(false);
+const error = ref(false);
 const players = ref<IPlayerItem[]>([]);
 const router = useRouter();
+
+const pageNum = ref(1);
+const pageSize = 10;
 
 const filterForm = reactive({
   name: ""
@@ -39,12 +45,13 @@ const cardAlbumCount = (item: IPlayerItem) => {
 };
 
 const buildPreviewMap = async (rows: IPlayerItem[]) => {
-  const nextCoverMap: Record<string, string> = {};
-  const nextAlbumMap: Record<string, string[]> = {};
+  const nextCoverMap: Record<string, string> = { ...coverPreviewMap.value };
+  const nextAlbumMap: Record<string, string[]> = { ...albumPreviewMap.value };
 
   for (const item of rows) {
     const id = item.id;
     if (!id) continue;
+    if (nextCoverMap[id] && nextAlbumMap[id]) continue;
 
     const albumNames = (item.album || "")
       .split(",")
@@ -52,8 +59,8 @@ const buildPreviewMap = async (rows: IPlayerItem[]) => {
       .filter(Boolean);
 
     const coverFile = item.avatar || albumNames[0] || "";
-    const coverUrl = await getAttachmentObjectUrl(coverFile);
-    if (coverUrl) nextCoverMap[id] = coverUrl;
+    const cover = await getAttachmentObjectUrl(coverFile);
+    if (cover) nextCoverMap[id] = cover;
 
     const firstThree = albumNames.slice(0, 3);
     const albumUrls: string[] = [];
@@ -155,29 +162,60 @@ const toggleCollect = async (item: IPlayerItem) => {
   }
 };
 
-const loadPlayers = async () => {
-  loading.value = true;
+const fetchPlayers = async (reset = false) => {
+  if (reset) {
+    pageNum.value = 1;
+    finished.value = false;
+    error.value = false;
+    players.value = [];
+    coverPreviewMap.value = {};
+    albumPreviewMap.value = {};
+  }
+
   try {
     const res = await listPlayer({
-      pageNum: 1,
-      pageSize: 20,
+      pageNum: pageNum.value,
+      pageSize,
       query: {
         name: filterForm.name || undefined
       }
     });
-    players.value = res?.records || [];
-    await buildPreviewMap(players.value);
-    await loadCollectMap();
+
+    const rows = res?.records || [];
+    players.value = reset ? rows : [...players.value, ...rows];
+
+    await buildPreviewMap(rows);
+    if (pageNum.value === 1) {
+      await loadCollectMap();
+    }
+
+    if (rows.length < pageSize) {
+      finished.value = true;
+    } else {
+      pageNum.value += 1;
+    }
   } catch {
+    error.value = true;
     showFailToast("加载人物失败");
   } finally {
     loading.value = false;
+    refreshing.value = false;
   }
+};
+
+const onLoad = async () => {
+  error.value = false;
+  await fetchPlayers(false);
+};
+
+const onRefresh = async () => {
+  await fetchPlayers(true);
 };
 
 const onTabChange = (index: number) => {
   activeTab.value = index;
-  loadPlayers();
+  refreshing.value = true;
+  onRefresh();
 };
 
 const goDetail = (item: IPlayerItem) => {
@@ -185,14 +223,14 @@ const goDetail = (item: IPlayerItem) => {
   router.push({ name: "Detail", query: { playerId: item.id } });
 };
 
-onMounted(() => {
-  loadPlayers();
+onMounted(async () => {
+  await onRefresh();
 });
 </script>
 
 <template>
   <div class="home-wrapper  w-full">
-    <div class="box-border  pb-10">
+    <div class="box-border">
       <div class="sticky-header">
         <div class="top-tabs">
           <div
@@ -211,63 +249,74 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="loading" class="loading-wrap">
-        <van-loading color="#ccc" />
-      </div>
-
-      <div v-else class="list-wrap">
-        <div
-          v-for="(item, index) in cardList"
-          :key="item.id || index"
-          class="player-card"
-          @click="goDetail(item)"
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+        <van-list
+          v-model:loading="loading"
+          v-model:error="error"
+          :finished="finished"
+          finished-text="没有更多了"
+          error-text="加载失败，点击重试"
+          @load="onLoad"
         >
-          <div class="cover-wrap">
-            <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" />
-            <div v-else class="cover-empty">暂无照片</div>
-            <div class="badge">
-              <span class="badge-text">真人认证</span>
-            </div>
-          </div>
-
-          <div class="info-wrap">
-            <div class="name-row">
-              <div class="name">{{ item.name || "神秘玩家" }}</div>
-              <div class="like-btn" @click.stop="toggleCollect(item)">
-                <van-icon
-                  :name="isCollected(item) ? 'like' : 'like-o'"
-                  size="20"
-                  :color="isCollected(item) ? '#ff4d4f' : '#666'"
-                />
+          <div class="list-wrap">
+            <div
+              v-for="(item, index) in cardList"
+              :key="item.id || index"
+              class="player-card"
+              @click="goDetail(item)"
+            >
+              <div class="cover-wrap">
+                <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" />
+                <div v-else class="cover-empty">暂无照片</div>
+                <div class="badge">
+                  <span class="badge-text">真人认证</span>
+                </div>
               </div>
-            </div>
 
-            <div class="meta-row">
-              <span class="pill">{{ item.age || "20" }}岁</span>
-              <span class="pill">{{ item.height || "165" }}CM</span>
-              <span v-if="playerTag(item)" class="pill">{{ playerTag(item) }}</span>
-            </div>
+              <div class="info-wrap">
+                <div class="name-row">
+                  <div class="name">{{ item.name || "神秘玩家" }}</div>
+                  <div class="like-btn" @click.stop="toggleCollect(item)">
+                    <van-icon
+                      :name="isCollected(item) ? 'like' : 'like-o'"
+                      size="20"
+                      :color="isCollected(item) ? '#ff4d4f' : '#666'"
+                    />
+                  </div>
+                </div>
 
-            <div class="city-row">
-              <van-icon name="location-o" class="mr-1" />
-              <span>{{ formatCityText(item.city) }} · {{ distanceText(item, index) }}</span>
-            </div>
+                <div class="meta-row">
+                  <span class="pill">{{ item.age || "20" }}岁</span>
+                  <span class="pill">{{ item.height || "165" }}CM</span>
+                  <span v-if="playerTag(item)" class="pill">{{ playerTag(item) }}</span>
+                </div>
 
-            <div class="album-row" v-if="cardImages(item).length > 0">
-              <div
-                v-for="(img, imgIdx) in cardImages(item)"
-                :key="img"
-                class="mini-wrap"
-              >
-                <img class="mini" :src="img" alt="album" />
-                <div v-if="imgIdx === 2 && cardAlbumCount(item) > 3" class="more">
-                  +{{ cardAlbumCount(item) - 3 }} >
+                <div class="city-row">
+                  <van-icon name="location-o" class="mr-1" />
+                  <span>{{ formatCityText(item.city) }} · {{ distanceText(item, index) }}</span>
+                </div>
+
+                <div class="album-row" v-if="cardImages(item).length > 0">
+                  <div
+                    v-for="(img, imgIdx) in cardImages(item)"
+                    :key="img"
+                    class="mini-wrap"
+                  >
+                    <img class="mini" :src="img" alt="album" />
+                    <div v-if="imgIdx === 2 && cardAlbumCount(item) > 3" class="more">
+                      +{{ cardAlbumCount(item) - 3 }} >
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <van-empty v-if="!loading && !cardList.length" description="暂无数据" />
           </div>
-        </div>
-      </div>
+        </van-list>
+      </van-pull-refresh>
+
+      <!-- <BackTop :right="16" :bottom="80" /> -->
     </div>
   </div>
 </template>
@@ -318,16 +367,10 @@ onMounted(() => {
   gap: 16px;
 }
 
-.loading-wrap {
-  height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .list-wrap {
   display: flex;
   flex-direction: column;
+  padding-bottom: 72px;
 }
 
 .player-card {

@@ -58,7 +58,8 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import("@/views/my/edit.vue"),
         meta: {
           title: "编辑资料",
-          noCache: true
+          noCache: true,
+          hideTabBar: true
         }
       },
       {
@@ -67,7 +68,8 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import("@/views/my/settings.vue"),
         meta: {
           title: "设置",
-          noCache: true
+          noCache: true,
+          hideTabBar: true
         }
       },
       {
@@ -76,7 +78,8 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import("@/views/my/change-password.vue"),
         meta: {
           title: "修改密码",
-          noCache: true
+          noCache: true,
+          hideTabBar: true
         }
       },
       {
@@ -104,7 +107,8 @@ const routes: Array<RouteRecordRaw> = [
     name: "Detail",
     component: () => import("@/views/home/detail.vue"),
     meta: {
-      title: "导航示例"
+      title: "人物详情",
+      hideTabBar: true
     }
   },
   {
@@ -113,7 +117,8 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import("@/views/news/chatPage.vue"),
     meta: {
       title: "聊天",
-      noCache: true
+      noCache: true,
+      hideTabBar: true
     }
   }
 ];

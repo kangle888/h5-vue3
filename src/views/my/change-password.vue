@@ -37,12 +37,6 @@ const onSubmit = async () => {
 
 <template>
   <div class="change-page">
-    <div class="top-bar">
-      <van-icon name="arrow-left" size="20" @click="router.back()" />
-      <span class="title">修改密码</span>
-      <span style="width: 20px"></span>
-    </div>
-
     <div class="form-box">
       <van-cell-group inset>
         <van-field v-model="form.oldPassword" type="password" label="旧密码" placeholder="请输入旧密码" />
@@ -68,28 +62,14 @@ const onSubmit = async () => {
   --van-button-primary-background: #dfc293;
   --van-button-primary-border-color: #dfc293;
   --van-button-primary-color: #000;
-  
-  min-height: 100vh;
+  height: 100%;
   background: #000;
   color: #fff;
-}
-
-.top-bar {
-  height: 54px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: 1px solid #111;
-
-  .title {
-    font-size: 16px;
-    font-weight: 500;
-  }
+  padding: 16px;
 }
 
 .form-box {
-  margin-top: 16px;
+  // margin-top: 16px;
 }
 
 .btn-wrap {
