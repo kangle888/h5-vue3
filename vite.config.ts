@@ -63,7 +63,7 @@ export default defineConfig(({ mode }) => {
       // doc: https://github.com/pengzhanbo/vite-plugin-mock-dev-server
       proxy: {
         "^/play": {
-          target: "https://duktig.art:8080",
+          target: "http://192.168.31.83:8080",
           changeOrigin: true,
           rewrite: path => path.replace(/^\/play/, "")
         }
