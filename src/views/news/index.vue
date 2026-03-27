@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { showFailToast } from "vant";
+import { showConfirmDialog, showFailToast, showSuccessToast } from "vant";
 import { useRouter } from "vue-router";
 import {
   countUnreadApi,
+  deleteChatRoomApi,
   pageChatRoomApi,
   type IChatRoomItem
 } from "@/api/news";
@@ -59,7 +60,7 @@ const avatarUrl = (room: IChatRoomItem) => {
 const loadRoomAvatars = async (rows: IChatRoomItem[]) => {
   const pairs = await Promise.all(
     rows.map(async room => {
-      const fileName = room.avatar || room.targetUserAvatar;
+      const fileName = room.targetUserAvatar;
       if (!fileName) return [roomAvatarKey(room), ""] as const;
       try {
         const url = await getAttachmentObjectUrl(fileName);
@@ -87,7 +88,7 @@ const mergeUnreadCount = async (rows: IChatRoomItem[]) => {
       );
       return {
         ...room,
-        unreadCount: oldRoom?.unreadCount || 0
+        unreadCount: room.unreadCount ?? oldRoom?.unreadCount ?? 0
       } as IChatRoomItem;
     });
   }
@@ -174,6 +175,36 @@ const openChat = (room: IChatRoomItem) => {
   });
 };
 
+const onDeleteRoom = async (room: IChatRoomItem) => {
+  const targetUserId = room.targetUserId;
+  if (!targetUserId) return;
+
+  try {
+    await showConfirmDialog({
+      title: "删除会话",
+      message: "删除后会话消息将不可恢复，是否继续？",
+      confirmButtonText: "删除",
+      cancelButtonText: "取消"
+    });
+  } catch {
+    return;
+  }
+
+  try {
+    await deleteChatRoomApi(targetUserId, room.sessionKey || "service_default");
+    showSuccessToast("删除成功");
+    roomList.value = roomList.value.filter(
+      item => !(
+        item.targetUserId === room.targetUserId
+        && (item.sessionKey || "service_default") === (room.sessionKey || "service_default")
+      )
+    );
+    await loadData();
+  } catch {
+    showFailToast("删除失败");
+  }
+};
+
 const onRefresh = async () => {
   refreshing.value = true;
   failCount = 0;
@@ -228,24 +259,37 @@ onBeforeUnmount(() => {
       <div class="content-container">
         <div v-if="activeTab === 'chat'" class="list-wrap">
           <van-list v-model:loading="listLoading" :finished="finished" finished-text="" @load="onLoad">
-            <div v-for="room in roomList" :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`"
-              class="chat-card" @click="openChat(room)">
-              <div class="avatar-wrap">
-                <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
-              </div>
-              <div class="main">
-                <div class="name-row">
-                  <span class="name">{{ roomTitle(room) }}</span>
-                  <span class="time">{{ roomTime(room) }}</span>
+            <van-swipe-cell
+              v-for="room in roomList"
+              :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`"
+            >
+              <div class="chat-card" @click="openChat(room)">
+                <div class="avatar-wrap">
+                  <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
                 </div>
-                <div class="msg-row">
-                  <span class="msg">{{ roomSubText(room) }}</span>
-                  <div v-if="(room.unreadCount || 0) > 0" class="badge">
-                    {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
+                <div class="main">
+                  <div class="name-row">
+                    <span class="name">{{ roomTitle(room) }}</span>
+                    <span class="time">{{ roomTime(room) }}</span>
+                  </div>
+                  <div class="msg-row">
+                    <span class="msg">{{ roomSubText(room) }}</span>
+                    <div v-if="(room.unreadCount || 0) > 0" class="badge">
+                      {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+              <template #right>
+                <van-button
+                  square
+                  type="danger"
+                  text="删除"
+                  class="delete-btn"
+                  @click.stop="onDeleteRoom(room)"
+                />
+              </template>
+            </van-swipe-cell>
           </van-list>
 
           <div v-if="!loading && !roomList.length" class="empty-state">
@@ -361,6 +405,7 @@ onBeforeUnmount(() => {
 
 .chat-card {
   padding: 16px;
+  min-height: 80px;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -371,6 +416,30 @@ onBeforeUnmount(() => {
   &:active {
     background: #0a0a0a;
   }
+}
+
+:deep(.van-swipe-cell__right) {
+  height: 100%;
+  display: flex;
+}
+
+.delete-btn {
+  height: 100%;
+  width: 72px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+:deep(.delete-btn .van-button__text) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
 }
 
 .avatar-wrap {

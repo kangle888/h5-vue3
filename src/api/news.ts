@@ -97,6 +97,17 @@ export function markReadApi(senderId: string, sessionKey?: string): Promise<numb
   });
 }
 
+// 删除会话（C端）
+export function deleteChatRoomApi(targetUserId: string, sessionKey?: string): Promise<number> {
+  const params: Record<string, string> = { targetUserId };
+  if (sessionKey) params.sessionKey = sessionKey;
+  return http.request({
+    url: "/playMessage/deleteChatRoom",
+    method: "post",
+    params
+  });
+}
+
 // /websocket/sendText 发送文本消息
 export function sendTextApi(data: Partial<IPlayMessageItem>): Promise<any> {
   return http.request({

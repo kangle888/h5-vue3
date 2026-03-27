@@ -437,14 +437,9 @@ onMounted(() => {
 }
 
 .like-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #1a1a1a;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #222;
 
   &:active {
     background: #0d0d0d;

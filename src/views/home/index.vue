@@ -32,6 +32,8 @@ const filterForm = reactive({
   name: ""
 });
 
+const showSearch = ref(false);
+
 const coverPreviewMap = ref<Record<string, string>>({});
 const albumPreviewMap = ref<Record<string, string[]>>({});
 const collectIdMap = ref<Record<string, string>>({});
@@ -121,10 +123,6 @@ const playerTag = (item: IPlayerItem) => {
   return item.occupation_dictText || item.occupation || "优质陪玩";
 };
 
-const distanceText = (_item: IPlayerItem, index: number) => {
-  const base = 390;
-  return `${base + index * 120}m`;
-};
 
 const formatCityText = (city?: string) => {
   const fallback = "武汉市";
@@ -239,6 +237,26 @@ const onTabChange = (index: number) => {
   onRefresh();
 };
 
+const openSearch = () => {
+  showSearch.value = true;
+};
+
+const onSearch = async (val?: string) => {
+  filterForm.name = (val || '').trim();
+  refreshing.value = true;
+  await onRefresh();
+};
+
+const clearSearch = async () => {
+  filterForm.name = '';
+  refreshing.value = true;
+  await onRefresh();
+};
+
+const closeSearch = () => {
+  showSearch.value = false;
+};
+
 const goDetail = (item: IPlayerItem) => {
   if (!item.id) return;
   router.push({ name: "Detail", query: { playerId: item.id } });
@@ -256,10 +274,26 @@ const goDetail = (item: IPlayerItem) => {
           </div>
         </div>
         <div class="top-actions">
-          <van-icon name="search" size="22" color="#ccc" />
+          <van-icon name="search" size="18" color="#ccc" @click="openSearch" />
           <!-- <van-icon name="filter-o" size="22" color="#ccc" /> -->
         </div>
       </div>
+
+      <van-popup v-model:show="showSearch" position="top" :style="{ width: '100%' }">
+        <div class="search-bar">
+          <van-search
+            v-model="filterForm.name"
+            placeholder="搜索人物名称"
+            show-action
+            @search="onSearch"
+            @clear="clearSearch"
+          >
+            <template #action>
+              <div class="search-action" @click="closeSearch">取消</div>
+            </template>
+          </van-search>
+        </div>
+      </van-popup>
 
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
         <van-list v-model:loading="loading" v-model:error="error" :finished="finished" finished-text="没有更多了"
@@ -269,6 +303,10 @@ const goDetail = (item: IPlayerItem) => {
               <div class="cover-wrap">
                 <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" />
                 <div v-else class="cover-empty">暂无照片</div>
+                <span
+                  class="status-dot"
+                  :class="{ online: item.onlineStatus === 'ONLINE' }"
+                ></span>
                 <div class="badge">
                   <span class="badge-text">真人认证</span>
                 </div>
@@ -413,6 +451,23 @@ const goDetail = (item: IPlayerItem) => {
     justify-content: center;
     color: #333;
     font-size: 12px;
+  }
+
+  .status-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9ca3af;
+    border: 2px solid #000;
+    box-shadow: 0 0 8px rgba(156, 163, 175, 0.6);
+
+    &.online {
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+    }
   }
 
   .badge {

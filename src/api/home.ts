@@ -28,6 +28,7 @@ export interface IPlayerItem {
   occupation_dictText?: string;
   height?: string;
   weight?: string;
+  onlineStatus?: string;
 }
 
 export interface IPageParam<T> {
@@ -145,10 +146,14 @@ export interface IPlayerActivityItem {
 }
 
 // /playerActivity/page   入参playerId  get
-export const getPlayerActivity = (data: any) => {
+export const getPlayerActivity = (data: { pageNum: number; pageSize: number; playerId?: string; query?: { playerId?: string } }) => {
+  const payload = {
+    ...data,
+    query: data.query ?? { playerId: data.playerId }
+  };
   return http.request<IPageResult<IPlayerActivityItem>>({
     url: "/playerActivity/page",
     method: "post",
-    data
+    data: payload
   });
 };

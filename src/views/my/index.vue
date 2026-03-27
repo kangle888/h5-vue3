@@ -27,8 +27,8 @@ const showSharePopup = ref(false);
 
 const shareLandingPage = async () => {
   const shareData = {
-    title: "闪月落地页",
-    text: "扫码或点击链接进入闪月落地页",
+    title: "初见",
+    text: "扫码或点击链接进下载初见App",
     url: landingUrl.value
   };
 

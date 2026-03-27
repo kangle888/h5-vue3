@@ -24,6 +24,17 @@ const form = reactive({
   code: ""
 });
 
+const showUserAgreement = ref(false);
+const showPrivacyPolicy = ref(false);
+
+const openUserAgreement = () => {
+  showUserAgreement.value = true;
+};
+
+const openPrivacyPolicy = () => {
+  showPrivacyPolicy.value = true;
+};
+
 const getDeviceId = () => {
   let id = localStorage.getItem("c_device_id");
   if (!id) {
@@ -253,11 +264,91 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Footer -->
-    <div class="mt-auto pt-10 text-center text-[12px] text-gray-600">
+    <div class="mt-auto pt-10 text-center text-[12px] text-gray-600 agreement-footer">
       登录即代表同意
-      <span class="text-gray-400 active:text-gray-300">用户协议</span> 和
-      <span class="text-gray-400 active:text-gray-300">隐私政策</span>
+      <span class="agreement-link" @click="openUserAgreement">《用户协议》</span>
+      和
+      <span class="agreement-link" @click="openPrivacyPolicy">《隐私政策》</span>
     </div>
+
+    <van-popup
+      v-model:show="showUserAgreement"
+      position="bottom"
+      round
+      closeable
+      class="protocol-popup"
+      :style="{ height: '80%' }"
+    >
+      <div class="protocol-container">
+        <h3>遇见App用户协议</h3>
+        <p class="protocol-meta">更新日期：2026-03-27</p>
+        <p>
+          欢迎使用遇见App（以下简称“本平台”）。本协议是您与本平台之间关于账号注册、登录、使用服务及相关权利义务的约定。
+          请您在使用前认真阅读并充分理解本协议全部内容。
+        </p>
+        <h4>一、服务说明</h4>
+        <p>
+          本平台为用户提供在线社交、兴趣匹配、内容浏览与互动等服务。平台有权根据业务发展对服务内容进行调整、升级、维护或暂停。
+        </p>
+        <h4>二、账号注册与使用</h4>
+        <p>
+          您应当使用真实、合法、有效的手机号完成注册和登录，并妥善保管账号、密码及验证码。因您保管不善导致的损失由您自行承担。
+        </p>
+        <h4>三、用户行为规范</h4>
+        <p>
+          您承诺在使用本平台时遵守法律法规及平台规则，不发布违法、违规、侵权、骚扰、诈骗、色情暴力等不当内容，不实施任何破坏平台秩序的行为。
+        </p>
+        <h4>四、内容与知识产权</h4>
+        <p>
+          您在平台发布的内容应确保合法且不侵犯第三方权益。平台依法享有对违规内容进行删除、屏蔽、限制展示、封禁账号等管理权。
+        </p>
+        <h4>五、责任限制</h4>
+        <p>
+          平台将尽力保障服务稳定和信息安全，但因不可抗力、网络故障、第三方原因等导致的服务中断或损失，平台在法律允许范围内承担相应责任。
+        </p>
+        <h4>六、协议变更与终止</h4>
+        <p>
+          平台有权根据法律法规及业务需要对本协议进行修订，修订内容公布后生效。若您继续使用服务，即视为接受修订后的协议。
+        </p>
+      </div>
+    </van-popup>
+
+    <van-popup
+      v-model:show="showPrivacyPolicy"
+      position="bottom"
+      round
+      closeable
+      class="protocol-popup"
+      :style="{ height: '80%' }"
+    >
+      <div class="protocol-container">
+        <h3>遇见App隐私政策</h3>
+        <p class="protocol-meta">更新日期：2026-03-27</p>
+        <p>
+          我们非常重视您的个人信息和隐私保护。本政策旨在说明我们如何收集、使用、存储和保护您的个人信息。
+        </p>
+        <h4>一、我们收集的信息</h4>
+        <p>
+          为实现登录与安全验证，我们会收集您的手机号、设备标识、登录日志等必要信息。您在使用服务过程中主动提供的资料（如头像、昵称、互动内容）也将用于功能实现。
+        </p>
+        <h4>二、信息使用目的</h4>
+        <p>
+          我们将信息用于账号登录认证、风险识别、消息通知、服务优化、故障排查及法律法规要求的合规用途，不会超出必要范围使用。
+        </p>
+        <h4>三、信息共享与披露</h4>
+        <p>
+          未经您同意，我们不会向无关第三方共享您的个人信息。法律法规另有规定、或为履行法定义务、保护用户及公众安全所必须时除外。
+        </p>
+        <h4>四、信息存储与保护</h4>
+        <p>
+          我们采取合理的技术与管理措施保护您的信息安全，包括访问控制、传输加密、权限隔离等。请您理解，互联网环境并非绝对安全。
+        </p>
+        <h4>五、未成年人保护</h4>
+        <p>
+          若您为未成年人，请在监护人指导下使用本平台。我们不会在明知情况下主动收集未成年人超出必要范围的个人信息。
+        </p>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -322,5 +413,57 @@ onBeforeUnmount(() => {
 
 :deep(.submit-btn::before) {
   display: none;
+}
+
+.agreement-footer {
+  line-height: 1.7;
+}
+
+.agreement-link {
+  color: #dfc293;
+  margin: 0 2px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+:deep(.protocol-popup) {
+  background: #0b0b0b;
+}
+
+.protocol-container {
+  height: 100%;
+  overflow-y: auto;
+  padding: 22px 16px 28px;
+  color: #d4d4d4;
+  line-height: 1.75;
+
+  h3 {
+    margin: 8px 0 6px;
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .protocol-meta {
+    text-align: center;
+    color: #8f8f8f;
+    font-size: 12px;
+    margin-bottom: 14px;
+  }
+
+  h4 {
+    margin: 14px 0 6px;
+    color: #f2f2f2;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #c8c8c8;
+  }
 }
 </style>
