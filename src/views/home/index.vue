@@ -4,6 +4,12 @@ import { showFailToast, showSuccessToast } from "vant";
 import { codeToText } from "element-china-area-data";
 import { useRouter } from "vue-router";
 import {
+  getCurrentLocation,
+  getLocationCache,
+  reverseGeocodeByTdt,
+  saveLocationCache
+} from "@/utils/location";
+import {
   addPlayerCollect,
   deletePlayerCollect,
   getAttachmentObjectUrl,
@@ -33,6 +39,10 @@ const filterForm = reactive({
 });
 
 const showSearch = ref(false);
+
+const locationCityCode = ref("");
+const locationCityLabel = ref("");
+const locationLoading = ref(false);
 
 const coverPreviewMap = ref<Record<string, string>>({});
 const albumPreviewMap = ref<Record<string, string[]>>({});
@@ -162,6 +172,59 @@ const toggleCollect = async (item: IPlayerItem) => {
 
 let inFlight = false;
 
+const buildTabQuery = () => {
+  const query: Record<string, any> = {
+    name: filterForm.name || undefined
+  };
+
+  if (activeTab.value === 0) {
+    if (locationCityCode.value) {
+      query.city = locationCityCode.value;
+    }
+  } else if (activeTab.value === 1) {
+    query.onlineStatus = "ONLINE";
+  } else if (activeTab.value === 2) {
+    query.recentMonths = 3;
+  }
+
+  return query;
+};
+
+const resolveCityByLocation = async () => {
+  const localCache = getLocationCache();
+  const location = localCache || (await getCurrentLocation());
+  if (!localCache) {
+    saveLocationCache(location);
+  }
+
+  const geo = await reverseGeocodeByTdt(location.longitude, location.latitude);
+  const cityLabel = geo.cityLabel || "";
+  locationCityLabel.value = cityLabel;
+
+  const dict = codeToText as Record<string, string>;
+  const matched = Object.entries(dict).find(([, text]) => cityLabel.includes(text));
+  if (matched?.[0]) {
+    const code = matched[0];
+    locationCityCode.value = code.length > 4 ? code.slice(0, 4) : code;
+  } else {
+    locationCityCode.value = "";
+  }
+};
+
+const ensureNearbyLocationReady = async () => {
+  if (activeTab.value !== 0) return;
+  if (locationCityCode.value || locationLoading.value) return;
+
+  locationLoading.value = true;
+  try {
+    await resolveCityByLocation();
+  } catch (e: any) {
+    showFailToast(e?.message || "定位失败，已显示全部");
+  } finally {
+    locationLoading.value = false;
+  }
+};
+
 const fetchPlayers = async (reset = false) => {
   if (inFlight) return;
   inFlight = true;
@@ -177,15 +240,16 @@ const fetchPlayers = async (reset = false) => {
 
   loading.value = true;
   try {
+    await ensureNearbyLocationReady();
+
     const res = await listPlayer({
       pageNum: pageNum.value,
       pageSize,
-      query: {
-        name: filterForm.name || undefined
-      }
+      query: buildTabQuery()
     });
 
     const rows = res?.records || [];
+    const total = Number(res?.total || 0);
 
     if (reset) {
       players.value = rows;
@@ -204,7 +268,12 @@ const fetchPlayers = async (reset = false) => {
       await loadCollectMap();
     }
 
-    if (rows.length < pageSize) {
+    if (total > 0) {
+      finished.value = players.value.length >= total;
+      if (!finished.value) {
+        pageNum.value += 1;
+      }
+    } else if (rows.length < pageSize) {
       finished.value = true;
     } else {
       pageNum.value += 1;
@@ -243,12 +312,13 @@ const openSearch = () => {
 
 const onSearch = async (val?: string) => {
   filterForm.name = (val || '').trim();
+  showSearch.value = false;
   refreshing.value = true;
   await onRefresh();
 };
 
 const clearSearch = async () => {
-  filterForm.name = '';
+  filterForm.name = "";
   refreshing.value = true;
   await onRefresh();
 };

@@ -7,12 +7,16 @@ export interface IPlayerItem {
   avatar?: string;
   album?: string;
   city?: string;
+  province?: string;
+  cityName?: string;
+  area?: string;
   longitude?: string;
   latitude?: string;
   price?: number;
   sex?: string;
   sex_dictText?: string;
   age?: string;
+  recentMonths?: number;
   introduction?: string;
   skill?: string;
   createTime?: string;
