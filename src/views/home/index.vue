@@ -250,45 +250,24 @@ const goDetail = (item: IPlayerItem) => {
     <div class="box-border">
       <div class="sticky-header">
         <div class="top-tabs">
-          <div
-            v-for="(tab, index) in tabs"
-            :key="tab"
-            class="tab-item"
-            :class="{ active: activeTab === index }"
-            @click="onTabChange(index)"
-          >
+          <div v-for="(tab, index) in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === index }"
+            @click="onTabChange(index)">
             {{ tab }}
           </div>
         </div>
         <div class="top-actions">
           <van-icon name="search" size="22" color="#ccc" />
-          <van-icon name="filter-o" size="22" color="#ccc" />
+          <!-- <van-icon name="filter-o" size="22" color="#ccc" /> -->
         </div>
       </div>
 
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-        <van-list
-          v-model:loading="loading"
-          v-model:error="error"
-          :finished="finished"
-          finished-text="没有更多了"
-          error-text="加载失败，点击重试"
-          @load="onLoad"
-        >
+        <van-list v-model:loading="loading" v-model:error="error" :finished="finished" finished-text="没有更多了"
+          error-text="加载失败，点击重试" @load="onLoad">
           <div class="list-wrap">
-            <div
-              v-for="(item, index) in cardList"
-              :key="item.id || index"
-              class="player-card"
-              @click="goDetail(item)"
-            >
+            <div v-for="(item, index) in cardList" :key="item.id || index" class="player-card" @click="goDetail(item)">
               <div class="cover-wrap">
-                <img
-                  v-if="coverUrl(item)"
-                  :src="coverUrl(item)"
-                  class="cover"
-                  alt="cover"
-                />
+                <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" />
                 <div v-else class="cover-empty">暂无照片</div>
                 <div class="badge">
                   <span class="badge-text">真人认证</span>
@@ -299,11 +278,8 @@ const goDetail = (item: IPlayerItem) => {
                 <div class="name-row">
                   <div class="name">{{ item.name || "神秘玩家" }}</div>
                   <div class="like-btn" @click.stop="toggleCollect(item)">
-                    <van-icon
-                      :name="isCollected(item) ? 'like' : 'like-o'"
-                      size="20"
-                      :color="isCollected(item) ? '#ff4d4f' : '#666'"
-                    />
+                    <van-icon :name="isCollected(item) ? 'like' : 'like-o'" size="20"
+                      :color="isCollected(item) ? '#ff4d4f' : '#666'" />
                   </div>
                 </div>
 
@@ -317,23 +293,15 @@ const goDetail = (item: IPlayerItem) => {
 
                 <div class="city-row">
                   <van-icon name="location-o" class="mr-1" />
-                  <span
-                    >{{ formatCityText(item.city) }} ·
-                    {{ distanceText(item, index) }}</span
-                  >
+                  <!-- <span>{{ formatCityText(item.city) }} ·
+                    {{ distanceText(item, index) }}</span> -->
+                  <span>{{ formatCityText(item.city) }} </span>
                 </div>
 
                 <div class="album-row" v-if="cardImages(item).length > 0">
-                  <div
-                    v-for="(img, imgIdx) in cardImages(item)"
-                    :key="img"
-                    class="mini-wrap"
-                  >
+                  <div v-for="(img, imgIdx) in cardImages(item)" :key="img" class="mini-wrap">
                     <img class="mini" :src="img" alt="album" />
-                    <div
-                      v-if="imgIdx === 2 && cardAlbumCount(item) > 3"
-                      class="more"
-                    >
+                    <div v-if="imgIdx === 2 && cardAlbumCount(item) > 3" class="more">
                       +{{ cardAlbumCount(item) - 3 }} >
                     </div>
                   </div>
@@ -341,10 +309,7 @@ const goDetail = (item: IPlayerItem) => {
               </div>
             </div>
 
-            <van-empty
-              v-if="!loading && !cardList.length"
-              description="暂无数据"
-            />
+            <van-empty v-if="!loading && !cardList.length" description="暂无数据" />
           </div>
         </van-list>
       </van-pull-refresh>
@@ -474,6 +439,7 @@ const goDetail = (item: IPlayerItem) => {
   flex-direction: column;
   justify-content: flex-start;
   padding-bottom: 4px;
+  padding-left: 8px;
 }
 
 .name-row {

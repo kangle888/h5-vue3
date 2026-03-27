@@ -21,6 +21,7 @@ export interface IChatRoomItem {
   targetUserId?: string;
   targetUserName?: string;
   targetUserAvatar?: string;
+  avatar?: string;
   targetUserMobile?: string;
   lastContent?: string;
   lastTime?: string;

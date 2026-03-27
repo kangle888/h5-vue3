@@ -69,7 +69,7 @@ const sessionKey = computed(() => {
 
 const chatTitle = computed(() => {
   return chatScene.value === "player"
-    ? `联系客服（${playerName.value}）`
+    ? `${playerName.value}`
     : "客服聊天";
 });
 
@@ -78,8 +78,8 @@ const wsUrl = () => {
   const base = (import.meta.env.VITE_BASE_API || "").replace(/^http/, "ws");
   const token = encodeURIComponent(
     localStorage.getItem("c_access_token") ||
-      localStorage.getItem("token") ||
-      ""
+    localStorage.getItem("token") ||
+    ""
   );
   return `${base}/websocket/register?access-token=${token}`;
 };
@@ -256,39 +256,22 @@ onBeforeUnmount(() => {
         <div class="right-placeholder"></div>
       </div>
 
-      <div
-        v-if="loading"
-        class="loading-wrap flex-1 flex items-center justify-center"
-      >
+      <div v-if="loading" class="loading-wrap flex-1 flex items-center justify-center">
         <van-loading size="24" color="#ccc" />
       </div>
 
       <div v-else ref="listRef" class="chat-list flex-1 overflow-auto">
-        <div
-          v-for="msg in records"
-          :key="msg.id"
-          class="chat-row"
-          :class="{ mine: msg.senderId === myUserId }"
-        >
+        <div v-for="msg in records" :key="msg.id" class="chat-row" :class="{ mine: msg.senderId === myUserId }">
           <div class="msg-content">
             <template v-if="msg.messageType === 'file'">
-              <img
-                v-if="imagePreviewMap[msg.id || '']"
-                class="image-bubble"
-                :src="imagePreviewMap[msg.id || '']"
-                alt="chat-image"
-                @click="previewImage(msg.id)"
-              />
+              <img v-if="imagePreviewMap[msg.id || '']" class="image-bubble" :src="imagePreviewMap[msg.id || '']"
+                alt="chat-image" @click="previewImage(msg.id)" />
               <div v-else class="bubble loading-bubble">[图片加载中...]</div>
             </template>
             <div v-else class="bubble">{{ msg.content }}</div>
 
             <div class="meta-row">
-              <span
-                v-if="msg.senderId === myUserId"
-                class="read-flag"
-                :class="{ read: msg.readStatus === '1' }"
-              >
+              <span v-if="msg.senderId === myUserId" class="read-flag" :class="{ read: msg.readStatus === '1' }">
                 {{ msg.readStatus === "1" ? "已读" : "未读" }}
               </span>
               <span class="time">{{
@@ -300,27 +283,12 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="chat-input-wrap">
-        <input
-          v-model="messageText"
-          class="chat-input"
-          placeholder="给Ta发消息..."
-          @keyup.enter="sendMessage"
-        />
-        <button
-          class="action-btn"
-          :disabled="sendingImage"
-          @click="triggerChooseImage"
-        >
+        <input v-model="messageText" class="chat-input" placeholder="给Ta发消息..." @keyup.enter="sendMessage" />
+        <button class="action-btn" :disabled="sendingImage" @click="triggerChooseImage">
           <van-icon name="photograph" size="24" />
         </button>
         <button class="send-btn" @click="sendMessage">发送</button>
-        <input
-          ref="fileInputRef"
-          type="file"
-          accept="image/*"
-          class="hidden-file"
-          @change="onChooseImage"
-        />
+        <input ref="fileInputRef" type="file" accept="image/*" class="hidden-file" @change="onChooseImage" />
       </div>
     </div>
   </div>
@@ -489,7 +457,7 @@ onBeforeUnmount(() => {
 }
 
 .send-btn {
-  height: 40px;
+  height: 32px;
   padding: 0 16px;
   border-radius: 20px;
   border: none;

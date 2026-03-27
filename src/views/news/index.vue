@@ -7,14 +7,19 @@ import {
   pageChatRoomApi,
   type IChatRoomItem
 } from "@/api/news";
+import { getAttachmentObjectUrl } from "@/api/home";
 
 defineOptions({ name: "News" });
 
 const router = useRouter();
 const activeTab = ref<"chat" | "system">("chat");
 const loading = ref(false);
+const listLoading = ref(false);
+const refreshing = ref(false);
+const finished = ref(false);
 const pollTimer = ref<number | null>(null);
 const roomList = ref<IChatRoomItem[]>([]);
+const avatarMap = ref<Record<string, string>>({});
 
 const BASE_POLL_INTERVAL = 8000;
 const MAX_POLL_INTERVAL = 60000;
@@ -27,11 +32,7 @@ let failCount = 0;
 let lastUnreadFetchAt = 0;
 
 const roomTitle = (room: IChatRoomItem) => {
-  const userName = room.targetUserName || room.targetUserId || "用户";
-  if (room.scene === "player") {
-    return `${userName}（${room.playerName || room.playerId || "卡片会话"}）`;
-  }
-  return `${userName}（客服会话）`;
+  return `${room.playerName || room.playerId || "卡片会话"}`;
 };
 
 const roomSubText = (room: IChatRoomItem) => {
@@ -47,8 +48,33 @@ const roomTime = (room: IChatRoomItem) => {
 
 const fallbackAvatar = "https://picsum.photos/seed/admin-chat/120/120";
 
-const avatarUrl = (_room: IChatRoomItem) => {
-  return fallbackAvatar;
+const roomAvatarKey = (room: IChatRoomItem) => {
+  return `${room.targetUserId || ""}_${room.sessionKey || "service_default"}`;
+};
+
+const avatarUrl = (room: IChatRoomItem) => {
+  return avatarMap.value[roomAvatarKey(room)] || fallbackAvatar;
+};
+
+const loadRoomAvatars = async (rows: IChatRoomItem[]) => {
+  const pairs = await Promise.all(
+    rows.map(async room => {
+      const fileName = room.avatar || room.targetUserAvatar;
+      if (!fileName) return [roomAvatarKey(room), ""] as const;
+      try {
+        const url = await getAttachmentObjectUrl(fileName);
+        return [roomAvatarKey(room), url || ""] as const;
+      } catch {
+        return [roomAvatarKey(room), ""] as const;
+      }
+    })
+  );
+
+  const nextMap: Record<string, string> = {};
+  pairs.forEach(([key, url]) => {
+    if (url) nextMap[key] = url;
+  });
+  avatarMap.value = nextMap;
 };
 
 const mergeUnreadCount = async (rows: IChatRoomItem[]) => {
@@ -94,6 +120,7 @@ const loadData = async () => {
   if (polling) return false;
   polling = true;
   loading.value = true;
+  listLoading.value = true;
 
   try {
     const res = await pageChatRoomApi({
@@ -104,6 +131,8 @@ const loadData = async () => {
 
     const rows = res?.records || [];
     roomList.value = await mergeUnreadCount(rows);
+    await loadRoomAvatars(roomList.value);
+    finished.value = true;
     failCount = 0;
     return true;
   } catch {
@@ -114,6 +143,8 @@ const loadData = async () => {
     return false;
   } finally {
     loading.value = false;
+    listLoading.value = false;
+    refreshing.value = false;
     polling = false;
   }
 };
@@ -143,6 +174,22 @@ const openChat = (room: IChatRoomItem) => {
   });
 };
 
+const onRefresh = async () => {
+  refreshing.value = true;
+  failCount = 0;
+  lastUnreadFetchAt = 0;
+  await loadData();
+};
+
+const onLoad = async () => {
+  if (roomList.value.length) {
+    finished.value = true;
+    listLoading.value = false;
+    return;
+  }
+  await loadData();
+};
+
 onMounted(async () => {
   await loadData();
   scheduleNextPoll();
@@ -155,9 +202,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="news-page-wrapper  w-full">
-    <div class="box-border  pb-20">
-      <div class="top-bar">
+  <div class="news-page-wrapper w-full">
+    <van-pull-refresh
+      v-model="refreshing"
+      :disabled="activeTab !== 'chat'"
+      class="page-refresh"
+      @refresh="onRefresh"
+    >
+      <div class="box-border pb-10">
+        <div class="top-bar">
         <div class="tabs">
           <div class="tab" :class="{ 'active-tab': activeTab === 'chat' }" @click="activeTab = 'chat'">
             聊天
@@ -173,41 +226,33 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="content-container">
-        <!-- Notify Banner -->
-        <div class="notice-card" v-if="activeTab === 'chat'">
-          <div class="notice-left">
-            <van-icon name="cross" class="close-icon" />
-            <span class="notice-text">收不到新消息？点击开启通知</span>
-          </div>
-          <button class="open-notify-btn">开启通知</button>
-        </div>
-
-        <!-- Chat List -->
         <div v-if="activeTab === 'chat'" class="list-wrap">
-          <div v-for="room in roomList" :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`" class="chat-card" @click="openChat(room)">
-            <div class="avatar-wrap">
-              <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
-            </div>
-            <div class="main">
-              <div class="name-row">
-                <span class="name">{{ roomTitle(room) }}</span>
-                <span class="time">{{ roomTime(room) }}</span>
+          <van-list v-model:loading="listLoading" :finished="finished" finished-text="" @load="onLoad">
+            <div v-for="room in roomList" :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`"
+              class="chat-card" @click="openChat(room)">
+              <div class="avatar-wrap">
+                <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
               </div>
-              <div class="msg-row">
-                <span class="msg">{{ roomSubText(room) }}</span>
-                <div v-if="(room.unreadCount || 0) > 0" class="badge">
-                  {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
+              <div class="main">
+                <div class="name-row">
+                  <span class="name">{{ roomTitle(room) }}</span>
+                  <span class="time">{{ roomTime(room) }}</span>
+                </div>
+                <div class="msg-row">
+                  <span class="msg">{{ roomSubText(room) }}</span>
+                  <div v-if="(room.unreadCount || 0) > 0" class="badge">
+                    {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          </van-list>
 
           <div v-if="!loading && !roomList.length" class="empty-state">
             <p>暂无消息</p>
           </div>
         </div>
 
-        <!-- System List -->
         <div v-else class="system-wrap">
           <div class="empty-state">
             <p>暂无系统消息</p>
@@ -215,6 +260,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+    </van-pull-refresh>
   </div>
 </template>
 
@@ -223,7 +269,12 @@ onBeforeUnmount(() => {
   background-color: #000000;
   color: #fff;
   box-sizing: border-box;
-  height: 100%;
+  height: 100vh;
+  overflow: auto;
+}
+
+.page-refresh {
+  min-height: 100%;
 }
 
 .top-bar {
@@ -266,6 +317,7 @@ onBeforeUnmount(() => {
 
 .content-container {
   padding: 0;
+  min-height: calc(100vh - 54px);
 }
 
 .notice-card {
@@ -280,12 +332,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  
+
   .close-icon {
     color: #666;
     font-size: 14px;
   }
-  
+
   .notice-text {
     color: #888;
     font-size: 13px;
@@ -304,6 +356,7 @@ onBeforeUnmount(() => {
 .list-wrap {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
 }
 
 .chat-card {

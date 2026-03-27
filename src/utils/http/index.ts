@@ -5,7 +5,7 @@ import Axios, {
   type AxiosRequestConfig
 } from "axios";
 import { ContentTypeEnum } from "@/enums/request-enum";
-import NProgress from "../progress";
+// import NProgress from "../progress";
 import { showFailToast } from "vant";
 import "vant/es/toast/style";
 
@@ -29,7 +29,7 @@ class Http {
   private httpInterceptorsRequest(): void {
     Http.axiosInstance.interceptors.request.use(
       config => {
-        NProgress.start();
+        // NProgress.start();
         // 发送请求前，可在此携带 token
         config.headers["access-token"] = localStorage.getItem("c_access_token") || localStorage.getItem("token");
         return config;
@@ -45,7 +45,7 @@ class Http {
   private httpInterceptorsResponse(): void {
     Http.axiosInstance.interceptors.response.use(
       (response: AxiosResponse) => {
-        NProgress.done();
+        // NProgress.done();
         // 与后端协定的返回字段（当前后端为 code + message + data）
         const { code, message, data } = response.data ?? {};
         const isSuccess =
@@ -61,7 +61,7 @@ class Http {
         return Promise.reject(response.data);
       },
       (error: AxiosError) => {
-        NProgress.done();
+        // NProgress.done();
         // 处理 HTTP 网络错误
         let message = "";
         // HTTP 状态码

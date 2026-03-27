@@ -29,6 +29,15 @@ const activities = ref<IPlayerActivityItem[]>([]);
 const activityImageMap = ref<Record<string, string[]>>({});
 const collectId = ref("");
 
+const currentUserId = computed(() => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem("c_user_info") || "{}");
+    return userInfo?.id || "";
+  } catch {
+    return "";
+  }
+});
+
 const playerId = computed(() => {
   const raw = route.query.playerId ?? route.query.id;
   const v = Array.isArray(raw) ? raw[0] : raw;
@@ -104,7 +113,11 @@ const loadCollectStatus = async (id: string) => {
     const res = await pagePlayerCollect({
       pageNum: 1,
       pageSize: 1,
-      query: { playerId: id, isCancel: "0" }
+      query: {
+        playerId: id,
+        collectPlayerId: currentUserId.value,
+        isCancel: "0"
+      }
     });
     collectId.value = res?.records?.[0]?.id || "";
   } catch {
@@ -222,11 +235,7 @@ onMounted(() => {
                   </span>
                 </div>
                 <div class="like-btn" :class="{ 'is-liked': collectId }" @click.stop="toggleCollect">
-                  <van-icon
-                    :name="collectId ? 'like' : 'like-o'"
-                    size="20"
-                    :color="collectId ? '#ff4d4f' : '#888'"
-                  />
+                  <van-icon :name="collectId ? 'like' : 'like-o'" size="20" :color="collectId ? '#ff4d4f' : '#888'" />
                 </div>
               </div>
 
@@ -237,7 +246,7 @@ onMounted(() => {
                 </div>
                 <div class="meta-item">
                   <van-icon name="location-o" class="mr-1" />
-                  {{ cityText }} · 397m
+                  {{ cityText }}
                 </div>
                 <div class="meta-item">
                   <van-icon name="contact-o" class="mr-1" />
@@ -259,12 +268,8 @@ onMounted(() => {
                   <div class="divider"></div>相册
                 </div>
                 <div class="album-grid" v-if="albumPreviewList.length > 0">
-                  <div 
-                    v-for="(img, idx) in albumPreviewList.slice(0, 8)"
-                    :key="img + idx"
-                    class="album-item-wrap"
-                    @click="openAlbumPreview(idx)"
-                  >
+                  <div v-for="(img, idx) in albumPreviewList.slice(0, 8)" :key="img + idx" class="album-item-wrap"
+                    @click="openAlbumPreview(idx)">
                     <img class="album-item" :src="img" alt="album" />
                     <div class="overlay-more" v-if="idx === 7 && albumPreviewList.length > 8">
                       +{{ albumPreviewList.length - 8 }}
@@ -286,14 +291,9 @@ onMounted(() => {
                     <div class="activity-body">
                       <div class="activity-content">{{ act.content || "半夜睡醒了咋整" }}</div>
                       <div class="activity-image-grid" v-if="(activityImageMap[act.id || ''] || []).length">
-                         <img
-                          v-for="(img, idx) in activityImageMap[act.id || ''].slice(0, 2)"
-                          :key="img + idx"
-                          class="activity-image"
-                          :src="img"
-                          alt="activity-image"
-                          @click="openActivityPreview(act.id || '', idx)"
-                        />
+                        <img v-for="(img, idx) in activityImageMap[act.id || ''].slice(0, 2)" :key="img + idx"
+                          class="activity-image" :src="img" alt="activity-image"
+                          @click="openActivityPreview(act.id || '', idx)" />
                       </div>
                     </div>
                   </div>
@@ -306,11 +306,7 @@ onMounted(() => {
 
         <div v-else class="empty-wrap">
           <div class="empty">暂无数据</div>
-          <van-button 
-            round
-            class="back-home-btn"
-            @click="router.replace({ name: 'Home' })"
-          >
+          <van-button round class="back-home-btn" @click="router.replace({ name: 'Home' })">
             返回首页
           </van-button>
         </div>
@@ -321,9 +317,9 @@ onMounted(() => {
         <button class="btn-chat" @click="goContactAdmin">
           <van-icon name="chat-o" size="18" class="mr-1" /> 私聊她
         </button>
-        <button class="btn-wechat" @click="goContactAdmin">
+        <!-- <button class="btn-wechat" @click="goContactAdmin">
           <van-icon name="wechat" size="18" class="mr-1" /> 微信
-        </button>
+        </button> -->
       </div>
     </div>
   </div>
@@ -374,7 +370,8 @@ onMounted(() => {
 
 .hero-img-box {
   width: 100%;
-  height: 300px; /* Large cover */
+  height: 300px;
+  /* Large cover */
   position: relative;
 }
 
@@ -403,7 +400,7 @@ onMounted(() => {
   background: #000000;
   border-radius: 24px 24px 0 0;
   padding: 24px 16px;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .name-row {
@@ -425,12 +422,13 @@ onMounted(() => {
 }
 
 .auth-badge {
-  background: #ff4d6a; /* Reddish badge for "真颜" */
+  background: #ff4d6a;
+  /* Reddish badge for "真颜" */
   padding: 2px 4px;
   border-radius: 4px;
   display: flex;
   align-items: center;
-  
+
   .badge-text {
     font-size: 10px;
     color: #fff;
@@ -447,7 +445,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid #222;
-  
+
   &:active {
     background: #0d0d0d;
   }
@@ -494,7 +492,7 @@ onMounted(() => {
   color: #fff;
   display: flex;
   align-items: center;
-  
+
   .divider {
     width: 3px;
     height: 14px;
@@ -534,7 +532,7 @@ onMounted(() => {
 .overlay-more {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -557,7 +555,7 @@ onMounted(() => {
 .activity-date {
   width: 40px;
   flex-shrink: 0;
-  
+
   .date-day {
     font-size: 24px;
     font-weight: 700;
@@ -581,7 +579,7 @@ onMounted(() => {
 .activity-image-grid {
   display: flex;
   gap: 8px;
-  
+
   .activity-image {
     width: 100px;
     height: 100px;
@@ -616,7 +614,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:active {
     opacity: 0.8;
   }
@@ -634,7 +632,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:active {
     background: #111;
   }

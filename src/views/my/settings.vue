@@ -61,26 +61,21 @@ const onLogout = () => {
         <div class="group group-panel">
           <div class="cell">
             <span class="label">手机号码</span>
-            <span class="value"
-              >{{ mobile || "-" }}
-              <span class="text-xs opacity-50 ml-1">(仅自己可见)</span></span
-            >
+            <span class="value">{{ mobile || "-" }}
+              <span class="text-xs opacity-50 ml-1">(仅自己可见)</span></span>
           </div>
-          <div
-            class="cell clickable"
-            @click="router.push({ name: 'ChangePassword' })"
-          >
+          <div class="cell clickable" @click="router.push({ name: 'ChangePassword' })">
             <span class="label">修改密码</span>
             <van-icon name="arrow" class="arrow-icon" />
           </div>
-          <div class="cell clickable">
+          <!-- <div class="cell clickable">
             <span class="label">注销账号</span>
             <van-icon name="arrow" class="arrow-icon" />
-          </div>
+          </div> -->
         </div>
 
         <!-- Group 2 -->
-        <div class="group group-panel">
+        <!-- <div class="group group-panel">
           <div class="cell clickable">
             <span class="label">隐私设置</span>
             <van-icon name="arrow" class="arrow-icon" />
@@ -101,7 +96,7 @@ const onLogout = () => {
             <span class="label">我的印象</span>
             <van-icon name="arrow" class="arrow-icon" />
           </div>
-        </div>
+        </div> -->
 
         <!-- Group 3 -->
         <div class="group group-panel">
@@ -121,13 +116,13 @@ const onLogout = () => {
             <span class="label">已收集个人信息清单</span>
             <van-icon name="arrow" class="arrow-icon" />
           </div>
-          <div class="cell clickable">
+          <!-- <div class="cell clickable">
             <span class="label">第三方共享个人信息清单</span>
             <van-icon name="arrow" class="arrow-icon" />
-          </div>
+          </div> -->
           <div class="cell">
             <span class="label">当前版本</span>
-            <span class="value">1.3.4.2</span>
+            <span class="value">1.0.0.1</span>
           </div>
         </div>
 
@@ -229,5 +224,4 @@ const onLogout = () => {
     padding-bottom: calc(50px + env(safe-area-inset-bottom));
   }
 }
-
 </style>
