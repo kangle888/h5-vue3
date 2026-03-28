@@ -125,7 +125,7 @@ onMounted(() => {
     <van-popup v-model:show="showSharePopup" round position="bottom" class="dark-popup">
       <div class="share-popup">
         <div class="popup-header">
-          <span class="popup-title">App 分享</span>
+          <span class="popup-title">遇见App分享</span>
           <van-icon name="cross" class="close-icon" @click="showSharePopup = false" />
         </div>
 
@@ -135,7 +135,6 @@ onMounted(() => {
               <van-image class="qr-image" fit="cover" :src="qrUrl" alt="landing-qrcode" />
             </div>
           </div>
-          <div class="qr-tip">扫码可直接进入落地页（无需登录）</div>
 
           <button class="share-btn" @click="shareLandingPage">
             <van-icon name="share-o" size="16" />

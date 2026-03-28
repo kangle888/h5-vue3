@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import {
-  useDarkMode,
-  useToggleDarkMode
-} from "@/composables/useToggleDarkMode";
+import { useToggleDarkMode } from "@/composables/useToggleDarkMode";
 
 interface NavBarProps {
   title?: string;
@@ -29,6 +26,7 @@ const onClickLeft = () => {
 
 <template>
   <van-nav-bar
+    class="dark-nav-bar"
     :title="props.title"
     :left-arrow="props.leftArrow"
     fixed
@@ -36,10 +34,28 @@ const onClickLeft = () => {
     @click-left="onClickLeft"
     @click-right="onClickRight"
   >
-    <template #right>
+    <!-- <template #right>
       <svg-icon class="text-[18px]" :name="useDarkMode() ? 'light' : 'dark'" />
-    </template>
+    </template> -->
   </van-nav-bar>
 </template>
 
-<style scoped></style>
+<style scoped lang="less">
+.dark-nav-bar {
+  :deep(.van-nav-bar) {
+    background: #000;
+  }
+
+  :deep(.van-nav-bar__title) {
+    color: #fff;
+  }
+
+  :deep(.van-icon) {
+    color: #fff;
+  }
+
+  :deep(.van-nav-bar__text) {
+    color: #fff;
+  }
+}
+</style>

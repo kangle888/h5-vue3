@@ -125,9 +125,9 @@ const onLogout = () => {
   showConfirmDialog({
     title: "退出登录",
     message: "确定退出当前账号吗？",
-    showCancelButton: true,
     cancelButtonText: "取消",
-    confirmButtonText: "确认"
+    confirmButtonText: "确认",
+    className: "logout-confirm-dialog"
   })
     .then(async () => {
       await logoutApi({
@@ -239,12 +239,7 @@ const onLogout = () => {
       </div>
     </div>
 
-    <van-popup
-      v-model:show="aboutVisible"
-      position="bottom"
-      round
-      :style="{ height: '72vh', background: '#0b0b0b' }"
-    >
+    <van-popup v-model:show="aboutVisible" position="bottom" round :style="{ height: '72vh', background: '#0b0b0b' }">
       <div class="agreement-sheet">
         <div class="agreement-header">
           <span class="agreement-title">关于遇见 App</span>
@@ -257,12 +252,8 @@ const onLogout = () => {
       </div>
     </van-popup>
 
-    <van-popup
-      v-model:show="agreementVisible"
-      position="bottom"
-      round
-      :style="{ height: '78vh', background: '#0b0b0b' }"
-    >
+    <van-popup v-model:show="agreementVisible" position="bottom" round
+      :style="{ height: '78vh', background: '#0b0b0b' }">
       <div class="agreement-sheet">
         <div class="agreement-header">
           <span class="agreement-title">{{ agreementTitle }}</span>
@@ -411,6 +402,47 @@ const onLogout = () => {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
       "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
   }
+}
+
+:global(.logout-confirm-dialog) {
+  width: min(86vw, 340px);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+}
+
+:global(.logout-confirm-dialog .van-dialog__header) {
+  padding: 20px 18px 8px;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #1f2937;
+}
+
+:global(.logout-confirm-dialog .van-dialog__content) {
+  padding: 0 22px 18px;
+}
+
+:global(.logout-confirm-dialog .van-dialog__message) {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6b7280;
+}
+
+:global(.logout-confirm-dialog .van-dialog__footer) {
+  border-top: 1px solid #e5e7eb;
+}
+
+:global(.logout-confirm-dialog .van-dialog__cancel),
+:global(.logout-confirm-dialog .van-dialog__confirm) {
+  height: 50px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #111827;
+}
+
+:global(.logout-confirm-dialog .van-dialog__confirm) {
+  color: #ef4444;
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {

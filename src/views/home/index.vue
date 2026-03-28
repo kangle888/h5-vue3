@@ -334,7 +334,7 @@ const goDetail = (item: IPlayerItem) => {
 </script>
 
 <template>
-  <div class="home-wrapper w-full">
+  <div class="home-wrapper">
     <div class="box-border">
       <div class="sticky-header">
         <div class="top-tabs">
@@ -351,13 +351,8 @@ const goDetail = (item: IPlayerItem) => {
 
       <van-popup v-model:show="showSearch" position="top" :style="{ width: '100%' }">
         <div class="search-bar">
-          <van-search
-            v-model="filterForm.name"
-            placeholder="搜索人物名称"
-            show-action
-            @search="onSearch"
-            @clear="clearSearch"
-          >
+          <van-search v-model="filterForm.name" placeholder="搜索人物名称" show-action @search="onSearch"
+            @clear="clearSearch">
             <template #action>
               <div class="search-action" @click="closeSearch">取消</div>
             </template>
@@ -373,10 +368,7 @@ const goDetail = (item: IPlayerItem) => {
               <div class="cover-wrap">
                 <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" />
                 <div v-else class="cover-empty">暂无照片</div>
-                <span
-                  class="status-dot"
-                  :class="{ online: item.onlineStatus === 'ONLINE' }"
-                ></span>
+                <span class="status-dot" :class="{ online: item.onlineStatus === 'ONLINE' }"></span>
                 <div class="badge">
                   <span class="badge-text">真人认证</span>
                 </div>
@@ -440,7 +432,7 @@ const goDetail = (item: IPlayerItem) => {
   background-color: #000000;
   color: #fff;
   height: 100%;
-  min-height: 100%;
+  overflow-y: auto;
 }
 
 .sticky-header {
