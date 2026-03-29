@@ -44,6 +44,11 @@ const onClickLeft = () => {
 .dark-nav-bar {
   :deep(.van-nav-bar) {
     background: #000;
+    box-shadow: none;
+  }
+
+  :deep(.van-hairline--bottom::after) {
+    border-bottom-width: 0;
   }
 
   :deep(.van-nav-bar__title) {

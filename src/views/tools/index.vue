@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { BackTop, showFailToast, showImagePreview } from "vant";
+import { showFailToast, showImagePreview } from "vant";
+import { useRouter } from "vue-router";
 import { computed, ref } from "vue";
 import {
   getAttachmentObjectUrl,
@@ -30,10 +31,7 @@ const pageSize = 10;
 
 const playerMap = ref<Record<string, PlayerWithAvatar>>({});
 
-const tabs = [
-  { key: "recommend", label: "推荐" },
-  { key: "heartbeat", label: "心动" }
-] as const;
+const router = useRouter();
 
 const currentList = computed(() => {
   if (activeTab.value === "recommend") return feedList.value;
@@ -162,19 +160,25 @@ const onTabChange = async (name: string | number) => {
   activeTab.value = (name as "recommend" | "heartbeat") || "recommend";
   await onRefresh();
 };
+const goDetail = (item: FeedItem) => {
+  if (!item.id) return;
+  router.push({ name: "Detail", query: { playerId: item.playerId } });
+};
 </script>
 
 <template>
   <div class="dynamic-page-wrapper">
-    <div class="box-border">
+    <div class="box-border" style="height: 100%;">
       <div class="top-tabs">
-        <van-tabs :active="activeTab" background="#000" color="#dfc293" title-inactive-color="#666"
-          title-active-color="#fff" line-width="30" shrink @change="onTabChange">
-          <van-tab v-for="tab in tabs" :key="tab.key" :name="tab.key" :title="tab.label" />
-        </van-tabs>
+        <div class="tab-item" :class="{ active: activeTab === 'recommend' }" @click="onTabChange('recommend')">
+          推荐
+        </div>
+        <div class="tab-item" :class="{ active: activeTab === 'heartbeat' }" @click="onTabChange('heartbeat')">
+          心动
+        </div>
       </div>
 
-      <van-pull-refresh v-model="refreshing" success-text="刷新成功" @refresh="onRefresh">
+      <van-pull-refresh v-model="refreshing" success-text="刷新成功" @refresh="onRefresh" class="page-refresh">
         <van-list v-model:loading="loading" v-model:error="error" :finished="finished" loading-text="加载中..."
           finished-text="没有更多了" error-text="加载失败，点击重试" @load="onLoad">
           <van-empty v-if="!loading && !currentList.length" image="search" description="暂无动态" class="empty-wrap" />
@@ -182,7 +186,7 @@ const onTabChange = async (name: string | number) => {
           <div v-for="item in currentList" :key="item.id" class="feed-card">
             <div class="author-row">
               <van-image v-if="getPlayerAvatar(item)" :src="getPlayerAvatar(item)" width="44" height="44" round
-                fit="cover" />
+                fit="cover" @click="goDetail(item)" />
               <div v-else class="avatar placeholder">
                 <van-icon name="user-circle-o" size="24" color="#333" />
               </div>
@@ -244,29 +248,27 @@ const onTabChange = async (name: string | number) => {
   background: #000000;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 16px;
   padding: 0 16px;
   border-bottom: 1px solid #111;
+}
 
-  .tabs-container {
-    display: flex;
-    gap: 30px;
-    height: 100%;
-  }
+.page-refresh {
+  height: calc(100% - 54px);
+  overflow-y: auto;
 }
 
 .tab-item {
-  position: relative;
-  display: flex;
-  align-items: center;
   color: #666;
   font-size: 16px;
+  font-weight: normal;
   transition: all 0.2s;
   cursor: pointer;
 
   &.active {
     color: #fff;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 600;
   }
 }
@@ -351,6 +353,7 @@ const onTabChange = async (name: string | number) => {
 .cover-empty {
   margin-top: 14px;
   width: 50%;
+  height: 180px;
   border-radius: 8px;
   background: #0a0a0a;
 }
@@ -368,7 +371,7 @@ const onTabChange = async (name: string | number) => {
 }
 
 .city {
-  margin-top: 45px;
+  // margin-top: 45px;
 }
 
 .city-tag {

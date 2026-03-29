@@ -22,7 +22,7 @@ defineOptions({
   name: "Home"
 });
 
-const tabs = ["附近", "活跃", "新人"] as const;
+const tabs = ["推荐", "活跃", "新人"] as const;
 const activeTab = ref(0);
 const loading = ref(false);
 const refreshing = ref(false);
@@ -177,11 +177,7 @@ const buildTabQuery = () => {
     name: filterForm.name || undefined
   };
 
-  if (activeTab.value === 0) {
-    if (locationCityCode.value) {
-      query.city = locationCityCode.value;
-    }
-  } else if (activeTab.value === 1) {
+  if (activeTab.value === 1) {
     query.onlineStatus = "ONLINE";
   } else if (activeTab.value === 2) {
     query.recentMonths = 3;
@@ -190,6 +186,7 @@ const buildTabQuery = () => {
   return query;
 };
 
+// 预留定位能力（当前推荐流不启用）
 const resolveCityByLocation = async () => {
   const localCache = getLocationCache();
   const location = localCache || (await getCurrentLocation());
@@ -212,17 +209,13 @@ const resolveCityByLocation = async () => {
 };
 
 const ensureNearbyLocationReady = async () => {
-  if (activeTab.value !== 0) return;
-  if (locationCityCode.value || locationLoading.value) return;
-
-  locationLoading.value = true;
-  try {
-    await resolveCityByLocation();
-  } catch (e: any) {
-    showFailToast(e?.message || "定位失败，已显示全部");
-  } finally {
-    locationLoading.value = false;
-  }
+  // 暂不启用定位逻辑，仅保留代码预留
+  // 通过以下引用保留定位相关代码，后续可直接恢复
+  void resolveCityByLocation;
+  void locationCityCode.value;
+  void locationCityLabel.value;
+  void locationLoading.value;
+  return;
 };
 
 const fetchPlayers = async (reset = false) => {
@@ -335,7 +328,7 @@ const goDetail = (item: IPlayerItem) => {
 
 <template>
   <div class="home-wrapper">
-    <div class="box-border">
+    <div class="box-border" style="height: 100%;">
       <div class="sticky-header">
         <div class="top-tabs">
           <div v-for="(tab, index) in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === index }"
@@ -360,7 +353,7 @@ const goDetail = (item: IPlayerItem) => {
         </div>
       </van-popup>
 
-      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="page-refresh">
         <van-list v-model:loading="loading" v-model:error="error" :finished="finished" finished-text="没有更多了"
           error-text="加载失败，点击重试" @load="onLoad">
           <div class="list-wrap">
@@ -393,9 +386,7 @@ const goDetail = (item: IPlayerItem) => {
 
                 <div class="city-row">
                   <van-icon name="location-o" class="mr-1" />
-                  <!-- <span>{{ formatCityText(item.city) }} ·
-                    {{ distanceText(item, index) }}</span> -->
-                  <span>{{ formatCityText(item.city) }} </span>
+                  <span>{{ item.cityName ? item.cityName : item.province }} </span>
                 </div>
 
                 <div class="album-row" v-if="cardImages(item).length > 0">
@@ -445,6 +436,12 @@ const goDetail = (item: IPlayerItem) => {
   justify-content: space-between;
   padding: 0 16px;
   background: #000000;
+  border-bottom: 1px solid #111;
+}
+
+.page-refresh {
+  height: calc(100% - 54px);
+  overflow-y: auto;
 }
 
 .top-tabs {

@@ -208,9 +208,9 @@ onMounted(() => {
         <div class="icon-btn" @click="router.back()">
           <van-icon name="arrow-left" size="20" color="#fff" />
         </div>
-        <div class="icon-btn">
+        <!-- <div class="icon-btn">
           <van-icon name="ellipsis" size="20" color="#fff" />
-        </div>
+        </div> -->
       </div>
 
       <div v-if="loading" class="loading-wrap">
@@ -246,20 +246,20 @@ onMounted(() => {
                 </div>
                 <div class="meta-item">
                   <van-icon name="location-o" class="mr-1" />
-                  {{ cityText }}
+                  {{ player.cityName ? player.cityName : player.province }}
                 </div>
-                <div class="meta-item">
-                  <van-icon name="contact-o" class="mr-1" />
-                  {{ occupationText }}
+                <div class="meta-item van-ellipsis">
+                  <van-icon name="records-o" class="mr-1" />
+                  {{ player.introduction || "暂无介绍" }}
                 </div>
               </div>
 
               <div class="tag-row mt-4">
-                <span class="tag-pill">🎂 {{ player.age || "25" }}岁</span>
-                <span class="tag-pill" v-if="player.constellation">⭐ {{ player.constellation }}</span>
-                <span class="tag-pill" v-if="player.height">🧍 {{ player.height }}CM</span>
-                <span class="tag-pill" v-if="player.weight">⚖️ {{ player.weight }}KG</span>
-                <span class="tag-pill">💼 {{ occupationText }}</span>
+                <span class="tag-pill">🎂{{ player.age || "25" }}岁</span>
+                <span class="tag-pill" v-if="player.constellation">⭐{{ player.constellation }}</span>
+                <span class="tag-pill" v-if="player.height">🧍{{ player.height }}CM</span>
+                <span class="tag-pill" v-if="player.weight">⚖️{{ player.weight }}KG</span>
+                <span class="tag-pill">💼{{ occupationText }}</span>
               </div>
 
               <!-- Content Sections -->
@@ -456,6 +456,12 @@ onMounted(() => {
   .meta-item {
     display: flex;
     align-items: center;
+  }
+
+  .van-ellipsis {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue";
-import { showFailToast, showSuccessToast, type UploaderAfterRead } from "vant";
+import { computed, reactive, ref } from "vue";
+import { showFailToast, showSuccessToast } from "vant";
 import { useRouter } from "vue-router";
 import {
   getAttachmentDownloadUrl,
@@ -26,6 +26,41 @@ const form = reactive({
 
 const avatarUrl = () => getAttachmentDownloadUrl(form.avatar);
 
+const ageOptions = Array.from({ length: 83 }, (_, i) => ({
+  name: `${18 + i}岁`,
+  value: String(18 + i)
+}));
+
+const heightOptions = Array.from({ length: 81 }, (_, i) => ({
+  name: `${140 + i}cm`,
+  value: String(140 + i)
+}));
+
+const weightOptions = Array.from({ length: 91 }, (_, i) => ({
+  name: `${40 + i}kg`,
+  value: String(40 + i)
+}));
+
+const constellationOptions = [
+  "白羊座",
+  "金牛座",
+  "双子座",
+  "巨蟹座",
+  "狮子座",
+  "处女座",
+  "天秤座",
+  "天蝎座",
+  "射手座",
+  "摩羯座",
+  "水瓶座",
+  "双鱼座"
+].map(item => ({ name: item, value: item }));
+
+const ageText = computed(() => (form.age ? `${form.age}岁` : "未设置"));
+const heightText = computed(() => (form.height ? `${form.height}cm` : "未设置"));
+const weightText = computed(() => (form.weight ? `${form.weight}kg` : "未设置"));
+const constellationText = computed(() => form.constellation || "未设置");
+
 const loadProfile = async () => {
   const res = await getCurrentCUserApi();
   form.avatar = res?.avatar || "";
@@ -41,32 +76,131 @@ const loadProfile = async () => {
 loadProfile();
 
 const avatarUploading = ref(false);
+const cameraInputRef = ref<HTMLInputElement | null>(null);
+const albumInputRef = ref<HTMLInputElement | null>(null);
 
-const onAvatarAfterRead: UploaderAfterRead = async file => {
-  const target = Array.isArray(file) ? file[0] : file;
-  const rawFile = target?.file as File | undefined;
-  if (!rawFile) {
-    showFailToast("未获取到图片文件");
-    return;
-  }
+const getExtByMime = (mime?: string) => {
+  if (!mime) return "jpg";
+  const lower = mime.toLowerCase();
+  if (lower.includes("png")) return "png";
+  if (lower.includes("webp")) return "webp";
+  if (lower.includes("gif")) return "gif";
+  if (lower.includes("heic")) return "heic";
+  if (lower.includes("heif")) return "heif";
+  if (lower.includes("jpeg") || lower.includes("jpg")) return "jpg";
+  return "jpg";
+};
 
+const toUniqueImageName = (mime?: string) => {
+  const ext = getExtByMime(mime);
+  return `${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+};
+
+const uploadAvatarFile = async (file?: File | null) => {
+  if (!file) return;
   avatarUploading.value = true;
-  target.status = "uploading";
-  target.message = "上传中...";
-
   try {
-    const fileName = await uploadAttachmentApi(rawFile);
+    const mime = file.type || "image/jpeg";
+    const fileName = await uploadAttachmentApi(file, toUniqueImageName(mime));
     form.avatar = fileName || "";
-    target.status = "done";
-    target.message = "";
     showSuccessToast("头像上传成功");
   } catch {
-    target.status = "failed";
-    target.message = "上传失败";
     showFailToast("头像上传失败");
   } finally {
     avatarUploading.value = false;
   }
+};
+
+const onChooseCamera = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] || null;
+  input.value = "";
+  await uploadAvatarFile(file);
+};
+
+const onChooseAlbum = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] || null;
+  input.value = "";
+  await uploadAvatarFile(file);
+};
+
+const pickerVisible = ref(false);
+const pickerTitle = ref("");
+const pickerActions = ref<Array<{ name: string; value: string }>>([]);
+let pickerResolver: ((value: string) => void) | null = null;
+
+const showPicker = async (
+  title: string,
+  actions: Array<{ name: string; value: string }>
+) => {
+  pickerTitle.value = title;
+  pickerActions.value = actions;
+  pickerVisible.value = true;
+  return new Promise<string>(resolve => {
+    pickerResolver = resolve;
+  });
+};
+
+const onPickerSelect = (action: { name?: string; value?: string }) => {
+  pickerVisible.value = false;
+  const value = action?.value || (action?.name === "拍照" ? "camera" : action?.name === "从相册选择" ? "album" : "");
+  if (pickerResolver) {
+    pickerResolver(value);
+    pickerResolver = null;
+  }
+};
+
+const onPickerCancel = () => {
+  pickerVisible.value = false;
+  if (pickerResolver) {
+    pickerResolver("");
+    pickerResolver = null;
+  }
+};
+
+const openAvatarActions = async () => {
+  if (avatarUploading.value) return;
+  const action = await showPicker("选择头像", [
+    // { name: "拍照", value: "camera" },
+    { name: "从相册选择", value: "album" }
+  ]);
+
+  // if (action === "camera") {
+  //   cameraInputRef.value?.click();
+  //   return;
+  // }
+  if (action === "album") {
+    albumInputRef.value?.click();
+  }
+};
+
+const chooseByActionSheet = async (options: {
+  title: string;
+  actions: Array<{ name: string; value: string }>;
+}) => {
+  const action = await showPicker(options.title, options.actions);
+  return action || "";
+};
+
+const onPickAge = async () => {
+  const selected = await chooseByActionSheet({ title: "年龄", actions: ageOptions });
+  if (selected) form.age = selected;
+};
+
+const onPickHeight = async () => {
+  const selected = await chooseByActionSheet({ title: "身高", actions: heightOptions });
+  if (selected) form.height = selected;
+};
+
+const onPickWeight = async () => {
+  const selected = await chooseByActionSheet({ title: "体重", actions: weightOptions });
+  if (selected) form.weight = selected;
+};
+
+const onPickConstellation = async () => {
+  const selected = await chooseByActionSheet({ title: "星座", actions: constellationOptions });
+  if (selected) form.constellation = selected;
 };
 
 const onSave = async () => {
@@ -91,24 +225,27 @@ const onSave = async () => {
         <!-- Avatar Section -->
         <div class="avatar-section panel">
           <div class="label">头像</div>
-          <van-uploader :after-read="onAvatarAfterRead" accept="image/*" :capture="'camera'" :max-count="1"
-            :disabled="avatarUploading" class="avatar-uploader">
+          <div class="avatar-uploader" @click="openAvatarActions">
             <div class="avatar-wrap">
               <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
               <div v-else class="avatar placeholder">
                 <van-icon name="photograph" size="24" color="#666" />
               </div>
             </div>
-          </van-uploader>
+          </div>
+          <input ref="cameraInputRef" type="file" accept="image/*" capture="environment" class="hidden-file"
+            @change="onChooseCamera" />
+          <input ref="albumInputRef" type="file" accept="image/*" class="hidden-file" @change="onChooseAlbum" />
         </div>
 
         <van-cell-group inset class="field-group">
           <van-field v-model="form.nickname" label="昵称" placeholder="未设置" />
-          <van-field v-model="form.age" label="年龄" placeholder="未设置" type="digit" />
+          <van-field :model-value="ageText" label="年龄" placeholder="未设置" is-link readonly @click="onPickAge" />
           <van-field v-model="form.occupation" label="职业" placeholder="未设置" />
-          <van-field v-model="form.height" label="身高(cm)" placeholder="未设置" type="digit" />
-          <van-field v-model="form.weight" label="体重(kg)" placeholder="未设置" type="digit" />
-          <van-field v-model="form.constellation" label="星座" placeholder="未设置" />
+          <van-field :model-value="heightText" label="身高" placeholder="未设置" is-link readonly @click="onPickHeight" />
+          <van-field :model-value="weightText" label="体重" placeholder="未设置" is-link readonly @click="onPickWeight" />
+          <van-field :model-value="constellationText" label="星座" placeholder="未设置" is-link readonly
+            @click="onPickConstellation" />
           <!-- </van-cell-group> -->
 
           <!-- <van-cell-group inset class="field-group"> -->
@@ -122,6 +259,9 @@ const onSave = async () => {
       </div>
 
     </div>
+
+    <van-action-sheet v-model:show="pickerVisible" :title="pickerTitle" :actions="pickerActions" cancel-text="取消"
+      @select="onPickerSelect" @cancel="onPickerCancel" @close="onPickerCancel" />
   </div>
 </template>
 

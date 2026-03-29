@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { showConfirmDialog, showSuccessToast } from "vant";
+import { showSuccessToast } from "vant";
 import { logoutApi } from "@/api/c-auth";
 import { getCurrentCUserApi } from "@/api/c-user";
 import { computed, ref } from "vue";
@@ -121,27 +121,34 @@ const clearImageCache = () => {
   showSuccessToast("已清除图片缓存");
 };
 
-const onLogout = () => {
-  showConfirmDialog({
-    title: "退出登录",
-    message: "确定退出当前账号吗？",
-    cancelButtonText: "取消",
-    confirmButtonText: "确认",
-    className: "logout-confirm-dialog"
-  })
-    .then(async () => {
-      await logoutApi({
-        deviceId: localStorage.getItem("c_device_id") || "default_device"
-      });
-      localStorage.removeItem("c_access_token");
-      localStorage.removeItem("c_refresh_token");
-      localStorage.removeItem("c_user_info");
-      showSuccessToast("已退出");
-      router.replace({ name: "Login" });
-    })
-    .catch(() => {
-      // on cancel
+const logoutConfirmVisible = ref(false);
+const logoutLoading = ref(false);
+
+const closeLogoutConfirm = () => {
+  if (logoutLoading.value) return;
+  logoutConfirmVisible.value = false;
+};
+
+const confirmLogout = async () => {
+  if (logoutLoading.value) return;
+  logoutLoading.value = true;
+  try {
+    await logoutApi({
+      deviceId: localStorage.getItem("c_device_id") || "default_device"
     });
+    localStorage.removeItem("c_access_token");
+    localStorage.removeItem("c_refresh_token");
+    localStorage.removeItem("c_user_info");
+    showSuccessToast("已退出");
+    logoutConfirmVisible.value = false;
+    router.replace({ name: "Login" });
+  } finally {
+    logoutLoading.value = false;
+  }
+};
+
+const onLogout = () => {
+  logoutConfirmVisible.value = true;
 };
 </script>
 
@@ -262,6 +269,26 @@ const onLogout = () => {
         <div class="agreement-sub">更新日期：2026-03-27</div>
         <div class="agreement-body">
           <pre>{{ agreementContent }}</pre>
+        </div>
+      </div>
+    </van-popup>
+
+    <van-popup
+      v-model:show="logoutConfirmVisible"
+      round
+      position="center"
+      :close-on-click-overlay="!logoutLoading"
+      :style="{ width: '86vw', maxWidth: '340px', background: 'transparent' }"
+      @click-overlay="closeLogoutConfirm"
+    >
+      <div class="logout-confirm-card">
+        <div class="logout-confirm-title">退出登录</div>
+        <div class="logout-confirm-desc">确定退出当前账号吗？</div>
+        <div class="logout-confirm-actions">
+          <button class="action-btn cancel" @click="closeLogoutConfirm">取消</button>
+          <button class="action-btn confirm" :disabled="logoutLoading" @click="confirmLogout">
+            {{ logoutLoading ? '退出中...' : '确认' }}
+          </button>
         </div>
       </div>
     </van-popup>
@@ -404,45 +431,61 @@ const onLogout = () => {
   }
 }
 
-:global(.logout-confirm-dialog) {
-  width: min(86vw, 340px);
-  border-radius: 18px;
+.logout-confirm-card {
+  border-radius: 16px;
   overflow: hidden;
-  background: #fff;
+  border: 1px solid #3a3120;
+  background: linear-gradient(180deg, #131313 0%, #0b0b0b 100%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
-:global(.logout-confirm-dialog .van-dialog__header) {
-  padding: 20px 18px 8px;
+.logout-confirm-title {
+  padding: 18px 18px 8px;
   font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
-  color: #1f2937;
+  font-weight: 700;
+  color: #f5deb3;
+  text-align: center;
+  letter-spacing: 0.5px;
 }
 
-:global(.logout-confirm-dialog .van-dialog__content) {
-  padding: 0 22px 18px;
-}
-
-:global(.logout-confirm-dialog .van-dialog__message) {
+.logout-confirm-desc {
+  padding: 0 20px 18px;
+  text-align: center;
   font-size: 14px;
+  color: #cbb892;
   line-height: 1.6;
-  color: #6b7280;
 }
 
-:global(.logout-confirm-dialog .van-dialog__footer) {
-  border-top: 1px solid #e5e7eb;
+.logout-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #2f2a1d;
 }
 
-:global(.logout-confirm-dialog .van-dialog__cancel),
-:global(.logout-confirm-dialog .van-dialog__confirm) {
-  height: 50px;
+.action-btn {
+  height: 48px;
+  border: none;
+  outline: none;
+  background: transparent;
   font-size: 16px;
-  font-weight: 500;
-  color: #111827;
-}
+  font-weight: 600;
 
-:global(.logout-confirm-dialog .van-dialog__confirm) {
-  color: #ef4444;
+  &.cancel {
+    color: #b0a07f;
+    border-right: 1px solid #2f2a1d;
+  }
+
+  &.confirm {
+    color: #f0c980;
+  }
+
+  &:active {
+    background: rgba(240, 201, 128, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+  }
 }
 
 @supports (padding: env(safe-area-inset-bottom)) {

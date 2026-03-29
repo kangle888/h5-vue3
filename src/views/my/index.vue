@@ -197,7 +197,6 @@ onMounted(() => {
 .name-row {
   display: flex;
   align-items: center;
-  gap: 8px;
   min-width: 0;
 }
 

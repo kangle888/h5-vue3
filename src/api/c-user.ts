@@ -28,9 +28,9 @@ export const updateCurrentCUserApi = (data: ICUserProfile) => {
   });
 };
 
-export const uploadAttachmentApi = (file: File) => {
+export const uploadAttachmentApi = (file: Blob, fileName?: string) => {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", file, fileName || `upload_${Date.now()}.jpg`);
   return http.request<string>({
     url: "/attachment/upload",
     method: "post",

@@ -99,7 +99,7 @@ const routes: Array<RouteRecordRaw> = [
     name: "LandingPage",
     component: () => import("@/views/landingPage/index.vue"),
     meta: {
-      title: "落地页"
+      title: "遇见app"
     }
   },
   {

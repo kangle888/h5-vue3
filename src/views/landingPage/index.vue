@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref } from "vue";
 import { showFailToast, Swipe, SwipeItem } from "vant";
+import iosQr from "@/assets/ios.png";
+import androidQr from "@/assets/安卓.png";
 import { useRouter } from "vue-router";
 import { getAttachmentObjectUrl } from "@/api/home";
 import { getSysBannerInfoApi, type ISysBannerItem } from "@/api/sys-banner";
@@ -10,15 +12,6 @@ defineOptions({ name: "LandingPage" });
 const router = useRouter();
 const loading = ref(false);
 const banners = ref<(ISysBannerItem & { imageSrc: string })[]>([]);
-
-const inviteCode = computed(() => {
-  try {
-    const user = JSON.parse(localStorage.getItem("c_user_info") || "{}");
-    return user?.inviteCode || "FH1BQW";
-  } catch {
-    return "FH1BQW";
-  }
-});
 
 const normalizeList = (res: ISysBannerItem[] | ISysBannerItem) => {
   if (Array.isArray(res)) return res;
@@ -72,14 +65,6 @@ const loadBanners = async () => {
   }
 };
 
-const copyInviteCode = async () => {
-  try {
-    await navigator.clipboard.writeText(inviteCode.value);
-  } catch {
-    showFailToast("复制失败，请手动复制");
-  }
-};
-
 const goWebApp = () => {
   router.push({ name: "Login" });
 };
@@ -96,32 +81,39 @@ onMounted(() => {
     </div>
 
     <template v-else>
-      <Swipe
-        v-if="banners.length"
-        class="landing-swiper"
-        vertical
-        :loop="true"
-        :autoplay="3500"
-        :show-indicators="true"
-        indicator-color="#d7b98f"
-      >
+      <Swipe v-if="banners.length" class="landing-swiper" vertical :loop="true" :autoplay="3500" :show-indicators="true"
+        indicator-color="#d7b98f">
         <SwipeItem v-for="item in banners" :key="item.id || item.imageSrc">
           <div class="slide-page">
             <img class="hero-bg" :src="item.imageSrc" alt="banner" />
             <div class="overlay"></div>
 
             <div class="center-content">
-              <h1 class="brand">闪月</h1>
+              <h1 class="brand">遇见</h1>
               <p class="slogan">达人认证 · 超高颜值</p>
 
-              <div class="invite-box">
+              <!-- <div class="invite-box">
                 <span class="invite-label">邀请码</span>
                 <span class="invite-code">{{ inviteCode }}</span>
                 <button class="copy-btn" @click="copyInviteCode">复制</button>
+              </div> -->
+
+              <div class="download-section">
+                <div class="download-title">扫码下载 App</div>
+                <div class="qr-grid">
+                  <div class="qr-card">
+                    <img :src="iosQr" class="qr-img" alt="ios-qr" />
+                    <p class="qr-label">iOS 下载</p>
+                  </div>
+                  <div class="qr-card">
+                    <img :src="androidQr" class="qr-img" alt="android-qr" />
+                    <p class="qr-label">Android 下载</p>
+                  </div>
+                </div>
+                <p class="qr-tip">请使用系统相机扫码下载</p>
               </div>
 
-              <button class="cta-btn ios-btn">苹果用户下载</button>
-              <button class="cta-btn web-btn" @click="goWebApp">进入网页版</button>
+              <!-- <button class="cta-btn web-btn" @click="goWebApp">进入网页版</button> -->
             </div>
           </div>
         </SwipeItem>
@@ -251,20 +243,70 @@ onMounted(() => {
   font-size: 14px;
 }
 
+.download-section {
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(12, 17, 36, 0.66) 0%, rgba(12, 17, 36, 0.42) 100%);
+  border: 1px solid rgba(215, 185, 143, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.download-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1d8b3;
+  text-align: center;
+}
+
+.qr-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.qr-card {
+  padding: 10px 8px 8px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr-img {
+  width: 112px;
+  height: 112px;
+  border-radius: 10px;
+  background: #fff;
+  padding: 6px;
+  object-fit: contain;
+}
+
+.qr-label {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #f7e5ca;
+}
+
+.qr-tip {
+  margin: 10px 0 0;
+  font-size: 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.72);
+}
+
 .cta-btn {
   margin-top: 14px;
   width: 270px;
-  height: 48px;
-  border-radius: 24px;
+  height: 46px;
+  border-radius: 23px;
   border: none;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
-}
-
-.ios-btn {
-  margin-top: 20px;
-  background: #f3ddb4;
-  color: #2f2011;
 }
 
 .web-btn {

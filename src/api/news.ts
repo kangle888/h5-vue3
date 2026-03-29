@@ -49,7 +49,9 @@ export interface IPlayMessageItem {
 }
 
 // /playMessage/pageMessage 分页查询消息列表
-export function pageMessageApi(data: IPageParam<Partial<IPlayMessageItem>>): Promise<IPageResult<IPlayMessageItem>> {
+export function pageMessageApi(
+  data: IPageParam<Partial<IPlayMessageItem>>
+): Promise<IPageResult<IPlayMessageItem>> {
   return http.request({
     url: "/playMessage/pageMessage",
     method: "post",
@@ -58,7 +60,9 @@ export function pageMessageApi(data: IPageParam<Partial<IPlayMessageItem>>): Pro
 }
 
 // /playMessage/pageChatRoom 分页查询聊天室列表
-export function pageChatRoomApi(data: IPageParam<Partial<IChatRoomItem>>): Promise<IPageResult<IChatRoomItem>> {
+export function pageChatRoomApi(
+  data: IPageParam<Partial<IChatRoomItem>>
+): Promise<IPageResult<IChatRoomItem>> {
   return http.request({
     url: "/playMessage/pageChatRoom",
     method: "post",
@@ -75,7 +79,10 @@ export function getAdminUserApi(): Promise<string> {
 }
 
 // 统计未读数（senderId/sessionKey 可选，不传统计总未读）
-export function countUnreadApi(senderId?: string, sessionKey?: string): Promise<number> {
+export function countUnreadApi(
+  senderId?: string,
+  sessionKey?: string
+): Promise<number> {
   const params: Record<string, string> = {};
   if (senderId) params.senderId = senderId;
   if (sessionKey) params.sessionKey = sessionKey;
@@ -87,7 +94,10 @@ export function countUnreadApi(senderId?: string, sessionKey?: string): Promise<
 }
 
 // 标记某会话为已读（sessionKey 可选）
-export function markReadApi(senderId: string, sessionKey?: string): Promise<number> {
+export function markReadApi(
+  senderId: string,
+  sessionKey?: string
+): Promise<number> {
   const params: Record<string, string> = { senderId };
   if (sessionKey) params.sessionKey = sessionKey;
   return http.request({
@@ -98,7 +108,10 @@ export function markReadApi(senderId: string, sessionKey?: string): Promise<numb
 }
 
 // 删除会话（C端）
-export function deleteChatRoomApi(targetUserId: string, sessionKey?: string): Promise<number> {
+export function deleteChatRoomApi(
+  targetUserId: string,
+  sessionKey?: string
+): Promise<number> {
   const params: Record<string, string> = { targetUserId };
   if (sessionKey) params.sessionKey = sessionKey;
   return http.request({

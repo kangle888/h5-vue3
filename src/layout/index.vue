@@ -58,19 +58,14 @@ const refreshLocationIfNeeded = async () => {
   }
 };
 
-onMounted(() => {
-  refreshLocationIfNeeded();
-});
+// onMounted(() => {
+//   refreshLocationIfNeeded();
+// });
 </script>
 
 <template>
   <div class="app-wrapper">
-    <nav-bar
-      v-if="showNavBar"
-      :title="navBarTitle"
-      :leftArrow="true"
-      @click-left="router.back"
-    />
+    <nav-bar v-if="showNavBar" :title="navBarTitle" :leftArrow="true" @click-left="router.back" />
 
     <main class="app-content">
       <router-view v-slot="{ Component }">

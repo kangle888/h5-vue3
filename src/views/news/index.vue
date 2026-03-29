@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { showConfirmDialog, showFailToast, showSuccessToast } from "vant";
+import { showFailToast, showSuccessToast } from "vant";
 import { useRouter } from "vue-router";
 import {
   countUnreadApi,
@@ -175,21 +175,33 @@ const openChat = (room: IChatRoomItem) => {
   });
 };
 
-const onDeleteRoom = async (room: IChatRoomItem) => {
+const deleteConfirmVisible = ref(false);
+const deleting = ref(false);
+const deletingRoom = ref<IChatRoomItem | null>(null);
+
+const closeDeleteConfirm = () => {
+  if (deleting.value) return;
+  deleteConfirmVisible.value = false;
+  deletingRoom.value = null;
+};
+
+const onDeleteRoom = (room: IChatRoomItem) => {
   const targetUserId = room.targetUserId;
   if (!targetUserId) return;
+  deletingRoom.value = room;
+  deleteConfirmVisible.value = true;
+};
 
-  try {
-    await showConfirmDialog({
-      title: "删除会话",
-      message: "删除后会话消息将不可恢复，是否继续？",
-      confirmButtonText: "删除",
-      cancelButtonText: "取消"
-    });
-  } catch {
+const confirmDeleteRoom = async () => {
+  if (deleting.value) return;
+  const room = deletingRoom.value;
+  const targetUserId = room?.targetUserId;
+  if (!room || !targetUserId) {
+    closeDeleteConfirm();
     return;
   }
 
+  deleting.value = true;
   try {
     await deleteChatRoomApi(targetUserId, room.sessionKey || "service_default");
     showSuccessToast("删除成功");
@@ -199,9 +211,13 @@ const onDeleteRoom = async (room: IChatRoomItem) => {
         && (item.sessionKey || "service_default") === (room.sessionKey || "service_default")
       )
     );
+    deleteConfirmVisible.value = false;
+    deletingRoom.value = null;
     await loadData();
   } catch {
     showFailToast("删除失败");
+  } finally {
+    deleting.value = false;
   }
 };
 
@@ -233,15 +249,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="news-page-wrapper w-full">
-    <van-pull-refresh
-      v-model="refreshing"
-      :disabled="activeTab !== 'chat'"
-      class="page-refresh"
-      @refresh="onRefresh"
-    >
-      <div class="box-border pb-10">
-        <div class="top-bar">
+  <div class="news-page-wrapper">
+    <div class="box-border" style="width: 100%;">
+      <div class="top-bar">
         <div class="tabs">
           <div class="tab" :class="{ 'active-tab': activeTab === 'chat' }" @click="activeTab = 'chat'">
             聊天
@@ -250,61 +260,64 @@ onBeforeUnmount(() => {
             系统消息
           </div>
         </div>
-        <div class="icons">
+        <!-- <div class="icons">
           <van-icon name="comment-o" size="20" />
           <van-icon name="delete-o" size="20" />
-        </div>
+        </div> -->
       </div>
-
-      <div class="content-container">
-        <div v-if="activeTab === 'chat'" class="list-wrap">
-          <van-list v-model:loading="listLoading" :finished="finished" finished-text="" @load="onLoad">
-            <van-swipe-cell
-              v-for="room in roomList"
-              :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`"
-            >
-              <div class="chat-card" @click="openChat(room)">
-                <div class="avatar-wrap">
-                  <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
+    </div>
+    <van-pull-refresh v-model="refreshing" :disabled="activeTab !== 'chat'" class="page-refresh" @refresh="onRefresh">
+      <div v-if="activeTab === 'chat'" class="list-wrap">
+        <van-list v-model:loading="listLoading" :finished="finished" finished-text="" @load="onLoad">
+          <van-swipe-cell v-for="room in roomList"
+            :key="`${room.targetUserId}-${room.sessionKey || 'service_default'}`">
+            <div class="chat-card" @click="openChat(room)">
+              <div class="avatar-wrap">
+                <img class="avatar" :src="avatarUrl(room)" alt="avatar" />
+              </div>
+              <div class="main">
+                <div class="name-row">
+                  <span class="name">{{ roomTitle(room) }}</span>
+                  <span class="time">{{ roomTime(room) }}</span>
                 </div>
-                <div class="main">
-                  <div class="name-row">
-                    <span class="name">{{ roomTitle(room) }}</span>
-                    <span class="time">{{ roomTime(room) }}</span>
-                  </div>
-                  <div class="msg-row">
-                    <span class="msg">{{ roomSubText(room) }}</span>
-                    <div v-if="(room.unreadCount || 0) > 0" class="badge">
-                      {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
-                    </div>
+                <div class="msg-row">
+                  <span class="msg">{{ roomSubText(room) }}</span>
+                  <div v-if="(room.unreadCount || 0) > 0" class="badge">
+                    {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
                   </div>
                 </div>
               </div>
-              <template #right>
-                <van-button
-                  square
-                  type="danger"
-                  text="删除"
-                  class="delete-btn"
-                  @click.stop="onDeleteRoom(room)"
-                />
-              </template>
-            </van-swipe-cell>
-          </van-list>
+            </div>
+            <template #right>
+              <van-button square type="danger" text="删除" class="delete-btn" @click.stop="onDeleteRoom(room)" />
+            </template>
+          </van-swipe-cell>
+        </van-list>
 
-          <div v-if="!loading && !roomList.length" class="empty-state">
-            <p>暂无消息</p>
-          </div>
-        </div>
-
-        <div v-else class="system-wrap">
-          <div class="empty-state">
-            <p>暂无系统消息</p>
-          </div>
+        <div v-if="!loading && !roomList.length" class="empty-state">
+          <p>暂无消息</p>
         </div>
       </div>
-    </div>
+
+      <div v-else class="system-wrap">
+        <div class="empty-state">
+          <p>暂无系统消息</p>
+        </div>
+      </div>
     </van-pull-refresh>
+    <van-popup v-model:show="deleteConfirmVisible" round position="center" :close-on-click-overlay="!deleting"
+      :style="{ width: '86vw', maxWidth: '340px', background: 'transparent' }" @click-overlay="closeDeleteConfirm">
+      <div class="logout-confirm-card">
+        <div class="logout-confirm-title">删除会话</div>
+        <div class="logout-confirm-desc">删除后会话消息将不可恢复，是否继续？</div>
+        <div class="logout-confirm-actions">
+          <button class="action-btn cancel" @click="closeDeleteConfirm">取消</button>
+          <button class="action-btn confirm" :disabled="deleting" @click="confirmDeleteRoom">
+            {{ deleting ? '删除中...' : '删除' }}
+          </button>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
@@ -318,7 +331,8 @@ onBeforeUnmount(() => {
 }
 
 .page-refresh {
-  min-height: 100%;
+  height: calc(100vh - 54px);
+  overflow-y: auto;
 }
 
 .top-bar {
@@ -331,6 +345,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
+  border-bottom: 1px solid #111;
 
   .tabs {
     display: flex;
@@ -359,10 +374,6 @@ onBeforeUnmount(() => {
   }
 }
 
-.content-container {
-  padding: 0;
-  min-height: calc(100vh - 54px);
-}
 
 .notice-card {
   display: flex;
@@ -521,5 +532,62 @@ onBeforeUnmount(() => {
   min-height: 200px;
   color: #666;
   font-size: 14px;
+}
+
+.logout-confirm-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #3a3120;
+  background: linear-gradient(180deg, #131313 0%, #0b0b0b 100%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.logout-confirm-title {
+  padding: 18px 18px 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f5deb3;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.logout-confirm-desc {
+  padding: 0 20px 18px;
+  text-align: center;
+  font-size: 14px;
+  color: #cbb892;
+  line-height: 1.6;
+}
+
+.logout-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #2f2a1d;
+}
+
+.action-btn {
+  height: 48px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 600;
+
+  &.cancel {
+    color: #b0a07f;
+    border-right: 1px solid #2f2a1d;
+  }
+
+  &.confirm {
+    color: #f0c980;
+  }
+
+  &:active {
+    background: rgba(240, 201, 128, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+  }
 }
 </style>
