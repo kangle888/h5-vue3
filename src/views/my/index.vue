@@ -11,7 +11,27 @@ import {
 defineOptions({ name: "My" });
 
 const router = useRouter();
-const profile = ref<ICUserProfile>({});
+
+const PROFILE_CACHE_KEY = "c_user_profile_cache";
+
+const readCachedProfile = (): ICUserProfile => {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as ICUserProfile) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeCachedProfile = (data: ICUserProfile) => {
+  try {
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data || {}));
+  } catch {
+    // ignore cache write errors
+  }
+};
+
+const profile = ref<ICUserProfile>(readCachedProfile());
 
 const avatarUrl = () => getAttachmentDownloadUrl(profile.value.avatar);
 
@@ -23,12 +43,27 @@ const qrUrl = computed(() => {
   const data = encodeURIComponent(landingUrl.value);
   return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}`;
 });
+const qrLoading = ref(false);
 const showSharePopup = ref(false);
+
+const openSharePopup = () => {
+  qrLoading.value = true;
+  showSharePopup.value = true;
+};
+
+const handleQrLoad = () => {
+  qrLoading.value = false;
+};
+
+const handleQrError = () => {
+  qrLoading.value = false;
+  showFailToast("二维码加载失败，请稍后重试");
+};
 
 const shareLandingPage = async () => {
   const shareData = {
-    title: "初见",
-    text: "扫码或点击链接进下载初见App",
+    title: "茶庄",
+    text: "扫码或点击链接进下载茶庄App",
     url: landingUrl.value
   };
 
@@ -46,9 +81,13 @@ const shareLandingPage = async () => {
 
 const loadProfile = async () => {
   try {
-    profile.value = (await getCurrentCUserApi()) || {};
+    const latest = (await getCurrentCUserApi()) || {};
+    profile.value = latest;
+    writeCachedProfile(latest);
   } catch {
-    profile.value = {};
+    if (!profile.value || !Object.keys(profile.value).length) {
+      profile.value = {};
+    }
   }
 };
 
@@ -109,7 +148,7 @@ onMounted(() => {
         </div>
         <van-icon name="arrow" class="entry-arrow" />
       </div>
-      <div class="entry" @click="showSharePopup = true">
+      <div class="entry" @click="openSharePopup">
         <div class="entry-left">
           <van-icon name="share-o" class="entry-icon" />
           <span>App分享</span>
@@ -131,8 +170,13 @@ onMounted(() => {
 
         <div class="share-card">
           <div class="qr-wrap">
-            <div class="qr-bg">
-              <van-image class="qr-image" fit="cover" :src="qrUrl" alt="landing-qrcode" />
+            <div class="qr-bg" :class="{ 'is-loading': qrLoading }">
+              <van-image class="qr-image" fit="cover" :src="qrUrl" alt="landing-qrcode" @load="handleQrLoad"
+                @error="handleQrError" />
+              <div v-if="qrLoading" class="qr-loading">
+                <van-loading size="24" color="#dfc293" />
+                <span>生成中...</span>
+              </div>
             </div>
           </div>
 
@@ -382,16 +426,34 @@ onMounted(() => {
 }
 
 .qr-bg {
+  position: relative;
   padding: 12px;
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  &.is-loading .qr-image {
+    opacity: 0.2;
+  }
 }
 
 .qr-image {
   width: 180px;
   height: 180px;
   display: block;
+  transition: opacity 0.2s;
+}
+
+.qr-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #666;
+  font-size: 12px;
 }
 
 .qr-tip {

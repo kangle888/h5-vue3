@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { showFailToast, Swipe, SwipeItem } from "vant";
-import iosQr from "@/assets/ios.png";
-import androidQr from "@/assets/安卓.png";
+import iosQr from "@/assets/download.png";
 import { useRouter } from "vue-router";
 import { getAttachmentObjectUrl } from "@/api/home";
 import { getSysBannerInfoApi, type ISysBannerItem } from "@/api/sys-banner";
@@ -106,7 +105,7 @@ onMounted(() => {
                     <p class="qr-label">iOS 下载</p>
                   </div>
                   <div class="qr-card">
-                    <img :src="androidQr" class="qr-img" alt="android-qr" />
+                    <img :src="iosQr" class="qr-img" alt="android-qr" />
                     <p class="qr-label">Android 下载</p>
                   </div>
                 </div>

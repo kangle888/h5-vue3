@@ -405,10 +405,10 @@ const onSave = async () => {
 }
 
 .field-group {
-  :deep(.van-cell-group) {
-    margin: 0 !important;
-    background: #111;
-  }
+  margin: 0;
+  background: #111;
+  border-radius: 16px;
+  overflow: hidden;
 
   :deep(.van-cell) {
     background: #111;
@@ -443,5 +443,22 @@ const onSave = async () => {
   :deep(.van-field__word-limit) {
     color: #777;
   }
+}
+
+.edit-page-wrapper {
+  --van-cell-background: #111;
+  --van-border-color: #222;
+  --van-cell-text-color: #e5e5e5;
+  --van-field-label-color: #e5e5e5;
+  --van-cell-value-color: #fff;
+  --van-field-input-text-color: #fff;
+  --van-field-placeholder-text-color: #666;
+  --van-button-primary-background: #dfc293;
+  --van-button-primary-border-color: #dfc293;
+  --van-button-primary-color: #000;
+  height: 100%;
+  background: #000;
+  color: #fff;
+  padding: 16px;
 }
 </style>
