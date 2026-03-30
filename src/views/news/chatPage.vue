@@ -23,9 +23,84 @@ const loading = ref(false);
 const sendingImage = ref(false);
 const socketIns = ref<WebSocket | null>(null);
 const pollTimer = ref<number | null>(null);
-const fileInputRef = ref<HTMLInputElement | null>(null);
+const cameraInputRef = ref<HTMLInputElement | null>(null);
+const albumInputRef = ref<HTMLInputElement | null>(null);
 const listRef = ref<HTMLElement | null>(null);
 const imagePreviewMap = ref<Record<string, string>>({});
+
+const pickerVisible = ref(false);
+const pickerTitle = ref("");
+const pickerActions = ref<Array<{ name: string; value: string }>>([]);
+let pickerResolver: ((value: string) => void) | null = null;
+
+/**
+ * 压缩图片：最大边 1080px，JPEG 质量 0.8，目标大小 1MB 以下
+ */
+const compressImage = (file: File, maxSize = 1080, quality = 0.8): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width: originalWidth, height: originalHeight } = img;
+
+      const compress = (currentMaxSize: number, currentQuality: number): Promise<File> => {
+        return new Promise((res, rej) => {
+          let { width, height } = img;
+          if (width > currentMaxSize || height > currentMaxSize) {
+            if (width >= height) {
+              height = Math.round((height * currentMaxSize) / width);
+              width = currentMaxSize;
+            } else {
+              width = Math.round((width * currentMaxSize) / height);
+              height = currentMaxSize;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return rej(new Error("canvas context unavailable"));
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            blob => {
+              if (!blob) return rej(new Error("compress failed"));
+              if (blob.size <= 1024 * 1024) { // 1MB
+                res(new File([blob], file.name, { type: "image/jpeg" }));
+              } else {
+                // 如果质量 > 0.1，降低质量
+                if (currentQuality > 0.1) {
+                  compress(currentMaxSize, currentQuality - 0.1).then(res).catch(rej);
+                } else {
+                  // 如果尺寸 > 300，缩小尺寸
+                  if (currentMaxSize > 300) {
+                    compress(currentMaxSize - 200, 0.8).then(res).catch(rej);
+                  } else {
+                    // 最后尝试最低质量
+                    canvas.toBlob(
+                      finalBlob => {
+                        if (!finalBlob) return rej(new Error("final compress failed"));
+                        res(new File([finalBlob], file.name, { type: "image/jpeg" }));
+                      },
+                      "image/jpeg",
+                      0.1
+                    );
+                  }
+                }
+              }
+            },
+            "image/jpeg",
+            currentQuality
+          );
+        });
+      };
+
+      compress(maxSize, quality).then(resolve).catch(reject);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
 
 const myUserId = computed(() => {
   try {
@@ -189,39 +264,14 @@ const sendMessage = async () => {
 };
 
 const triggerChooseImage = () => {
-  fileInputRef.value?.click();
+  openImageActions();
 };
 
 const onChooseImage = async (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = "";
-  if (!file) return;
-  if (!adminUserId.value) {
-    showFailToast("管理员不可用");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("receiverId", adminUserId.value);
-  formData.append("scene", chatScene.value);
-  formData.append("sessionKey", sessionKey.value);
-  if (playerId.value) {
-    formData.append("playerId", playerId.value);
-    formData.append("playerName", playerName.value);
-  }
-
-  sendingImage.value = true;
-  try {
-    await sendFileApi(formData);
-    showSuccessToast("图片发送成功");
-    await loadMessages();
-  } catch {
-    showFailToast("图片发送失败");
-  } finally {
-    sendingImage.value = false;
-  }
+  await uploadImageFile(file);
 };
 
 const previewImage = (msgId?: string) => {
@@ -229,6 +279,99 @@ const previewImage = (msgId?: string) => {
   const url = imagePreviewMap.value[msgId];
   if (!url) return;
   showImagePreview([url]);
+};
+
+const showPicker = async (
+  title: string,
+  actions: Array<{ name: string; value: string }>
+) => {
+  pickerTitle.value = title;
+  pickerActions.value = actions;
+  pickerVisible.value = true;
+  return new Promise<string>(resolve => {
+    pickerResolver = resolve;
+  });
+};
+
+const onPickerSelect = (action: { name?: string; value?: string }) => {
+  pickerVisible.value = false;
+  const value = action?.value || (action?.name === "拍照" ? "camera" : action?.name === "从相册选择" ? "album" : "");
+  if (pickerResolver) {
+    pickerResolver(value);
+    pickerResolver = null;
+  }
+};
+
+const onPickerCancel = () => {
+  pickerVisible.value = false;
+  if (pickerResolver) {
+    pickerResolver("");
+    pickerResolver = null;
+  }
+};
+
+const openImageActions = async () => {
+  if (sendingImage.value) return;
+  const action = await showPicker("选择图片", [
+    { name: "拍照", value: "camera" },
+    { name: "从相册选择", value: "album" }
+  ]);
+
+  if (action === "camera") {
+    cameraInputRef.value?.click();
+    return;
+  }
+  if (action === "album") {
+    albumInputRef.value?.click();
+  }
+};
+
+const onChooseCamera = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] || null;
+  input.value = "";
+  await uploadImageFile(file);
+};
+
+const onChooseAlbum = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0] || null;
+  input.value = "";
+  await uploadImageFile(file);
+};
+
+const uploadImageFile = async (file?: File | null) => {
+  if (!file) return;
+  if (!adminUserId.value) {
+    showFailToast("管理员不可用");
+    return;
+  }
+
+  sendingImage.value = true;
+  try {
+    let fileToUpload = file;
+    if (file.type.startsWith("image/")) {
+      fileToUpload = await compressImage(file);
+    }
+    // 如果是视频，直接上传不压缩
+    const formData = new FormData();
+    formData.append("file", fileToUpload);
+    formData.append("receiverId", adminUserId.value);
+    formData.append("scene", chatScene.value);
+    formData.append("sessionKey", sessionKey.value);
+    if (playerId.value) {
+      formData.append("playerId", playerId.value);
+      formData.append("playerName", playerName.value);
+    }
+
+    await sendFileApi(formData);
+    showSuccessToast("文件发送成功");
+    await loadMessages();
+  } catch {
+    showFailToast("文件发送失败");
+  } finally {
+    sendingImage.value = false;
+  }
 };
 
 onMounted(async () => {
@@ -288,9 +431,13 @@ onBeforeUnmount(() => {
           <van-icon name="photograph" size="24" />
         </button>
         <button class="send-btn" @click="sendMessage">发送</button>
-        <input ref="fileInputRef" type="file" accept="image/*" class="hidden-file" @change="onChooseImage" />
+        <input ref="cameraInputRef" type="file" accept="image/*" capture class="hidden-file" @change="onChooseCamera" />
+        <input ref="albumInputRef" type="file" accept="image/*,video/*" class="hidden-file" @change="onChooseAlbum" />
       </div>
     </div>
+
+    <van-action-sheet v-model:show="pickerVisible" :title="pickerTitle" :actions="pickerActions" cancel-text="取消"
+      @select="onPickerSelect" @cancel="onPickerCancel" @close="onPickerCancel" />
   </div>
 </template>
 

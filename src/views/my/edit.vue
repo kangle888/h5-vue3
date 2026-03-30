@@ -303,9 +303,9 @@ const onSave = async () => {
               </div>
             </div>
           </div>
-          <input ref="cameraInputRef" type="file" accept="image/*" capture="environment" class="hidden-file"
+          <input ref="cameraInputRef" type="file" accept="image/*" capture class="hidden-file"
             @change="onChooseCamera" />
-          <input ref="albumInputRef" type="file" accept="image/*" class="hidden-file" @change="onChooseAlbum" />
+          <input ref="albumInputRef" type="file" accept="image/*,video/*" class="hidden-file" @change="onChooseAlbum" />
         </div>
 
         <van-cell-group inset class="field-group">

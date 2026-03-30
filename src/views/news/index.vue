@@ -37,7 +37,22 @@ const roomTitle = (room: IChatRoomItem) => {
 };
 
 const roomSubText = (room: IChatRoomItem) => {
-  return room.lastContent || "点击进入聊天";
+  const content = room.lastContent;
+  if (content) {
+    const lowerContent = content.toLowerCase();
+    if (
+      lowerContent.endsWith('.jpg') ||
+      lowerContent.endsWith('.jpeg') ||
+      lowerContent.endsWith('.png') ||
+      lowerContent.endsWith('.gif') ||
+      lowerContent.endsWith('.webp') ||
+      lowerContent.endsWith('.bmp') ||
+      lowerContent.endsWith('.svg')
+    ) {
+      return '[图片]';
+    }
+  }
+  return content || "点击进入聊天";
 };
 
 const roomTime = (room: IChatRoomItem) => {
