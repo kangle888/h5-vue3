@@ -7,6 +7,7 @@ import {
   getCurrentCUserApi,
   type ICUserProfile
 } from "@/api/c-user";
+import { queryByIdPlayerCollect } from "@/api/home";
 
 defineOptions({ name: "My" });
 
@@ -32,6 +33,22 @@ const writeCachedProfile = (data: ICUserProfile) => {
 };
 
 const profile = ref<ICUserProfile>(readCachedProfile());
+
+const collectCount = ref(0);
+
+const loadCollectCount = async (playerId?: string) => {
+  if (!playerId) {
+    collectCount.value = 0;
+    return;
+  }
+  try {
+    const res = await queryByIdPlayerCollect(playerId);
+    const page = res?.data;
+    collectCount.value = page?.total || 0;
+  } catch (e) {
+    collectCount.value = 0;
+  }
+};
 
 const avatarUrl = () => getAttachmentDownloadUrl(profile.value.avatar);
 
@@ -84,6 +101,7 @@ const loadProfile = async () => {
     const latest = (await getCurrentCUserApi()) || {};
     profile.value = latest;
     writeCachedProfile(latest);
+    await loadCollectCount(profile.value.id);
   } catch {
     if (!profile.value || !Object.keys(profile.value).length) {
       profile.value = {};
@@ -128,7 +146,7 @@ onMounted(() => {
       </div>
       <div class="divider"></div> -->
       <div class="stat-item">
-        <div class="num gold-text">1</div>
+        <div class="num gold-text">{{ collectCount }}</div>
         <div class="label">心动女生</div>
       </div>
     </div>
