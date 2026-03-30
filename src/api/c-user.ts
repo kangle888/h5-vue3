@@ -44,6 +44,10 @@ export const uploadAttachmentApi = (file: Blob, fileName?: string) => {
 export const getAttachmentDownloadUrl = (fileName?: string) => {
   if (!fileName) return "";
   const base = import.meta.env.VITE_BASE_API;
+  // 静态资源路径（以 / 开头），直接拼 base URL，不走附件接口
+  if (fileName.startsWith("/")) {
+    return `${base}${fileName}`;
+  }
   const token = encodeURIComponent(localStorage.getItem("c_access_token") || localStorage.getItem("token") || "");
   return `${base}/attachment/download?fileName=${encodeURIComponent(fileName)}&access-token=${token}`;
 };

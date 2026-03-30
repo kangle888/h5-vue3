@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { showFailToast, showSuccessToast } from "vant";
+import { showFailToast, showLoadingToast, showSuccessToast, closeToast } from "vant";
 import {
   codeLoginApi,
   loginPasswordApi,
@@ -100,20 +100,22 @@ const sendCode = async () => {
 };
 
 const submitPassword = async () => {
+  const password = form.password.trim();
   if (!/^1\d{10}$/.test(form.mobile)) {
     showFailToast("请输入正确手机号");
     return;
   }
-  if (form.password.length < 6) {
+  if (password.length < 6) {
     showFailToast("密码至少6位");
     return;
   }
 
   loading.value = true;
+  showLoadingToast({ message: "登录中...", forbidClick: true, duration: 0 });
   try {
     const res = await loginPasswordApi({
       mobile: form.mobile,
-      password: form.password,
+      password,
       deviceId: getDeviceId()
     });
     saveLogin(res, form.mobile);
@@ -124,25 +126,29 @@ const submitPassword = async () => {
     switchMode("verify");
   } finally {
     loading.value = false;
+    closeToast();
   }
 };
 
 const submitVerify = async () => {
+  const code = form.code.trim();
+  const password = form.password.trim();
   if (!/^1\d{10}$/.test(form.mobile)) {
     showFailToast("请输入正确手机号");
     return;
   }
-  if (!form.code.trim()) {
+  if (!code) {
     showFailToast("请输入验证码");
     return;
   }
 
   loading.value = true;
+  showLoadingToast({ message: "登录中...", forbidClick: true, duration: 0 });
   try {
     const res = await codeLoginApi({
       mobile: form.mobile,
-      code: form.code,
-      password: form.password,
+      code,
+      password,
       deviceId: getDeviceId()
     });
     saveLogin(res, form.mobile);
@@ -152,6 +158,7 @@ const submitVerify = async () => {
     showFailToast("验证失败，请检查验证码");
   } finally {
     loading.value = false;
+    closeToast();
   }
 };
 

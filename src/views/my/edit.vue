@@ -96,12 +96,52 @@ const toUniqueImageName = (mime?: string) => {
   return `${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
 };
 
+/**
+ * 压缩图片：最大边 1080px，JPEG 质量 0.8
+ */
+const compressImage = (file: File, maxSize = 1080, quality = 0.8): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width > maxSize || height > maxSize) {
+        if (width >= height) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("canvas context unavailable"));
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        blob => {
+          if (!blob) return reject(new Error("compress failed"));
+          resolve(new File([blob], file.name, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 const uploadAvatarFile = async (file?: File | null) => {
   if (!file) return;
   avatarUploading.value = true;
   try {
-    const mime = file.type || "image/jpeg";
-    const fileName = await uploadAttachmentApi(file, toUniqueImageName(mime));
+    const compressed = await compressImage(file);
+    const mime = compressed.type || "image/jpeg";
+    const fileName = await uploadAttachmentApi(compressed, toUniqueImageName(mime));
     form.avatar = fileName || "";
     showSuccessToast("头像上传成功");
   } catch {
@@ -162,14 +202,14 @@ const onPickerCancel = () => {
 const openAvatarActions = async () => {
   if (avatarUploading.value) return;
   const action = await showPicker("选择头像", [
-    // { name: "拍照", value: "camera" },
+    { name: "拍照", value: "camera" },
     { name: "从相册选择", value: "album" }
   ]);
 
-  // if (action === "camera") {
-  //   cameraInputRef.value?.click();
-  //   return;
-  // }
+  if (action === "camera") {
+    cameraInputRef.value?.click();
+    return;
+  }
   if (action === "album") {
     albumInputRef.value?.click();
   }
