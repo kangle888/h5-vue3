@@ -97,7 +97,7 @@ const toUniqueImageName = (mime?: string) => {
 };
 
 /**
- * 压缩图片：最大边 1080px，JPEG 质量 0.8
+ * 压缩图片：最大边 1080px，JPEG 质量 0.8，目标大小 1MB 以下
  */
 const compressImage = (file: File, maxSize = 1080, quality = 0.8): Promise<File> => {
   return new Promise((resolve, reject) => {
@@ -105,30 +105,60 @@ const compressImage = (file: File, maxSize = 1080, quality = 0.8): Promise<File>
     const img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxSize || height > maxSize) {
-        if (width >= height) {
-          height = Math.round((height * maxSize) / width);
-          width = maxSize;
-        } else {
-          width = Math.round((width * maxSize) / height);
-          height = maxSize;
-        }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("canvas context unavailable"));
-      ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(
-        blob => {
-          if (!blob) return reject(new Error("compress failed"));
-          resolve(new File([blob], file.name, { type: "image/jpeg" }));
-        },
-        "image/jpeg",
-        quality
-      );
+      let { width: originalWidth, height: originalHeight } = img;
+
+      const compress = (currentMaxSize: number, currentQuality: number): Promise<File> => {
+        return new Promise((res, rej) => {
+          let { width, height } = img;
+          if (width > currentMaxSize || height > currentMaxSize) {
+            if (width >= height) {
+              height = Math.round((height * currentMaxSize) / width);
+              width = currentMaxSize;
+            } else {
+              width = Math.round((width * currentMaxSize) / height);
+              height = currentMaxSize;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return rej(new Error("canvas context unavailable"));
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            blob => {
+              if (!blob) return rej(new Error("compress failed"));
+              if (blob.size <= 1024 * 1024) { // 1MB
+                res(new File([blob], file.name, { type: "image/jpeg" }));
+              } else {
+                // 如果质量 > 0.1，降低质量
+                if (currentQuality > 0.1) {
+                  compress(currentMaxSize, currentQuality - 0.1).then(res).catch(rej);
+                } else {
+                  // 如果尺寸 > 300，缩小尺寸
+                  if (currentMaxSize > 300) {
+                    compress(currentMaxSize - 200, 0.8).then(res).catch(rej);
+                  } else {
+                    // 最后尝试最低质量
+                    canvas.toBlob(
+                      finalBlob => {
+                        if (!finalBlob) return rej(new Error("final compress failed"));
+                        res(new File([finalBlob], file.name, { type: "image/jpeg" }));
+                      },
+                      "image/jpeg",
+                      0.1
+                    );
+                  }
+                }
+              }
+            },
+            "image/jpeg",
+            currentQuality
+          );
+        });
+      };
+
+      compress(maxSize, quality).then(resolve).catch(reject);
     };
     img.onerror = reject;
     img.src = url;
