@@ -133,7 +133,6 @@ const playerTag = (item: IPlayerItem) => {
   return item.occupation_dictText || item.occupation || "优质陪玩";
 };
 
-
 const formatCityText = (city?: string) => {
   const fallback = "武汉市";
   if (!city) return fallback;
@@ -199,7 +198,9 @@ const resolveCityByLocation = async () => {
   locationCityLabel.value = cityLabel;
 
   const dict = codeToText as Record<string, string>;
-  const matched = Object.entries(dict).find(([, text]) => cityLabel.includes(text));
+  const matched = Object.entries(dict).find(([, text]) =>
+    cityLabel.includes(text)
+  );
   if (matched?.[0]) {
     const code = matched[0];
     locationCityCode.value = code.length > 4 ? code.slice(0, 4) : code;
@@ -304,7 +305,7 @@ const openSearch = () => {
 };
 
 const onSearch = async (val?: string) => {
-  filterForm.name = (val || '').trim();
+  filterForm.name = (val || "").trim();
   showSearch.value = false;
   refreshing.value = true;
   await onRefresh();
@@ -328,11 +329,16 @@ const goDetail = (item: IPlayerItem) => {
 
 <template>
   <div class="home-wrapper">
-    <div class="box-border" style="height: 100%;">
+    <div class="box-border" style="height: 100%">
       <div class="sticky-header">
         <div class="top-tabs">
-          <div v-for="(tab, index) in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === index }"
-            @click="onTabChange(index)">
+          <div
+            v-for="(tab, index) in tabs"
+            :key="tab"
+            class="tab-item"
+            :class="{ active: activeTab === index }"
+            @click="onTabChange(index)"
+          >
             {{ tab }}
           </div>
         </div>
@@ -342,10 +348,19 @@ const goDetail = (item: IPlayerItem) => {
         </div>
       </div>
 
-      <van-popup v-model:show="showSearch" position="top" :style="{ width: '100%' }">
+      <van-popup
+        v-model:show="showSearch"
+        position="top"
+        :style="{ width: '100%' }"
+      >
         <div class="search-bar">
-          <van-search v-model="filterForm.name" placeholder="搜索人物名称" show-action @search="onSearch"
-            @clear="clearSearch">
+          <van-search
+            v-model="filterForm.name"
+            placeholder="搜索人物名称"
+            show-action
+            @search="onSearch"
+            @clear="clearSearch"
+          >
             <template #action>
               <div class="search-action" @click="closeSearch">取消</div>
             </template>
@@ -353,15 +368,38 @@ const goDetail = (item: IPlayerItem) => {
         </div>
       </van-popup>
 
-      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="page-refresh">
-        <van-list v-model:loading="loading" v-model:error="error" :finished="finished" finished-text="没有更多了"
-          error-text="加载失败，点击重试" @load="onLoad">
+      <van-pull-refresh
+        v-model="refreshing"
+        @refresh="onRefresh"
+        class="page-refresh"
+      >
+        <van-list
+          v-model:loading="loading"
+          v-model:error="error"
+          :finished="finished"
+          finished-text="没有更多了"
+          error-text="加载失败，点击重试"
+          @load="onLoad"
+        >
           <div class="list-wrap">
-            <div v-for="(item, index) in cardList" :key="item.id || index" class="player-card" @click="goDetail(item)">
+            <div
+              v-for="(item, index) in cardList"
+              :key="item.id || index"
+              class="player-card"
+              @click="goDetail(item)"
+            >
               <div class="cover-wrap">
-                <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" />
+                <img
+                  v-if="coverUrl(item)"
+                  :src="coverUrl(item)"
+                  class="cover"
+                  alt="cover"
+                />
                 <div v-else class="cover-empty">暂无照片</div>
-                <span class="status-dot" :class="{ online: item.onlineStatus === 'ONLINE' }"></span>
+                <span
+                  class="status-dot"
+                  :class="{ online: item.onlineStatus === 'ONLINE' }"
+                ></span>
                 <div class="badge">
                   <span class="badge-text">真人认证</span>
                 </div>
@@ -371,8 +409,11 @@ const goDetail = (item: IPlayerItem) => {
                 <div class="name-row">
                   <div class="name">{{ item.name || "神秘玩家" }}</div>
                   <div class="like-btn" @click.stop="toggleCollect(item)">
-                    <van-icon :name="isCollected(item) ? 'like' : 'like-o'" size="20"
-                      :color="isCollected(item) ? '#ff4d4f' : '#666'" />
+                    <van-icon
+                      :name="isCollected(item) ? 'like' : 'like-o'"
+                      size="20"
+                      :color="isCollected(item) ? '#ff4d4f' : '#666'"
+                    />
                   </div>
                 </div>
 
@@ -386,13 +427,22 @@ const goDetail = (item: IPlayerItem) => {
 
                 <div class="city-row">
                   <van-icon name="location-o" class="mr-1" />
-                  <span>{{ item.cityName ? item.cityName : item.province }} </span>
+                  <span
+                    >{{ item.cityName ? item.cityName : item.province }}
+                  </span>
                 </div>
 
                 <div class="album-row" v-if="cardImages(item).length > 0">
-                  <div v-for="(img, imgIdx) in cardImages(item)" :key="img" class="mini-wrap">
+                  <div
+                    v-for="(img, imgIdx) in cardImages(item)"
+                    :key="img"
+                    class="mini-wrap"
+                  >
                     <img class="mini" :src="img" alt="album" />
-                    <div v-if="imgIdx === 2 && cardAlbumCount(item) > 3" class="more">
+                    <div
+                      v-if="imgIdx === 2 && cardAlbumCount(item) > 3"
+                      class="more"
+                    >
                       +{{ cardAlbumCount(item) - 3 }} >
                     </div>
                   </div>
@@ -400,7 +450,10 @@ const goDetail = (item: IPlayerItem) => {
               </div>
             </div>
 
-            <van-empty v-if="!loading && !cardList.length" description="暂无数据" />
+            <van-empty
+              v-if="!loading && !cardList.length"
+              description="暂无数据"
+            />
           </div>
         </van-list>
       </van-pull-refresh>

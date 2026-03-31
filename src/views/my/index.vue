@@ -7,7 +7,7 @@ import {
   getCurrentCUserApi,
   type ICUserProfile
 } from "@/api/c-user";
-import { queryByIdPlayerCollect } from "@/api/home";
+import { pagePlayerCollect } from "@/api/home";
 
 defineOptions({ name: "My" });
 
@@ -41,13 +41,15 @@ const loadCollectCount = async (playerId?: string) => {
     collectCount.value = 0;
     return;
   }
-  try {
-    const res = await queryByIdPlayerCollect(playerId);
-    const page = res?.data;
-    collectCount.value = page?.total || 0;
-  } catch (e) {
-    collectCount.value = 0;
-  }
+  const res = await pagePlayerCollect({
+    pageNum: 1,
+    pageSize: 1000,
+    query: {
+      isCancel: "0",
+      collectPlayerId: playerId || undefined
+    }
+  });
+  collectCount.value = res?.records.length || 0;
 };
 
 const avatarUrl = () => getAttachmentDownloadUrl(profile.value.avatar);
@@ -118,7 +120,12 @@ onMounted(() => {
   <div class="my-page-wrapper w-full">
     <div class="header-card">
       <div class="avatar-wrap">
-        <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
+        <img
+          v-if="avatarUrl()"
+          :src="avatarUrl()"
+          class="avatar"
+          alt="avatar"
+        />
         <div v-else class="avatar placeholder">
           <van-icon name="user-circle-o" size="32" color="#666" />
         </div>
@@ -179,18 +186,33 @@ onMounted(() => {
       探索你的专属陪伴 v1.0.0
     </div>
 
-    <van-popup v-model:show="showSharePopup" round position="bottom" class="dark-popup">
+    <van-popup
+      v-model:show="showSharePopup"
+      round
+      position="bottom"
+      class="dark-popup"
+    >
       <div class="share-popup">
         <div class="popup-header">
           <span class="popup-title">遇见App分享</span>
-          <van-icon name="cross" class="close-icon" @click="showSharePopup = false" />
+          <van-icon
+            name="cross"
+            class="close-icon"
+            @click="showSharePopup = false"
+          />
         </div>
 
         <div class="share-card">
           <div class="qr-wrap">
             <div class="qr-bg" :class="{ 'is-loading': qrLoading }">
-              <van-image class="qr-image" fit="cover" :src="qrUrl" alt="landing-qrcode" @load="handleQrLoad"
-                @error="handleQrError" />
+              <van-image
+                class="qr-image"
+                fit="cover"
+                :src="qrUrl"
+                alt="landing-qrcode"
+                @load="handleQrLoad"
+                @error="handleQrError"
+              />
               <div v-if="qrLoading" class="qr-loading">
                 <van-loading size="24" color="#dfc293" />
                 <span>生成中...</span>

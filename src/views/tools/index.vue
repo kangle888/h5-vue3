@@ -5,7 +5,7 @@ import { computed, ref } from "vue";
 import {
   getAttachmentObjectUrl,
   getPlayerActivity,
-  queryById,
+  pagePlayerCollectList,
   type IPlayerActivityItem,
   type IPlayerItem
 } from "@/api/home";
@@ -17,6 +17,8 @@ type PlayerWithAvatar = IPlayerItem & { avatarUrl?: string };
 type FeedItem = IPlayerActivityItem & {
   player?: PlayerWithAvatar;
   imageUrl?: string;
+  playerName?: string;
+  playerAvatar?: string;
 };
 
 const activeTab = ref<"recommend" | "heartbeat">("recommend");
@@ -25,6 +27,13 @@ const refreshing = ref(false);
 const error = ref(false);
 const finished = ref(false);
 const feedList = ref<FeedItem[]>([]);
+// 心动(收藏) 列表状态
+const collectLoading = ref(false);
+const collectError = ref(false);
+const collectFinished = ref(false);
+const collectList = ref<FeedItem[]>([]);
+
+const collectPageNum = ref(1);
 
 const pageNum = ref(1);
 const pageSize = 10;
@@ -33,10 +42,10 @@ const playerMap = ref<Record<string, PlayerWithAvatar>>({});
 
 const router = useRouter();
 
-const currentList = computed(() => {
-  if (activeTab.value === "recommend") return feedList.value;
-  return feedList.value.filter((_item, idx) => idx % 2 === 0);
-});
+// const currentList = computed(() => {
+//   if (activeTab.value === "recommend") return feedList.value;
+//   return collectList.value;
+// });
 
 const formatDateText = (value?: string) => {
   if (!value) return "刚刚";
@@ -62,7 +71,7 @@ const getImageFileName = (item: IPlayerActivityItem) => {
 };
 
 const getPlayerAvatar = (item: FeedItem) => {
-  return item.player?.avatarUrl || "";
+  return item.playerAvatar || "";
 };
 
 const previewImage = (item: FeedItem) => {
@@ -74,36 +83,16 @@ const previewImage = (item: FeedItem) => {
   });
 };
 
-const enrichPlayers = async (records: IPlayerActivityItem[]) => {
-  const ids = Array.from(new Set(records.map(i => i.playerId).filter(Boolean) as string[]));
-  for (const id of ids) {
-    if (playerMap.value[id]) continue;
-    try {
-      const detail = await queryById(id);
-      const player = { ...(detail || {}), avatarUrl: "" } as PlayerWithAvatar;
-      if (player.avatar) {
-        player.avatarUrl = await getAttachmentObjectUrl(player.avatar);
-      }
-      playerMap.value[id] = player;
-    } catch {
-      // ignore single player load failure
-    }
-  }
-};
-
 const mapFeed = async (records: IPlayerActivityItem[]) => {
-  await enrichPlayers(records);
   const list: FeedItem[] = [];
 
   for (const row of records) {
-    const fileName = getImageFileName(row);
     let imageUrl = "";
-    if (fileName) {
-      imageUrl = await getAttachmentObjectUrl(fileName);
+    if (row.playerAvatar) {
+      imageUrl = await getAttachmentObjectUrl(row.playerAvatar);
     }
     list.push({
       ...row,
-      player: row.playerId ? playerMap.value[row.playerId] : undefined,
       imageUrl
     });
   }
@@ -148,83 +137,266 @@ const loadFeedPage = async (reset = false) => {
   }
 };
 
-const onLoad = async () => {
+// const onLoad = async () => {
+//   if (activeTab.value === "recommend") {
+//     await loadFeedPage(false);
+//   } else {
+//     await loadCollectPage(false);
+//   }
+// };
+
+const onRefresh = async () => {
+  if (activeTab.value === "recommend") {
+    await loadFeedPage(true);
+  } else {
+    await loadCollectPage(true);
+  }
+};
+
+const onFeedLoad = async () => {
   await loadFeedPage(false);
 };
 
-const onRefresh = async () => {
-  await loadFeedPage(true);
+const onCollectLoad = async () => {
+  await loadCollectPage(false);
+};
+
+// 加载pagePlayerCollectList  这个分页接口
+const loadCollectPage = async (reset = false) => {
+  if (collectLoading.value) return;
+
+  if (reset) {
+    collectPageNum.value = 1;
+    collectFinished.value = false;
+    collectError.value = false;
+    collectList.value = [];
+  }
+
+  collectLoading.value = true;
+  try {
+    const res = await pagePlayerCollectList({
+      pageNum: collectPageNum.value,
+      pageSize,
+      query: {}
+    });
+    const records = res?.records || [];
+
+    const list: FeedItem[] = [];
+    for (const row of records) {
+      let imageUrl = "";
+      if (row.playerAvatar) {
+        imageUrl = await getAttachmentObjectUrl(row.playerAvatar);
+      }
+
+      list.push({
+        id: row.id,
+        content: row.content || "",
+        createTime: row.createTime || "",
+        city: row.city,
+        playerId: row.playerId,
+        imageUrl: imageUrl,
+        playerName: row.playerName,
+        playerAvatar: row.playerAvatar
+      } as FeedItem);
+    }
+
+    if (reset) {
+      collectList.value = list;
+    } else {
+      collectList.value = [...collectList.value, ...list];
+    }
+
+    if (records.length < pageSize) {
+      collectFinished.value = true;
+    } else {
+      collectPageNum.value += 1;
+    }
+  } catch (err) {
+    collectError.value = true;
+    showFailToast("心动加载失败");
+  } finally {
+    collectLoading.value = false;
+    refreshing.value = false;
+  }
 };
 
 const onTabChange = async (name: string | number) => {
   activeTab.value = (name as "recommend" | "heartbeat") || "recommend";
-  await onRefresh();
+  if (activeTab.value === "heartbeat") {
+    await loadCollectPage(true);
+  } else {
+    await onRefresh();
+  }
 };
 const goDetail = (item: FeedItem) => {
   if (!item.id) return;
-  router.push({ name: "Detail", query: { playerId: item.playerId } });
+  const pid = (item as any).playerId || item.player?.id || item.id;
+  router.push({ name: "Detail", query: { playerId: pid } });
 };
 </script>
 
 <template>
   <div class="dynamic-page-wrapper">
-    <div class="box-border" style="height: 100%;">
+    <div class="box-border" style="height: 100%">
       <div class="top-tabs">
-        <div class="tab-item" :class="{ active: activeTab === 'recommend' }" @click="onTabChange('recommend')">
+        <div
+          class="tab-item"
+          :class="{ active: activeTab === 'recommend' }"
+          @click="onTabChange('recommend')"
+        >
           推荐
         </div>
-        <div class="tab-item" :class="{ active: activeTab === 'heartbeat' }" @click="onTabChange('heartbeat')">
+        <div
+          class="tab-item"
+          :class="{ active: activeTab === 'heartbeat' }"
+          @click="onTabChange('heartbeat')"
+        >
           心动
         </div>
       </div>
 
-      <van-pull-refresh v-model="refreshing" success-text="刷新成功" @refresh="onRefresh" class="page-refresh">
-        <van-list v-model:loading="loading" v-model:error="error" :finished="finished" loading-text="加载中..."
-          finished-text="没有更多了" error-text="加载失败，点击重试" @load="onLoad">
-          <van-empty v-if="!loading && !currentList.length" image="search" description="暂无动态" class="empty-wrap" />
+      <van-pull-refresh
+        v-model="refreshing"
+        success-text="刷新成功"
+        @refresh="onRefresh"
+        class="page-refresh"
+      >
+        <template v-if="activeTab === 'recommend'">
+          <van-list
+            v-model:loading="loading"
+            v-model:error="error"
+            :finished="finished"
+            loading-text="加载中..."
+            finished-text="没有更多了"
+            error-text="加载失败，点击重试"
+            @load="onFeedLoad"
+          >
+            <van-empty
+              v-if="!loading && !feedList.length"
+              image="search"
+              description="暂无动态"
+              class="empty-wrap"
+            />
 
-          <div v-for="item in currentList" :key="item.id" class="feed-card">
-            <div class="author-row">
-              <van-image v-if="getPlayerAvatar(item)" :src="getPlayerAvatar(item)" width="44" height="44" round
-                fit="cover" @click="goDetail(item)" />
-              <div v-else class="avatar placeholder">
-                <van-icon name="user-circle-o" size="24" color="#333" />
-              </div>
+            <div v-for="item in feedList" :key="item.id" class="feed-card">
+              <div class="author-row">
+                <van-image
+                  v-if="getPlayerAvatar(item)"
+                  :src="item.imageUrl"
+                  width="44"
+                  height="44"
+                  round
+                  fit="cover"
+                  @click="goDetail(item)"
+                />
+                <div v-else class="avatar placeholder">
+                  <van-icon name="user-circle-o" size="24" color="#333" />
+                </div>
 
-              <div class="author-info">
-                <div class="name">{{ item.player?.name || "神秘玩家" }}</div>
-                <div class="sub">{{ getPlayerBrief(item) }}</div>
-              </div>
-              <!-- <div class="more">
+                <div class="author-info">
+                  <div class="name">{{ item.playerName || "神秘玩家" }}</div>
+                  <div class="sub">{{ getPlayerBrief(item) }}</div>
+                </div>
+                <!-- <div class="more">
                 <van-icon name="ellipsis" size="20" />
               </div> -->
-            </div>
+              </div>
 
-            <div class="content">{{ item.content || "今天也是元气满满的一天~" }}</div>
+              <div class="content">
+                {{ item.content || "今天也是元气满满的一天~" }}
+              </div>
 
-            <van-image v-if="item.imageUrl" :src="item.imageUrl" class="cover" fit="cover"
-              @click="previewImage(item)" />
-            <div v-else class="cover-empty">
-              <van-icon name="photo-o" size="32" color="#333" />
-            </div>
+              <van-image
+                v-if="item.imageUrl"
+                :src="item.imageUrl"
+                class="cover"
+                fit="cover"
+                @click="previewImage(item)"
+              />
+              <div v-else class="cover-empty">
+                <van-icon name="photo-o" size="32" color="#333" />
+              </div>
 
-            <div class="city">
-              <span class="city-tag">
-                <van-icon name="location-o" class="mr-1" />
-                {{ item.city || "成都市" }}
-              </span>
-              <span class="time">{{ formatDateText(item.createTime) }}</span>
-            </div>
+              <div class="city">
+                <span class="city-tag">
+                  <van-icon name="location-o" class="mr-1" />
+                  {{ item.city || "成都市" }}
+                </span>
+                <span class="time">{{ formatDateText(item.createTime) }}</span>
+              </div>
 
-            <!-- <div class="bottom-row">
+              <!-- <div class="bottom-row">
               <div class="time">{{ formatDateText(item.createTime) }}</div>
               <div class="actions">
                 <van-button class="action-btn" size="mini" plain hairline type="default" icon="like-o">0</van-button>
                 <van-button class="action-btn" size="mini" plain hairline type="default" icon="chat-o">评论</van-button>
               </div>
             </div> -->
-          </div>
-        </van-list>
+            </div>
+          </van-list>
+        </template>
+
+        <template v-else>
+          <van-list
+            v-model:loading="collectLoading"
+            v-model:error="collectError"
+            :finished="collectFinished"
+            loading-text="加载中..."
+            finished-text="没有更多了"
+            error-text="加载失败，点击重试"
+            @load="onCollectLoad"
+          >
+            <van-empty
+              v-if="!collectLoading && !collectList.length"
+              image="search"
+              description="暂无心动"
+              class="empty-wrap"
+            />
+
+            <div v-for="item in collectList" :key="item.id" class="feed-card">
+              <div class="author-row">
+                <van-image
+                  v-if="getPlayerAvatar(item)"
+                  :src="getPlayerAvatar(item)"
+                  width="44"
+                  height="44"
+                  round
+                  fit="cover"
+                  @click="goDetail(item)"
+                />
+                <div v-else class="avatar placeholder">
+                  <van-icon name="user-circle-o" size="24" color="#333" />
+                </div>
+
+                <div class="author-info">
+                  <div class="name">{{ item.playerName || "女神" }}</div>
+                  <div class="sub">{{ getPlayerBrief(item) }}</div>
+                </div>
+              </div>
+
+              <div class="content">{{ item.content || "" }}</div>
+
+              <van-image
+                v-if="item.imageUrl"
+                :src="item.imageUrl"
+                class="cover"
+                fit="cover"
+                @click="previewImage(item)"
+              />
+              <div v-else class="cover-empty">
+                <van-icon name="photo-o" size="32" color="#333" />
+              </div>
+
+              <div class="city">
+                <span class="city-tag">
+                  <van-icon name="location-o" class="mr-1" />
+                  {{ item.city || "成都市" }}
+                </span>
+                <span class="time">{{ formatDateText(item.createTime) }}</span>
+              </div>
+            </div>
+          </van-list>
+        </template>
       </van-pull-refresh>
 
       <!-- <BackTop :right="16" :bottom="80" /> -->

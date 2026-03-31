@@ -85,11 +85,11 @@ export const deletePlayerCollect = (id: string) => {
 };
 
 // /playerCollect/queryById
-export const queryByIdPlayerCollect = (id: string) => {
+export const queryByIdPlayerCollect = (collectPlayerId: string) => {
   return http.request<any>({
-    url: "/playerCollect/queryById",
+    url: "/playerCollect/queryByCollectPlayerId",
     method: "get",
-    params: { id }
+    params: { collectPlayerId }
   });
 };
 
@@ -130,7 +130,9 @@ export interface IPlayerCollectItem {
   isCancel?: string;
 }
 
-export const pagePlayerCollect = (data: IPageParam<Partial<IPlayerCollectItem>>) => {
+export const pagePlayerCollect = (
+  data: IPageParam<Partial<IPlayerCollectItem>>
+) => {
   return http.request<IPageResult<IPlayerCollectItem>>({
     url: "/playerCollect/pagePlayerCollect",
     method: "post",
@@ -144,13 +146,20 @@ export interface IPlayerActivityItem {
   createTime?: string;
   city?: string;
   playerId?: string;
+  playerName?: string;
+  playerAvatar?: string;
   image1?: string;
   image2?: string;
   image3?: string;
 }
 
 // /playerActivity/page   入参playerId  get
-export const getPlayerActivity = (data: { pageNum: number; pageSize: number; playerId?: string; query?: { playerId?: string } }) => {
+export const getPlayerActivity = (data: {
+  pageNum: number;
+  pageSize: number;
+  playerId?: string;
+  query?: { playerId?: string };
+}) => {
   const payload = {
     ...data,
     query: data.query ?? { playerId: data.playerId }
@@ -159,5 +168,14 @@ export const getPlayerActivity = (data: { pageNum: number; pageSize: number; pla
     url: "/playerActivity/page",
     method: "post",
     data: payload
+  });
+};
+
+// pagePlayerCollectList
+export const pagePlayerCollectList = (data: any) => {
+  return http.request<any>({
+    url: "/playerCollect/pagePlayerCollectList",
+    method: "post",
+    data
   });
 };
