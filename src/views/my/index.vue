@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { showFailToast, showSuccessToast } from "vant";
 import { useRouter } from "vue-router";
 import {
@@ -64,11 +64,20 @@ const qrUrl = computed(() => {
 });
 const qrLoading = ref(false);
 const showSharePopup = ref(false);
+const qrSrc = ref("");
 
 const openSharePopup = () => {
   qrLoading.value = true;
+  qrSrc.value = `${qrUrl.value}&ts=${Date.now()}`;
   showSharePopup.value = true;
 };
+
+watch(showSharePopup, (val) => {
+  if (!val) {
+    qrLoading.value = false;
+    qrSrc.value = "";
+  }
+});
 
 const handleQrLoad = () => {
   qrLoading.value = false;
@@ -208,7 +217,7 @@ onMounted(() => {
               <van-image
                 class="qr-image"
                 fit="cover"
-                :src="qrUrl"
+                :src="qrSrc || qrUrl"
                 alt="landing-qrcode"
                 @load="handleQrLoad"
                 @error="handleQrError"

@@ -81,10 +81,6 @@ const previewImage = (item: FeedItem) => {
   showImagePreview({
     images: [src],
     startPosition: 0,
-    showIndicators: true,
-    loop: false,
-    teleport: "body",
-    closeOnClickImage: false,
     closeable: true
   });
 };

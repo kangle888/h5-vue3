@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import 'vant/es/image-preview/style';
 import { computed, onMounted, ref } from "vue";
 import { showImagePreview, showFailToast } from "vant";
 import { codeToText } from "element-china-area-data";
@@ -13,6 +14,7 @@ import {
   type IPlayerItem
 } from "@/api/home";
 import { useRoute, useRouter } from "vue-router";
+import { nextTick } from 'vue';
 
 defineOptions({
   name: "Detail"
@@ -81,28 +83,26 @@ const formatDateTime = (value?: string) => {
   return value.replace("T", " ");
 };
 
-const openAlbumPreview = (start: number) => {
+const openAlbumPreview = async (start: number) => {
   if (!albumPreviewList.value.length) return;
+
+  await nextTick(); // 等待 Vue 更新 DOM
+
   showImagePreview({
     images: albumPreviewList.value,
     startPosition: start,
-    showIndicators: true,
-    loop: false,
-    teleport: "body",
-    closeOnClickImage: false
+    closeable: true,
   });
 };
 
-const openActivityPreview = (activityId: string, start: number) => {
+const openActivityPreview = async (activityId: string, start: number) => {
   const list = activityImageMap.value[activityId] || [];
   if (!list.length) return;
+  await nextTick(); // 等待 Vue 更新 DOM
   showImagePreview({
     images: list,
     startPosition: start,
-    showIndicators: true,
-    loop: false,
-    teleport: "body",
-    closeOnClickImage: false
+    closeable: true,
   });
 };
 
@@ -670,5 +670,8 @@ onMounted(() => {
   background: #222 !important;
   border: none !important;
   color: #dfc293 !important;
+}
+.van-image-preview .van-swipe-item {
+  width: 100vw !important;
 }
 </style>
