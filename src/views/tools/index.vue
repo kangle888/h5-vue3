@@ -76,10 +76,15 @@ const getPlayerAvatar = (item: FeedItem) => {
 };
 
 const previewImage = (item: FeedItem) => {
-  if (!item.imageUrl) return;
+  const src = item.dynamicImageUrl;
+  if (!src) return;
   showImagePreview({
-    images: [item.imageUrl],
+    images: [src],
     startPosition: 0,
+    showIndicators: true,
+    loop: false,
+    teleport: "body",
+    closeOnClickImage: false,
     closeable: true
   });
 };
