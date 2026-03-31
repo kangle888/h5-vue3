@@ -19,6 +19,7 @@ type FeedItem = IPlayerActivityItem & {
   imageUrl?: string;
   playerName?: string;
   playerAvatar?: string;
+  dynamicImageUrl?: string;
 };
 
 const activeTab = ref<"recommend" | "heartbeat">("recommend");
@@ -88,12 +89,15 @@ const mapFeed = async (records: IPlayerActivityItem[]) => {
 
   for (const row of records) {
     let imageUrl = "";
+    let dynamicImageUrl = "";
     if (row.playerAvatar) {
       imageUrl = await getAttachmentObjectUrl(row.playerAvatar);
+      dynamicImageUrl = await getAttachmentObjectUrl(row.image1);
     }
     list.push({
       ...row,
-      imageUrl
+      imageUrl,
+      dynamicImageUrl,
     });
   }
 
@@ -184,8 +188,10 @@ const loadCollectPage = async (reset = false) => {
     const list: FeedItem[] = [];
     for (const row of records) {
       let imageUrl = "";
+      let dynamicImageUrl = "";
       if (row.playerAvatar) {
         imageUrl = await getAttachmentObjectUrl(row.playerAvatar);
+        dynamicImageUrl = await getAttachmentObjectUrl(row.image1);
       }
 
       list.push({
@@ -196,7 +202,8 @@ const loadCollectPage = async (reset = false) => {
         playerId: row.playerId,
         imageUrl: imageUrl,
         playerName: row.playerName,
-        playerAvatar: row.playerAvatar
+        playerAvatar: row.playerAvatar,
+        dynamicImageUrl: dynamicImageUrl
       } as FeedItem);
     }
 
@@ -307,8 +314,8 @@ const goDetail = (item: FeedItem) => {
               </div>
 
               <van-image
-                v-if="item.imageUrl"
-                :src="item.imageUrl"
+                v-if="item.dynamicImageUrl"
+                :src="item.dynamicImageUrl"
                 class="cover"
                 fit="cover"
                 @click="previewImage(item)"
@@ -357,7 +364,7 @@ const goDetail = (item: FeedItem) => {
               <div class="author-row">
                 <van-image
                   v-if="getPlayerAvatar(item)"
-                  :src="getPlayerAvatar(item)"
+                  :src="item.imageUrl"
                   width="44"
                   height="44"
                   round
@@ -377,8 +384,8 @@ const goDetail = (item: FeedItem) => {
               <div class="content">{{ item.content || "" }}</div>
 
               <van-image
-                v-if="item.imageUrl"
-                :src="item.imageUrl"
+                v-if="item.dynamicImageUrl"
+                :src="item.dynamicImageUrl"
                 class="cover"
                 fit="cover"
                 @click="previewImage(item)"

@@ -83,13 +83,27 @@ const formatDateTime = (value?: string) => {
 
 const openAlbumPreview = (start: number) => {
   if (!albumPreviewList.value.length) return;
-  showImagePreview({ images: albumPreviewList.value, startPosition: start });
+  showImagePreview({
+    images: albumPreviewList.value,
+    startPosition: start,
+    showIndicators: true,
+    loop: false,
+    teleport: "body",
+    closeOnClickImage: false
+  });
 };
 
 const openActivityPreview = (activityId: string, start: number) => {
   const list = activityImageMap.value[activityId] || [];
   if (!list.length) return;
-  showImagePreview({ images: list, startPosition: start });
+  showImagePreview({
+    images: list,
+    startPosition: start,
+    showIndicators: true,
+    loop: false,
+    teleport: "body",
+    closeOnClickImage: false
+  });
 };
 
 const goContactAdmin = () => {
