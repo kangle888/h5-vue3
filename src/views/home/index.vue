@@ -382,13 +382,41 @@ const goDetail = (item: IPlayerItem) => {
           @load="onLoad"
         >
           <div class="list-wrap">
-            <div
-              v-for="(item, index) in cardList"
-              :key="item.id || index"
-              class="player-card"
-              @click="goDetail(item)"
-            >
-              <div class="cover-wrap">
+            <!-- 首次加载骨架屏 -->
+            <template v-if="loading && pageNum === 1 && !cardList.length">
+              <div v-for="n in 6" :key="'skel-' + n" class="player-card">
+                <div class="cover-wrap">
+                  <div class="cover skeleton-block"></div>
+                </div>
+                <div class="info-wrap">
+                  <div class="name-row mt-1">
+                    <div class="skeleton-block" style="width: 120px; height: 20px; border-radius: 4px;"></div>
+                    <div class="skeleton-block" style="width: 24px; height: 24px; border-radius: 50%;"></div>
+                  </div>
+                  <div class="meta-row" style="margin-top: 12px;">
+                    <div class="skeleton-block" style="width: 48px; height: 20px; border-radius: 4px;"></div>
+                    <div class="skeleton-block" style="width: 56px; height: 20px; border-radius: 4px;"></div>
+                    <div class="skeleton-block" style="width: 64px; height: 20px; border-radius: 4px;"></div>
+                  </div>
+                  <div class="city-row" style="margin-top: 10px;">
+                    <div class="skeleton-block" style="width: 80px; height: 14px; border-radius: 4px;"></div>
+                  </div>
+                  <div class="album-row" style="margin-top: 10px;">
+                    <div class="skeleton-block" style="width: 32px; height: 32px; border-radius: 4px;" v-for="j in 3" :key="j"></div>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- 真实数据 -->
+            <template v-else>
+              <div
+                v-for="(item, index) in cardList"
+                :key="item.id || index"
+                class="player-card"
+                @click="goDetail(item)"
+              >
+                <div class="cover-wrap">
                 <img
                   v-if="coverUrl(item)"
                   :src="coverUrl(item)"
@@ -449,6 +477,7 @@ const goDetail = (item: IPlayerItem) => {
                 </div>
               </div>
             </div>
+            </template>
 
             <van-empty
               v-if="!loading && !cardList.length"
@@ -660,6 +689,17 @@ const goDetail = (item: IPlayerItem) => {
   align-items: center;
   color: #666;
   font-size: 12px;
+}
+
+@keyframes skeleton-blink {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+.skeleton-block {
+  background-color: #222;
+  animation: skeleton-blink 1.5s ease-in-out infinite;
 }
 
 .album-row {

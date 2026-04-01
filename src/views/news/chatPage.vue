@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import "vant/es/image-preview/style";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { showImagePreview, showFailToast, showSuccessToast } from "vant";
 import { useRoute, useRouter } from "vue-router";
@@ -36,7 +37,11 @@ let pickerResolver: ((value: string) => void) | null = null;
 /**
  * 压缩图片：最大边 1080px，JPEG 质量 0.8，目标大小 1MB 以下
  */
-const compressImage = (file: File, maxSize = 1080, quality = 0.8): Promise<File> => {
+const compressImage = (
+  file: File,
+  maxSize = 1080,
+  quality = 0.8
+): Promise<File> => {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -44,7 +49,10 @@ const compressImage = (file: File, maxSize = 1080, quality = 0.8): Promise<File>
       URL.revokeObjectURL(url);
       let { width: originalWidth, height: originalHeight } = img;
 
-      const compress = (currentMaxSize: number, currentQuality: number): Promise<File> => {
+      const compress = (
+        currentMaxSize: number,
+        currentQuality: number
+      ): Promise<File> => {
         return new Promise((res, rej) => {
           let { width, height } = img;
           if (width > currentMaxSize || height > currentMaxSize) {
@@ -65,22 +73,32 @@ const compressImage = (file: File, maxSize = 1080, quality = 0.8): Promise<File>
           canvas.toBlob(
             blob => {
               if (!blob) return rej(new Error("compress failed"));
-              if (blob.size <= 1024 * 1024) { // 1MB
+              if (blob.size <= 1024 * 1024) {
+                // 1MB
                 res(new File([blob], file.name, { type: "image/jpeg" }));
               } else {
                 // 如果质量 > 0.1，降低质量
                 if (currentQuality > 0.1) {
-                  compress(currentMaxSize, currentQuality - 0.1).then(res).catch(rej);
+                  compress(currentMaxSize, currentQuality - 0.1)
+                    .then(res)
+                    .catch(rej);
                 } else {
                   // 如果尺寸 > 300，缩小尺寸
                   if (currentMaxSize > 300) {
-                    compress(currentMaxSize - 200, 0.8).then(res).catch(rej);
+                    compress(currentMaxSize - 200, 0.8)
+                      .then(res)
+                      .catch(rej);
                   } else {
                     // 最后尝试最低质量
                     canvas.toBlob(
                       finalBlob => {
-                        if (!finalBlob) return rej(new Error("final compress failed"));
-                        res(new File([finalBlob], file.name, { type: "image/jpeg" }));
+                        if (!finalBlob)
+                          return rej(new Error("final compress failed"));
+                        res(
+                          new File([finalBlob], file.name, {
+                            type: "image/jpeg"
+                          })
+                        );
                       },
                       "image/jpeg",
                       0.1
@@ -143,9 +161,7 @@ const sessionKey = computed(() => {
 });
 
 const chatTitle = computed(() => {
-  return chatScene.value === "player"
-    ? `${playerName.value}`
-    : "客服聊天";
+  return chatScene.value === "player" ? `${playerName.value}` : "客服聊天";
 });
 
 const wsUrl = () => {
@@ -153,8 +169,8 @@ const wsUrl = () => {
   const base = (import.meta.env.VITE_BASE_API || "").replace(/^http/, "ws");
   const token = encodeURIComponent(
     localStorage.getItem("c_access_token") ||
-    localStorage.getItem("token") ||
-    ""
+      localStorage.getItem("token") ||
+      ""
   );
   return `${base}/websocket/register?access-token=${token}`;
 };
@@ -295,7 +311,13 @@ const showPicker = async (
 
 const onPickerSelect = (action: { name?: string; value?: string }) => {
   pickerVisible.value = false;
-  const value = action?.value || (action?.name === "拍照" ? "camera" : action?.name === "从相册选择" ? "album" : "");
+  const value =
+    action?.value ||
+    (action?.name === "拍照"
+      ? "camera"
+      : action?.name === "从相册选择"
+        ? "album"
+        : "");
   if (pickerResolver) {
     pickerResolver(value);
     pickerResolver = null;
@@ -399,22 +421,39 @@ onBeforeUnmount(() => {
         <div class="right-placeholder"></div>
       </div>
 
-      <div v-if="loading" class="loading-wrap flex-1 flex items-center justify-center">
+      <div
+        v-if="loading"
+        class="loading-wrap flex-1 flex items-center justify-center"
+      >
         <van-loading size="24" color="#ccc" />
       </div>
 
       <div v-else ref="listRef" class="chat-list flex-1 overflow-auto">
-        <div v-for="msg in records" :key="msg.id" class="chat-row" :class="{ mine: msg.senderId === myUserId }">
+        <div
+          v-for="msg in records"
+          :key="msg.id"
+          class="chat-row"
+          :class="{ mine: msg.senderId === myUserId }"
+        >
           <div class="msg-content">
             <template v-if="msg.messageType === 'file'">
-              <img v-if="imagePreviewMap[msg.id || '']" class="image-bubble" :src="imagePreviewMap[msg.id || '']"
-                alt="chat-image" @click="previewImage(msg.id)" />
+              <img
+                v-if="imagePreviewMap[msg.id || '']"
+                class="image-bubble"
+                :src="imagePreviewMap[msg.id || '']"
+                alt="chat-image"
+                @click="previewImage(msg.id)"
+              />
               <div v-else class="bubble loading-bubble">[图片加载中...]</div>
             </template>
             <div v-else class="bubble">{{ msg.content }}</div>
 
             <div class="meta-row">
-              <span v-if="msg.senderId === myUserId" class="read-flag" :class="{ read: msg.readStatus === '1' }">
+              <span
+                v-if="msg.senderId === myUserId"
+                class="read-flag"
+                :class="{ read: msg.readStatus === '1' }"
+              >
                 {{ msg.readStatus === "1" ? "已读" : "未读" }}
               </span>
               <span class="time">{{
@@ -426,18 +465,47 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="chat-input-wrap">
-        <input v-model="messageText" class="chat-input" placeholder="给Ta发消息..." @keyup.enter="sendMessage" />
-        <button class="action-btn" :disabled="sendingImage" @click="triggerChooseImage">
+        <input
+          v-model="messageText"
+          class="chat-input"
+          placeholder="给Ta发消息..."
+          @keyup.enter="sendMessage"
+        />
+        <button
+          class="action-btn"
+          :disabled="sendingImage"
+          @click="triggerChooseImage"
+        >
           <van-icon name="photograph" size="24" />
         </button>
         <button class="send-btn" @click="sendMessage">发送</button>
-        <input ref="cameraInputRef" type="file" accept="image/*" capture class="hidden-file" @change="onChooseCamera" />
-        <input ref="albumInputRef" type="file" accept="image/*,video/*" class="hidden-file" @change="onChooseAlbum" />
+        <input
+          ref="cameraInputRef"
+          type="file"
+          accept="image/*"
+          capture
+          class="hidden-file"
+          @change="onChooseCamera"
+        />
+        <input
+          ref="albumInputRef"
+          type="file"
+          accept="image/*,video/*"
+          class="hidden-file"
+          @change="onChooseAlbum"
+        />
       </div>
     </div>
 
-    <van-action-sheet v-model:show="pickerVisible" :title="pickerTitle" :actions="pickerActions" cancel-text="取消"
-      @select="onPickerSelect" @cancel="onPickerCancel" @close="onPickerCancel" />
+    <van-action-sheet
+      v-model:show="pickerVisible"
+      :title="pickerTitle"
+      :actions="pickerActions"
+      cancel-text="取消"
+      @select="onPickerSelect"
+      @cancel="onPickerCancel"
+      @close="onPickerCancel"
+    />
   </div>
 </template>
 
