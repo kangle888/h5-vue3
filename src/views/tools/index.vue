@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import "vant/es/image-preview/style";
 import { showFailToast, showImagePreview } from "vant";
 import { useRouter } from "vue-router";
 import { computed, ref } from "vue";
@@ -98,7 +99,7 @@ const mapFeed = async (records: IPlayerActivityItem[]) => {
     list.push({
       ...row,
       imageUrl,
-      dynamicImageUrl,
+      dynamicImageUrl
     });
   }
 

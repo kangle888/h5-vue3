@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import 'vant/es/image-preview/style';
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, nextTick } from "vue";
 import { showImagePreview, showFailToast } from "vant";
 import { codeToText } from "element-china-area-data";
 import {
@@ -14,7 +14,6 @@ import {
   type IPlayerItem
 } from "@/api/home";
 import { useRoute, useRouter } from "vue-router";
-import { nextTick } from 'vue';
 
 defineOptions({
   name: "Detail"
@@ -215,7 +214,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="detail-page-wrappern w-full">
+  <div class="detail-page-wrapper w-full">
     <div class="relative z-10 box-border">
       <!-- Top Actions Over Image -->
       <div class="top-bar">
@@ -227,8 +226,67 @@ onMounted(() => {
         </div> -->
       </div>
 
-      <div v-if="loading" class="loading-wrap">
-        <van-loading color="#ccc" />
+      <div v-if="loading" class="skeleton-wrap">
+        <div class="skeleton-hero skeleton-block"></div>
+        <div class="base-card-wrapper">
+          <div class="base-card">
+            
+            <div class="name-row">
+              <div class="name-wrap">
+                <div class="skeleton-block" style="width: 120px; height: 28px; border-radius: 4px;"></div>
+                <div class="skeleton-block" style="width: 32px; height: 16px; border-radius: 4px;"></div>
+              </div>
+              <div class="skeleton-block" style="width: 24px; height: 24px; border-radius: 50%;"></div>
+            </div>
+
+            <div class="meta-list" style="gap: 10px; margin-top: 16px;">
+              <div class="skeleton-block" style="width: 60%; height: 16px; border-radius: 4px;"></div>
+              <div class="skeleton-block" style="width: 80%; height: 16px; border-radius: 4px;"></div>
+              <div class="skeleton-block" style="width: 40%; height: 16px; border-radius: 4px;"></div>
+            </div>
+
+            <div class="tag-row mt-4">
+              <div class="skeleton-block" style="width: 48px; height: 24px; border-radius: 4px;"></div>
+              <div class="skeleton-block" style="width: 64px; height: 24px; border-radius: 4px;"></div>
+              <div class="skeleton-block" style="width: 56px; height: 24px; border-radius: 4px;"></div>
+              <div class="skeleton-block" style="width: 60px; height: 24px; border-radius: 4px;"></div>
+            </div>
+
+            <!-- Content Sections -->
+            <div class="section">
+              <div class="section-title">
+                <div class="divider"></div>
+                <div class="skeleton-block" style="width: 40px; height: 20px; border-radius: 4px;"></div>
+              </div>
+              <div class="album-grid">
+                <div v-for="i in 8" :key="i" class="album-item-wrap skeleton-block"></div>
+              </div>
+            </div>
+
+            <div class="section">
+              <div class="section-title">
+                <div class="divider"></div>
+                <div class="skeleton-block" style="width: 40px; height: 20px; border-radius: 4px;"></div>
+              </div>
+              <div class="activity-list">
+                <div v-for="j in 2" :key="'act'+j" class="activity-item">
+                  <div class="activity-date">
+                     <div class="skeleton-block" style="width: 28px; height: 28px; border-radius: 4px;"></div>
+                  </div>
+                  <div class="activity-body">
+                    <div class="skeleton-block" style="width: 100%; height: 16px; border-radius: 4px; margin-bottom: 8px;"></div>
+                    <div class="skeleton-block" style="width: 70%; height: 16px; border-radius: 4px; margin-bottom: 12px;"></div>
+                    <div class="activity-image-grid">
+                      <div class="activity-image skeleton-block"></div>
+                      <div class="activity-image skeleton-block"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
       <div v-else class="content-wrap">
@@ -367,11 +425,14 @@ onMounted(() => {
   justify-content: center;
 }
 
-.loading-wrap {
-  min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.skeleton-wrap {
+  width: 100%;
+  padding-bottom: 77px;
+}
+
+.skeleton-hero {
+  width: 100%;
+  height: 300px;
 }
 
 .content-wrap {
@@ -671,6 +732,18 @@ onMounted(() => {
   border: none !important;
   color: #dfc293 !important;
 }
+
+@keyframes skeleton-blink {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+.skeleton-block {
+  background-color: #222;
+  animation: skeleton-blink 1.5s ease-in-out infinite;
+}
+
 .van-image-preview .van-swipe-item {
   width: 100vw !important;
 }

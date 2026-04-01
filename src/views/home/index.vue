@@ -60,10 +60,10 @@ const buildPreviewMap = async (rows: IPlayerItem[]) => {
   const nextCoverMap: Record<string, string> = { ...coverPreviewMap.value };
   const nextAlbumMap: Record<string, string[]> = { ...albumPreviewMap.value };
 
-  for (const item of rows) {
+  const promises = rows.map(async item => {
     const id = item.id;
-    if (!id) continue;
-    if (nextCoverMap[id] && nextAlbumMap[id]) continue;
+    if (!id) return;
+    if (nextCoverMap[id] && nextAlbumMap[id]) return;
 
     const albumNames = (item.album || "")
       .split(",")
@@ -71,17 +71,29 @@ const buildPreviewMap = async (rows: IPlayerItem[]) => {
       .filter(Boolean);
 
     const coverFile = item.avatar || albumNames[0] || "";
-    const cover = await getAttachmentObjectUrl(coverFile);
-    if (cover) nextCoverMap[id] = cover;
+    const coverPromise = coverFile
+      ? getAttachmentObjectUrl(coverFile)
+      : Promise.resolve("");
 
     const firstThree = albumNames.slice(0, 3);
-    const albumUrls: string[] = [];
-    for (const fileName of firstThree) {
-      const url = await getAttachmentObjectUrl(fileName);
-      if (url) albumUrls.push(url);
+    const albumPromises = firstThree.map(fileName =>
+      getAttachmentObjectUrl(fileName)
+    );
+
+    try {
+      const [cover, ...albumUrls] = await Promise.all([
+        coverPromise,
+        ...albumPromises
+      ]);
+      if (cover) nextCoverMap[id] = cover;
+      const validUrls = albumUrls.filter(Boolean) as string[];
+      if (validUrls.length > 0) nextAlbumMap[id] = validUrls;
+    } catch {
+      // ignore
     }
-    if (albumUrls.length) nextAlbumMap[id] = albumUrls;
-  }
+  });
+
+  await Promise.all(promises);
 
   coverPreviewMap.value = nextCoverMap;
   albumPreviewMap.value = nextAlbumMap;
@@ -245,6 +257,11 @@ const fetchPlayers = async (reset = false) => {
     const rows = res?.records || [];
     const total = Number(res?.total || 0);
 
+    await Promise.all([
+      buildPreviewMap(rows),
+      pageNum.value === 1 ? loadCollectMap() : Promise.resolve()
+    ]);
+
     if (reset) {
       players.value = rows;
     } else {
@@ -255,11 +272,6 @@ const fetchPlayers = async (reset = false) => {
         item => !item.id || !existIds.has(item.id)
       );
       players.value = [...players.value, ...appendRows];
-    }
-
-    await buildPreviewMap(rows);
-    if (pageNum.value === 1) {
-      await loadCollectMap();
     }
 
     if (total > 0) {
@@ -274,7 +286,7 @@ const fetchPlayers = async (reset = false) => {
     }
   } catch {
     error.value = true;
-    showFailToast("加载人物失败");
+    // showFailToast("加载人物失败");
   } finally {
     loading.value = false;
     refreshing.value = false;
@@ -295,9 +307,9 @@ const onRefresh = async () => {
 };
 
 const onTabChange = (index: number) => {
+  if (activeTab.value === index) return;
   activeTab.value = index;
-  refreshing.value = true;
-  onRefresh();
+  fetchPlayers(true);
 };
 
 const openSearch = () => {
@@ -307,14 +319,12 @@ const openSearch = () => {
 const onSearch = async (val?: string) => {
   filterForm.name = (val || "").trim();
   showSearch.value = false;
-  refreshing.value = true;
-  await onRefresh();
+  await fetchPlayers(true);
 };
 
 const clearSearch = async () => {
   filterForm.name = "";
-  refreshing.value = true;
-  await onRefresh();
+  await fetchPlayers(true);
 };
 
 const closeSearch = () => {
@@ -382,48 +392,91 @@ const goDetail = (item: IPlayerItem) => {
           @load="onLoad"
         >
           <div class="list-wrap">
-            <div
-              v-for="(item, index) in cardList"
-              :key="item.id || index"
-              class="player-card"
-              @click="goDetail(item)"
-            >
-              <div class="cover-wrap">
-                <img
-                  v-if="coverUrl(item)"
-                  :src="coverUrl(item)"
-                  class="cover"
-                  alt="cover"
-                />
-                <div v-else class="cover-empty">暂无照片</div>
-                <span
-                  class="status-dot"
-                  :class="{ online: item.onlineStatus === 'ONLINE' }"
-                ></span>
-                <div class="badge">
-                  <span class="badge-text">真人认证</span>
+            <!-- 首次加载骨架屏 -->
+            <template v-if="loading && pageNum === 1 && !cardList.length">
+              <div v-for="n in 6" :key="'skel-' + n" class="player-card">
+                <div class="cover-wrap">
+                  <div class="cover skeleton-block"></div>
+                </div>
+                <div class="info-wrap">
+                  <div class="name-row mt-1">
+                    <div
+                      class="skeleton-block"
+                      style="width: 120px; height: 20px; border-radius: 4px"
+                    ></div>
+                    <div
+                      class="skeleton-block"
+                      style="width: 24px; height: 24px; border-radius: 50%"
+                    ></div>
+                  </div>
+                  <div class="meta-row" style="margin-top: 12px">
+                    <div
+                      class="skeleton-block"
+                      style="width: 48px; height: 20px; border-radius: 4px"
+                    ></div>
+                    <div
+                      class="skeleton-block"
+                      style="width: 56px; height: 20px; border-radius: 4px"
+                    ></div>
+                    <div
+                      class="skeleton-block"
+                      style="width: 64px; height: 20px; border-radius: 4px"
+                    ></div>
+                  </div>
+                  <div class="city-row" style="margin-top: 10px">
+                    <div
+                      class="skeleton-block"
+                      style="width: 80px; height: 14px; border-radius: 4px"
+                    ></div>
+                  </div>
+                  <div class="album-row" style="margin-top: 10px">
+                    <div
+                      class="skeleton-block"
+                      style="width: 32px; height: 32px; border-radius: 4px"
+                      v-for="j in 3"
+                      :key="j"
+                    ></div>
+                  </div>
                 </div>
               </div>
+            </template>
 
-              <div class="info-wrap">
-                <div class="name-row">
-                  <div class="name">{{ item.name || "神秘玩家" }}</div>
-                  <div class="like-btn" @click.stop="toggleCollect(item)">
-                    <van-icon
-                      :name="isCollected(item) ? 'like' : 'like-o'"
-                      size="20"
-                      :color="isCollected(item) ? '#ff4d4f' : '#666'"
-                    />
+            <!-- 真实数据 -->
+            <template v-else>
+              <div
+                v-for="(item, index) in cardList"
+                :key="item.id || index"
+                class="player-card"
+                @click="goDetail(item)"
+              >
+                <div class="cover-wrap">
+                  <img
+                    v-if="coverUrl(item)"
+                    :src="coverUrl(item)"
+                    class="cover"
+                    alt="cover"
+                  />
+                  <div v-else class="cover-empty">暂无照片</div>
+                  <span
+                    class="status-dot"
+                    :class="{ online: item.onlineStatus === 'ONLINE' }"
+                  ></span>
+                  <div class="badge">
+                    <span class="badge-text">真人认证</span>
                   </div>
                 </div>
 
-                <div class="meta-row">
-                  <span class="pill">{{ item.age || "20" }}岁</span>
-                  <span class="pill">{{ item.height || "165" }}CM</span>
-                  <span v-if="playerTag(item)" class="pill">{{
-                    playerTag(item)
-                  }}</span>
-                </div>
+                <div class="info-wrap">
+                  <div class="name-row">
+                    <div class="name">{{ item.name || "神秘玩家" }}</div>
+                    <div class="like-btn" @click.stop="toggleCollect(item)">
+                      <van-icon
+                        :name="isCollected(item) ? 'like' : 'like-o'"
+                        size="20"
+                        :color="isCollected(item) ? '#ff4d4f' : '#666'"
+                      />
+                    </div>
+                  </div>
 
                 <div class="city-row">
                   <van-icon name="location-o" class="mr-1" />
@@ -431,24 +484,32 @@ const goDetail = (item: IPlayerItem) => {
                     >{{ item.cityName && item.cityName !='市辖区' ? item.cityName : item.province }}
                   </span>
                 </div>
+                  <div class="meta-row">
+                    <span class="pill">{{ item.age || "20" }}岁</span>
+                    <span class="pill">{{ item.height || "165" }}CM</span>
+                    <span v-if="playerTag(item)" class="pill">{{
+                      playerTag(item)
+                    }}</span>
+                  </div>
 
-                <div class="album-row" v-if="cardImages(item).length > 0">
-                  <div
-                    v-for="(img, imgIdx) in cardImages(item)"
-                    :key="img"
-                    class="mini-wrap"
-                  >
-                    <img class="mini" :src="img" alt="album" />
+                  <div class="album-row" v-if="cardImages(item).length > 0">
                     <div
-                      v-if="imgIdx === 2 && cardAlbumCount(item) > 3"
-                      class="more"
+                      v-for="(img, imgIdx) in cardImages(item)"
+                      :key="img"
+                      class="mini-wrap"
                     >
-                      +{{ cardAlbumCount(item) - 3 }} >
+                      <img class="mini" :src="img" alt="album" />
+                      <div
+                        v-if="imgIdx === 2 && cardAlbumCount(item) > 3"
+                        class="more"
+                      >
+                        +{{ cardAlbumCount(item) - 3 }} >
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </template>
 
             <van-empty
               v-if="!loading && !cardList.length"
@@ -660,6 +721,23 @@ const goDetail = (item: IPlayerItem) => {
   align-items: center;
   color: #666;
   font-size: 12px;
+}
+
+@keyframes skeleton-blink {
+  0% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.4;
+  }
+}
+
+.skeleton-block {
+  background-color: #222;
+  animation: skeleton-blink 1.5s ease-in-out infinite;
 }
 
 .album-row {
