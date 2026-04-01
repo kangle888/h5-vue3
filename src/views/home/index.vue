@@ -60,10 +60,10 @@ const buildPreviewMap = async (rows: IPlayerItem[]) => {
   const nextCoverMap: Record<string, string> = { ...coverPreviewMap.value };
   const nextAlbumMap: Record<string, string[]> = { ...albumPreviewMap.value };
 
-  for (const item of rows) {
+  const promises = rows.map(async (item) => {
     const id = item.id;
-    if (!id) continue;
-    if (nextCoverMap[id] && nextAlbumMap[id]) continue;
+    if (!id) return;
+    if (nextCoverMap[id] && nextAlbumMap[id]) return;
 
     const albumNames = (item.album || "")
       .split(",")
@@ -71,17 +71,22 @@ const buildPreviewMap = async (rows: IPlayerItem[]) => {
       .filter(Boolean);
 
     const coverFile = item.avatar || albumNames[0] || "";
-    const cover = await getAttachmentObjectUrl(coverFile);
-    if (cover) nextCoverMap[id] = cover;
+    const coverPromise = coverFile ? getAttachmentObjectUrl(coverFile) : Promise.resolve("");
 
     const firstThree = albumNames.slice(0, 3);
-    const albumUrls: string[] = [];
-    for (const fileName of firstThree) {
-      const url = await getAttachmentObjectUrl(fileName);
-      if (url) albumUrls.push(url);
+    const albumPromises = firstThree.map(fileName => getAttachmentObjectUrl(fileName));
+
+    try {
+      const [cover, ...albumUrls] = await Promise.all([coverPromise, ...albumPromises]);
+      if (cover) nextCoverMap[id] = cover;
+      const validUrls = albumUrls.filter(Boolean) as string[];
+      if (validUrls.length > 0) nextAlbumMap[id] = validUrls;
+    } catch {
+      // ignore
     }
-    if (albumUrls.length) nextAlbumMap[id] = albumUrls;
-  }
+  });
+
+  await Promise.all(promises);
 
   coverPreviewMap.value = nextCoverMap;
   albumPreviewMap.value = nextAlbumMap;
@@ -245,6 +250,11 @@ const fetchPlayers = async (reset = false) => {
     const rows = res?.records || [];
     const total = Number(res?.total || 0);
 
+    await Promise.all([
+      buildPreviewMap(rows),
+      pageNum.value === 1 ? loadCollectMap() : Promise.resolve()
+    ]);
+
     if (reset) {
       players.value = rows;
     } else {
@@ -255,11 +265,6 @@ const fetchPlayers = async (reset = false) => {
         item => !item.id || !existIds.has(item.id)
       );
       players.value = [...players.value, ...appendRows];
-    }
-
-    await buildPreviewMap(rows);
-    if (pageNum.value === 1) {
-      await loadCollectMap();
     }
 
     if (total > 0) {
@@ -295,9 +300,9 @@ const onRefresh = async () => {
 };
 
 const onTabChange = (index: number) => {
+  if (activeTab.value === index) return;
   activeTab.value = index;
-  refreshing.value = true;
-  onRefresh();
+  fetchPlayers(true);
 };
 
 const openSearch = () => {
@@ -307,14 +312,12 @@ const openSearch = () => {
 const onSearch = async (val?: string) => {
   filterForm.name = (val || "").trim();
   showSearch.value = false;
-  refreshing.value = true;
-  await onRefresh();
+  await fetchPlayers(true);
 };
 
 const clearSearch = async () => {
   filterForm.name = "";
-  refreshing.value = true;
-  await onRefresh();
+  await fetchPlayers(true);
 };
 
 const closeSearch = () => {
