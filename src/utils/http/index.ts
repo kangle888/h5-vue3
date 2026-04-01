@@ -76,8 +76,7 @@ class Http {
       url: "/c-auth/refresh-token",
       method: "post",
       headers: {
-        "Content-Type": ContentTypeEnum.JSON,
-        "access-token": this.getAccessToken()
+        "Content-Type": ContentTypeEnum.JSON
       },
       data: {
         refreshToken,
