@@ -72,7 +72,7 @@ const openSharePopup = () => {
   showSharePopup.value = true;
 };
 
-watch(showSharePopup, (val) => {
+watch(showSharePopup, val => {
   if (!val) {
     qrLoading.value = false;
     qrSrc.value = "";
@@ -122,6 +122,7 @@ const loadProfile = async () => {
 
 onMounted(() => {
   loadProfile();
+  console.log("My page mounted, profile loaded:", avatarUrl());
 });
 </script>
 

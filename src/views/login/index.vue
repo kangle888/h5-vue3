@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { showFailToast, showLoadingToast, showSuccessToast, closeToast } from "vant";
+import {
+  showFailToast,
+  showLoadingToast,
+  showSuccessToast,
+  closeToast
+} from "vant";
 import {
   codeLoginApi,
   loginPasswordApi,
@@ -225,10 +230,19 @@ onBeforeUnmount(() => {
           <template #button>
             <span
               class="get-code-text"
-              :class="{ 'opacity-50 pointer-events-none': codeLoading || codeCountDown > 0 }"
+              :class="{
+                'opacity-50 pointer-events-none':
+                  codeLoading || codeCountDown > 0
+              }"
               @click="sendCode"
             >
-              {{ codeLoading ? "获取中..." : codeCountDown > 0 ? `${codeCountDown}s后重试` : "获取验证码" }}
+              {{
+                codeLoading
+                  ? "获取中..."
+                  : codeCountDown > 0
+                    ? `${codeCountDown}s后重试`
+                    : "获取验证码"
+              }}
             </span>
           </template>
         </van-field>
@@ -271,11 +285,17 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Footer -->
-    <div class="mt-auto pt-10 text-center text-[12px] text-gray-600 agreement-footer">
+    <div
+      class="mt-auto pt-10 text-center text-[12px] text-gray-600 agreement-footer"
+    >
       登录即代表同意
-      <span class="agreement-link" @click="openUserAgreement">《用户协议》</span>
+      <span class="agreement-link" @click="openUserAgreement"
+        >《用户协议》</span
+      >
       和
-      <span class="agreement-link" @click="openPrivacyPolicy">《隐私政策》</span>
+      <span class="agreement-link" @click="openPrivacyPolicy"
+        >《隐私政策》</span
+      >
     </div>
 
     <van-popup
