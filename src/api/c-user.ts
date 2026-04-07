@@ -48,6 +48,10 @@ export const getAttachmentDownloadUrl = (fileName?: string) => {
   if (fileName.startsWith("/")) {
     return `${base}${fileName}`;
   }
-  const token = encodeURIComponent(localStorage.getItem("c_access_token") || localStorage.getItem("token") || "");
+  const token = encodeURIComponent(
+    localStorage.getItem("c_access_token") ||
+      localStorage.getItem("token") ||
+      ""
+  );
   return `${base}/attachment/download?fileName=${encodeURIComponent(fileName)}&access-token=${token}`;
 };

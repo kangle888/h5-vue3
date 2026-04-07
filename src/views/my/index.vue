@@ -72,7 +72,7 @@ const openSharePopup = () => {
   showSharePopup.value = true;
 };
 
-watch(showSharePopup, (val) => {
+watch(showSharePopup, val => {
   if (!val) {
     qrLoading.value = false;
     qrSrc.value = "";
@@ -90,8 +90,6 @@ const handleQrError = () => {
 
 const shareLandingPage = async () => {
   const shareData = {
-    title: "茶庄",
-    text: "扫码或点击链接进下载茶庄App",
     url: landingUrl.value
   };
 
@@ -101,10 +99,8 @@ const shareLandingPage = async () => {
       return;
     }
     await navigator.clipboard.writeText(landingUrl.value);
-    showSuccessToast("落地页链接已复制");
-  } catch {
-    showFailToast("分享失败，请稍后重试");
-  }
+    showSuccessToast("复制成功");
+  } catch {}
 };
 
 const loadProfile = async () => {
@@ -122,6 +118,7 @@ const loadProfile = async () => {
 
 onMounted(() => {
   loadProfile();
+  console.log("My page mounted, profile loaded:", avatarUrl());
 });
 </script>
 
