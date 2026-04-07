@@ -5,6 +5,7 @@ import { useRouter } from "vue-router";
 import {
   countUnreadApi,
   deleteChatRoomApi,
+  getAdminUserApi,
   pageChatRoomApi,
   type IChatRoomItem
 } from "@/api/news";
@@ -21,6 +22,7 @@ const finished = ref(false);
 const pollTimer = ref<number | null>(null);
 const roomList = ref<IChatRoomItem[]>([]);
 const avatarMap = ref<Record<string, string>>({});
+const adminUserId = ref("");
 
 const BASE_POLL_INTERVAL = 8000;
 const MAX_POLL_INTERVAL = 60000;
@@ -33,26 +35,14 @@ let failCount = 0;
 let lastUnreadFetchAt = 0;
 
 const roomTitle = (room: IChatRoomItem) => {
+  if (room.scene === "service") {
+    return "客服消息";
+  }
   return `${room.playerName || room.playerId || "卡片会话"}`;
 };
 
 const roomSubText = (room: IChatRoomItem) => {
-  const content = room.lastContent;
-  if (content) {
-    const lowerContent = content.toLowerCase();
-    if (
-      lowerContent.endsWith('.jpg') ||
-      lowerContent.endsWith('.jpeg') ||
-      lowerContent.endsWith('.png') ||
-      lowerContent.endsWith('.gif') ||
-      lowerContent.endsWith('.webp') ||
-      lowerContent.endsWith('.bmp') ||
-      lowerContent.endsWith('.svg')
-    ) {
-      return '[图片]';
-    }
-  }
-  return content || "点击进入聊天";
+  return room.lastContent || "点击进入聊天";
 };
 
 const roomTime = (room: IChatRoomItem) => {
@@ -139,13 +129,23 @@ const loadData = async () => {
   listLoading.value = true;
 
   try {
+    if (!adminUserId.value) {
+      adminUserId.value = (await getAdminUserApi()) || "";
+    }
+
     const res = await pageChatRoomApi({
       pageNum: 1,
       pageSize: 200,
       query: {}
     });
 
-    const rows = res?.records || [];
+    const rows = (res?.records || []).filter(room => {
+      // 过滤“人物会话”里因镜像给admin产生的冗余会话卡片
+      if (room.scene === "player" && adminUserId.value) {
+        return room.targetUserId !== adminUserId.value;
+      }
+      return true;
+    });
     roomList.value = await mergeUnreadCount(rows);
     await loadRoomAvatars(roomList.value);
     finished.value = true;
@@ -185,6 +185,7 @@ const openChat = (room: IChatRoomItem) => {
       scene: room.scene || "service",
       playerId: room.playerId,
       playerName: room.playerName,
+      targetUserId: room.targetUserId,
       sessionKey: room.sessionKey || "service_default"
     }
   });

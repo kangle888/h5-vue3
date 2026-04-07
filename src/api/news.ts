@@ -45,6 +45,7 @@ export interface IPlayMessageItem {
   scene?: string;
   playerId?: string;
   playerName?: string;
+  playerCreateBy?: string;
   sessionKey?: string;
 }
 

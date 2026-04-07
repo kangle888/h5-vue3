@@ -13,7 +13,7 @@ import {
   addPlayerCollect,
   deletePlayerCollect,
   getAttachmentObjectUrl,
-  listPlayer,
+  listPlayerClient,
   pagePlayerCollect,
   type IPlayerItem
 } from "@/api/home";
@@ -145,15 +145,6 @@ const playerTag = (item: IPlayerItem) => {
   return item.occupation_dictText || item.occupation || "优质陪玩";
 };
 
-const formatCityText = (city?: string) => {
-  const fallback = "武汉市";
-  if (!city) return fallback;
-  const parts = city.split(/[\s,]+/).filter(Boolean);
-  if (parts.length === 0) return fallback;
-  const lastCode = parts[parts.length - 1];
-  return (codeToText as Record<string, string>)[lastCode] || lastCode;
-};
-
 const cardList = computed(() => players.value);
 
 const isCollected = (item: IPlayerItem) => {
@@ -248,7 +239,7 @@ const fetchPlayers = async (reset = false) => {
   try {
     await ensureNearbyLocationReady();
 
-    const res = await listPlayer({
+    const res = await listPlayerClient({
       pageNum: pageNum.value,
       pageSize,
       query: buildTabQuery()

@@ -33,6 +33,7 @@ export interface IPlayerItem {
   height?: string;
   weight?: string;
   onlineStatus?: string;
+  createBy?: string;
 }
 
 export interface IPageParam<T> {
@@ -48,10 +49,19 @@ export interface IPageResult<T> {
   pageSize: number;
 }
 
-// /player/listPlayer
+// /player/listPlayer（后台）
 export const listPlayer = (data: IPageParam<Partial<IPlayerItem>>) => {
   return http.request<IPageResult<IPlayerItem>>({
     url: "/player/listPlayer",
+    method: "post",
+    data
+  });
+};
+
+// /player/listPlayerClient（C端）
+export const listPlayerClient = (data: IPageParam<Partial<IPlayerItem>>) => {
+  return http.request<IPageResult<IPlayerItem>>({
+    url: "/player/listPlayerClient",
     method: "post",
     data
   });

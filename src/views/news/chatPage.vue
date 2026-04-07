@@ -143,6 +143,18 @@ const playerName = computed(() => {
   return typeof value === "string" && value.trim() ? value : "TA";
 });
 
+const targetUserId = computed(() => {
+  const raw = route.query.targetUserId;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === "string" ? value : "";
+});
+
+const playerCreateBy = computed(() => {
+  const raw = route.query.playerCreateBy;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === "string" ? value : "";
+});
+
 const chatScene = computed(() => {
   const raw = route.query.scene;
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -185,8 +197,9 @@ const connectSocket = () => {
     socketIns.value = new WebSocket(wsUrl());
     socketIns.value.onmessage = async () => {
       await loadMessages();
-      if (adminUserId.value) {
-        await markReadApi(adminUserId.value, sessionKey.value);
+      const chatTargetId = targetUserId.value || adminUserId.value;
+      if (chatTargetId) {
+        await markReadApi(chatTargetId, sessionKey.value);
       }
     };
   } catch {
@@ -218,12 +231,13 @@ const buildImagePreviewMap = async () => {
 };
 
 const loadMessages = async () => {
-  if (!adminUserId.value) return;
+  const chatTargetId = targetUserId.value || adminUserId.value;
+  if (!chatTargetId) return;
   const res = await pageMessageApi({
     pageNum: 1,
     pageSize: 200,
     query: {
-      receiverId: adminUserId.value,
+      receiverId: chatTargetId,
       sessionKey: sessionKey.value
     }
   });
@@ -249,7 +263,10 @@ const initData = async () => {
       return;
     }
     await loadMessages();
-    await markReadApi(adminUserId.value, sessionKey.value);
+    const chatTargetId = targetUserId.value || adminUserId.value;
+    if (chatTargetId) {
+      await markReadApi(chatTargetId, sessionKey.value);
+    }
   } catch {
     showFailToast("加载聊天失败");
   } finally {
@@ -269,6 +286,7 @@ const sendMessage = async () => {
       scene: chatScene.value,
       playerId: playerId.value || undefined,
       playerName: playerName.value,
+      playerCreateBy: playerCreateBy.value || undefined,
       sessionKey: sessionKey.value
     });
     messageText.value = "";
@@ -384,6 +402,9 @@ const uploadImageFile = async (file?: File | null) => {
     if (playerId.value) {
       formData.append("playerId", playerId.value);
       formData.append("playerName", playerName.value);
+      if (playerCreateBy.value) {
+        formData.append("playerCreateBy", playerCreateBy.value);
+      }
     }
 
     await sendFileApi(formData);

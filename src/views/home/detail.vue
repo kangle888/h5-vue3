@@ -116,7 +116,8 @@ const goContactAdmin = () => {
     query: {
       scene: "player",
       playerId: player.value.id,
-      playerName: player.value.name || "神秘玩家"
+      playerName: player.value.name || "神秘玩家",
+      playerCreateBy: player.value.createBy || ""
     }
   });
 };
