@@ -472,7 +472,7 @@ const goDetail = (item: IPlayerItem) => {
                 <div class="city-row">
                   <van-icon name="location-o" class="mr-1" />
                   <span
-                    >{{ item.cityName && item.cityName !='市辖区' ? item.cityName : item.province }}
+                    >{{ item.area }}
                   </span>
                 </div>
                   <div class="meta-row">

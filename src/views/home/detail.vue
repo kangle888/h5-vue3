@@ -319,7 +319,7 @@ onMounted(() => {
                 </div>
                 <div class="meta-item">
                   <van-icon name="location-o" class="mr-1" />
-                  {{ player.cityName && player.cityName !="市辖区" ? player.cityName : player.province }}
+                  {{ player.area }}
                 </div>
                 <div class="meta-item van-ellipsis">
                   <van-icon name="records-o" class="mr-1" />
