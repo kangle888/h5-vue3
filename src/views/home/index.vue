@@ -56,14 +56,41 @@ const cardAlbumCount = (item: IPlayerItem) => {
   return list.length;
 };
 
-const buildPreviewMap = async (rows: IPlayerItem[]) => {
-  const nextCoverMap: Record<string, string> = { ...coverPreviewMap.value };
-  const nextAlbumMap: Record<string, string[]> = { ...albumPreviewMap.value };
+const imageLoadStatus = ref<Record<string, "loading" | "done">>({});
 
-  const promises = rows.map(async item => {
+const isCoverLoading = (item: IPlayerItem) => {
+  if (!item.id) return false;
+  return imageLoadStatus.value[item.id] === "loading" && !coverPreviewMap.value[item.id];
+};
+
+const isAlbumLoading = (item: IPlayerItem) => {
+  if (!item.id) return false;
+  const firstThree = (item.album || "")
+    .split(",")
+    .map((v: string) => v.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+  return (
+    firstThree.length > 0 &&
+    imageLoadStatus.value[item.id] === "loading" &&
+    (!albumPreviewMap.value[item.id] || albumPreviewMap.value[item.id].length === 0)
+  );
+};
+
+const albumSkelCount = (item: IPlayerItem) => {
+  return Math.min(
+    (item.album || "")
+      .split(",")
+      .filter(Boolean).length,
+    3
+  );
+};
+
+const buildPreviewMap = (rows: IPlayerItem[]) => {
+  rows.forEach(async item => {
     const id = item.id;
     if (!id) return;
-    if (nextCoverMap[id] && nextAlbumMap[id]) return;
+    if (coverPreviewMap.value[id] && albumPreviewMap.value[id]) return;
 
     const albumNames = (item.album || "")
       .split(",")
@@ -71,32 +98,37 @@ const buildPreviewMap = async (rows: IPlayerItem[]) => {
       .filter(Boolean);
 
     const coverFile = item.avatar || albumNames[0] || "";
-    const coverPromise = coverFile
-      ? getAttachmentObjectUrl(coverFile)
-      : Promise.resolve("");
-
     const firstThree = albumNames.slice(0, 3);
-    const albumPromises = firstThree.map(fileName =>
-      getAttachmentObjectUrl(fileName)
-    );
 
-    try {
-      const [cover, ...albumUrls] = await Promise.all([
-        coverPromise,
-        ...albumPromises
-      ]);
-      if (cover) nextCoverMap[id] = cover;
-      const validUrls = albumUrls.filter(Boolean) as string[];
-      if (validUrls.length > 0) nextAlbumMap[id] = validUrls;
-    } catch {
-      // ignore
+    if (!coverFile && firstThree.length === 0) {
+      imageLoadStatus.value[id] = "done";
+      return;
     }
+
+    imageLoadStatus.value[id] = "loading";
+
+    if (coverFile && !coverPreviewMap.value[id]) {
+      try {
+        const cover = await getAttachmentObjectUrl(coverFile);
+        if (cover) coverPreviewMap.value[id] = cover;
+      } catch {}
+    }
+
+    if (firstThree.length > 0 && !albumPreviewMap.value[id]) {
+      const albumPromises = firstThree.map(fileName =>
+        getAttachmentObjectUrl(fileName)
+      );
+      try {
+        const albumUrls = await Promise.all(albumPromises);
+        const validUrls = albumUrls.filter(Boolean) as string[];
+        if (validUrls.length > 0) {
+          albumPreviewMap.value[id] = validUrls;
+        }
+      } catch {}
+    }
+
+    imageLoadStatus.value[id] = "done";
   });
-
-  await Promise.all(promises);
-
-  coverPreviewMap.value = nextCoverMap;
-  albumPreviewMap.value = nextAlbumMap;
 };
 
 const currentUserId = () => {
@@ -248,10 +280,11 @@ const fetchPlayers = async (reset = false) => {
     const rows = res?.records || [];
     const total = Number(res?.total || 0);
 
-    await Promise.all([
-      buildPreviewMap(rows),
-      pageNum.value === 1 ? loadCollectMap() : Promise.resolve()
-    ]);
+    if (pageNum.value === 1) {
+      await loadCollectMap();
+    }
+    // 异步加载图片，不阻塞首屏渲染
+    buildPreviewMap(rows);
 
     if (reset) {
       players.value = rows;
@@ -446,7 +479,9 @@ const goDetail = (item: IPlayerItem) => {
                     :src="coverUrl(item)"
                     class="cover"
                     alt="cover"
+                    loading="lazy"
                   />
+                  <div v-else-if="isCoverLoading(item)" class="cover-empty skeleton-block"></div>
                   <div v-else class="cover-empty">暂无照片</div>
                   <span
                     class="status-dot"
@@ -469,12 +504,10 @@ const goDetail = (item: IPlayerItem) => {
                     </div>
                   </div>
 
-                <div class="city-row">
-                  <van-icon name="location-o" class="mr-1" />
-                  <span
-                    >{{ item.cityName && item.cityName !='市辖区' ? item.cityName : item.province }}
-                  </span>
-                </div>
+                  <div class="city-row">
+                    <van-icon name="location-o" class="mr-1" />
+                    <span>{{ item.area || "" }} </span>
+                  </div>
                   <div class="meta-row">
                     <span class="pill">{{ item.age || "20" }}岁</span>
                     <span class="pill">{{ item.height || "165" }}CM</span>
@@ -489,7 +522,7 @@ const goDetail = (item: IPlayerItem) => {
                       :key="img"
                       class="mini-wrap"
                     >
-                      <img class="mini" :src="img" alt="album" />
+                      <img class="mini" :src="img" alt="album" loading="lazy" />
                       <div
                         v-if="imgIdx === 2 && cardAlbumCount(item) > 3"
                         class="more"
@@ -497,6 +530,14 @@ const goDetail = (item: IPlayerItem) => {
                         +{{ cardAlbumCount(item) - 3 }} >
                       </div>
                     </div>
+                  </div>
+                  <div class="album-row" v-else-if="isAlbumLoading(item)">
+                    <div
+                      class="skeleton-block"
+                      style="width: 32px; height: 32px; border-radius: 4px"
+                      v-for="j in albumSkelCount(item)"
+                      :key="'skel-' + j"
+                    ></div>
                   </div>
                 </div>
               </div>

@@ -7,6 +7,7 @@ import {
   getCurrentCUserApi,
   type ICUserProfile
 } from "@/api/c-user";
+import { addFeedbackApi } from "@/api/feedback";
 import { pagePlayerCollect } from "@/api/home";
 
 defineOptions({ name: "My" });
@@ -66,6 +67,13 @@ const qrLoading = ref(false);
 const showSharePopup = ref(false);
 const qrSrc = ref("");
 
+const showFeedbackPopup = ref(false);
+const feedbackSubmitting = ref(false);
+const feedbackForm = ref({
+  content: "",
+  contact: ""
+});
+
 const openSharePopup = () => {
   qrLoading.value = true;
   qrSrc.value = `${qrUrl.value}&ts=${Date.now()}`;
@@ -100,7 +108,36 @@ const shareLandingPage = async () => {
     }
     await navigator.clipboard.writeText(landingUrl.value);
     showSuccessToast("复制成功");
-  } catch {}
+  } catch { }
+};
+
+const openFeedbackPopup = () => {
+  feedbackForm.value = {
+    content: "",
+    contact: profile.value.mobile || ""
+  };
+  showFeedbackPopup.value = true;
+};
+
+const submitFeedback = async () => {
+  if (!feedbackForm.value.content.trim()) {
+    showFailToast("请填写留言内容");
+    return;
+  }
+
+  feedbackSubmitting.value = true;
+  try {
+    await addFeedbackApi({
+      content: feedbackForm.value.content.trim(),
+      contact: feedbackForm.value.contact.trim() || undefined
+    });
+    showSuccessToast("留言成功，客服会尽快联系你");
+    showFeedbackPopup.value = false;
+  } catch {
+    showFailToast("留言失败，请稍后重试");
+  } finally {
+    feedbackSubmitting.value = false;
+  }
 };
 
 const loadProfile = async () => {
@@ -126,12 +163,7 @@ onMounted(() => {
   <div class="my-page-wrapper w-full">
     <div class="header-card">
       <div class="avatar-wrap">
-        <img
-          v-if="avatarUrl()"
-          :src="avatarUrl()"
-          class="avatar"
-          alt="avatar"
-        />
+        <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
         <div v-else class="avatar placeholder">
           <van-icon name="user-circle-o" size="32" color="#666" />
         </div>
@@ -186,39 +218,31 @@ onMounted(() => {
         </div>
         <van-icon name="arrow" class="entry-arrow" />
       </div>
+      <div class="entry" @click="openFeedbackPopup">
+        <div class="entry-left">
+          <van-icon name="comment-circle-o" class="entry-icon" />
+          <span>客服留言</span>
+        </div>
+        <van-icon name="arrow" class="entry-arrow" />
+      </div>
+
     </div>
 
     <div class="mt-12 text-center text-[11px] text-[#666] tracking-widest">
       探索你的专属陪伴 v1.0.0
     </div>
 
-    <van-popup
-      v-model:show="showSharePopup"
-      round
-      position="bottom"
-      class="dark-popup"
-    >
+    <van-popup v-model:show="showSharePopup" round position="bottom" class="dark-popup">
       <div class="share-popup">
         <div class="popup-header">
           <span class="popup-title">遇见App分享</span>
-          <van-icon
-            name="cross"
-            class="close-icon"
-            @click="showSharePopup = false"
-          />
+          <van-icon name="cross" class="close-icon" @click="showSharePopup = false" />
         </div>
-
         <div class="share-card">
           <div class="qr-wrap">
             <div class="qr-bg" :class="{ 'is-loading': qrLoading }">
-              <van-image
-                class="qr-image"
-                fit="cover"
-                :src="qrSrc || qrUrl"
-                alt="landing-qrcode"
-                @load="handleQrLoad"
-                @error="handleQrError"
-              />
+              <van-image class="qr-image" fit="cover" :src="qrSrc || qrUrl" alt="landing-qrcode" @load="handleQrLoad"
+                @error="handleQrError" />
               <div v-if="qrLoading" class="qr-loading">
                 <van-loading size="24" color="#dfc293" />
                 <span>生成中...</span>
@@ -229,6 +253,27 @@ onMounted(() => {
           <button class="share-btn" @click="shareLandingPage">
             <van-icon name="share-o" size="16" />
             <span>立即分享链接</span>
+          </button>
+        </div>
+      </div>
+    </van-popup>
+
+    <van-popup v-model:show="showFeedbackPopup" round position="bottom" class="dark-popup">
+      <div class="feedback-popup">
+        <div class="popup-header">
+          <span class="popup-title">客服留言</span>
+          <van-icon name="cross" class="close-icon" @click="showFeedbackPopup = false" />
+        </div>
+
+        <div class="feedback-content">
+          <div class="feedback-tip">请留下你的问题，建议附上联系方式，方便客服与你沟通。</div>
+          <van-field v-model="feedbackForm.contact" label="联系方式" placeholder="手机号/微信/邮箱（选填）" maxlength="50" clearable />
+          <van-field v-model="feedbackForm.content" type="textarea" rows="5" autosize label="留言内容" maxlength="500"
+            show-word-limit placeholder="请输入你想反馈的问题或建议" />
+
+          <button class="share-btn" :disabled="feedbackSubmitting" @click="submitFeedback">
+            <van-loading v-if="feedbackSubmitting" size="16" color="#000" />
+            <span>{{ feedbackSubmitting ? "提交中..." : "提交留言" }}</span>
           </button>
         </div>
       </div>
@@ -527,6 +572,56 @@ onMounted(() => {
   &:active {
     transform: scale(0.96);
     opacity: 0.9;
+  }
+}
+
+.feedback-popup {
+  padding: 0 0 calc(50px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-content {
+  padding: 24px 20px 0;
+
+  .feedback-tip {
+    margin-bottom: 14px;
+    color: #999;
+    font-size: 13px;
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  :deep(.van-cell) {
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+  }
+
+  :deep(.van-field__label) {
+    width: 64px;
+    color: #cfcfcf;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  :deep(.van-field__control) {
+    color: #fff;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  :deep(.van-field__control::placeholder) {
+    color: #7c7c7c;
+  }
+
+  :deep(.van-field__word-limit) {
+    color: #7c7c7c;
+  }
+
+  .share-btn {
+    margin-top: 22px;
   }
 }
 </style>
