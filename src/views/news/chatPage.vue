@@ -11,7 +11,7 @@ import {
   sendTextApi,
   type IPlayMessageItem
 } from "@/api/news";
-import { getAttachmentObjectUrl } from "@/api/home";
+import { getAttachmentObjectUrl, queryById } from "@/api/home";
 
 defineOptions({ name: "NewsChatPage" });
 
@@ -33,6 +33,7 @@ const pickerVisible = ref(false);
 const pickerTitle = ref("");
 const pickerActions = ref<Array<{ name: string; value: string }>>([]);
 let pickerResolver: ((value: string) => void) | null = null;
+const playerDeleted = ref(false);
 
 /**
  * 压缩图片：最大边 1080px，JPEG 质量 0.8，目标大小 1MB 以下
@@ -253,6 +254,21 @@ const loadMessages = async () => {
   await scrollToBottom();
 };
 
+const checkPlayerDeleted = async (): Promise<boolean> => {
+  if (chatScene.value !== "player" || !playerId.value) {
+    playerDeleted.value = false;
+    return false;
+  }
+  try {
+    const player = await queryById(playerId.value);
+    playerDeleted.value = !player || !player.id;
+  } catch {
+    // 查询失败按未删除处理，避免误伤正常发送
+    playerDeleted.value = false;
+  }
+  return playerDeleted.value;
+};
+
 const initData = async () => {
   loading.value = true;
   try {
@@ -262,6 +278,9 @@ const initData = async () => {
       showFailToast("未找到管理员");
       return;
     }
+
+    await checkPlayerDeleted();
+
     await loadMessages();
     const chatTargetId = targetUserId.value || adminUserId.value;
     if (chatTargetId) {
@@ -278,6 +297,11 @@ const sendMessage = async () => {
   const text = messageText.value.trim();
   if (!text) return;
   if (!adminUserId.value) return;
+
+  if (await checkPlayerDeleted()) {
+    showFailToast("该玩家账号已注销，无法继续发送消息");
+    return;
+  }
 
   try {
     await sendTextApi({
@@ -387,6 +411,11 @@ const uploadImageFile = async (file?: File | null) => {
     return;
   }
 
+  if (await checkPlayerDeleted()) {
+    showFailToast("该玩家账号已注销，无法继续发送消息");
+    return;
+  }
+
   sendingImage.value = true;
   try {
     let fileToUpload = file;
@@ -489,17 +518,20 @@ onBeforeUnmount(() => {
         <input
           v-model="messageText"
           class="chat-input"
-          placeholder="给Ta发消息..."
+          :placeholder="playerDeleted ? '该玩家账号已注销' : '给Ta发消息...'"
+          :disabled="playerDeleted"
           @keyup.enter="sendMessage"
         />
         <button
           class="action-btn"
-          :disabled="sendingImage"
+          :disabled="sendingImage || playerDeleted"
           @click="triggerChooseImage"
         >
           <van-icon name="photograph" size="24" />
         </button>
-        <button class="send-btn" @click="sendMessage">发送</button>
+        <button class="send-btn" :disabled="playerDeleted" @click="sendMessage">
+          发送
+        </button>
         <input
           ref="cameraInputRef"
           type="file"

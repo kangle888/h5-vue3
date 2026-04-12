@@ -10,6 +10,7 @@ import {
   type IChatRoomItem
 } from "@/api/news";
 import { getAttachmentObjectUrl } from "@/api/home";
+import fallbackAvatarImg from "@/assets/actress.png";
 
 defineOptions({ name: "News" });
 
@@ -52,7 +53,7 @@ const roomTime = (room: IChatRoomItem) => {
   return text.length >= 16 ? text.slice(11, 16) : text;
 };
 
-const fallbackAvatar = "https://picsum.photos/seed/admin-chat/120/120";
+const fallbackAvatar = fallbackAvatarImg;
 
 const roomAvatarKey = (room: IChatRoomItem) => {
   return `${room.targetUserId || ""}_${room.sessionKey || "service_default"}`;

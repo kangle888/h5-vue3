@@ -60,7 +60,10 @@ const imageLoadStatus = ref<Record<string, "loading" | "done">>({});
 
 const isCoverLoading = (item: IPlayerItem) => {
   if (!item.id) return false;
-  return imageLoadStatus.value[item.id] === "loading" && !coverPreviewMap.value[item.id];
+  return (
+    imageLoadStatus.value[item.id] === "loading" &&
+    !coverPreviewMap.value[item.id]
+  );
 };
 
 const isAlbumLoading = (item: IPlayerItem) => {
@@ -73,17 +76,13 @@ const isAlbumLoading = (item: IPlayerItem) => {
   return (
     firstThree.length > 0 &&
     imageLoadStatus.value[item.id] === "loading" &&
-    (!albumPreviewMap.value[item.id] || albumPreviewMap.value[item.id].length === 0)
+    (!albumPreviewMap.value[item.id] ||
+      albumPreviewMap.value[item.id].length === 0)
   );
 };
 
 const albumSkelCount = (item: IPlayerItem) => {
-  return Math.min(
-    (item.album || "")
-      .split(",")
-      .filter(Boolean).length,
-    3
-  );
+  return Math.min((item.album || "").split(",").filter(Boolean).length, 3);
 };
 
 const buildPreviewMap = (rows: IPlayerItem[]) => {
@@ -481,7 +480,10 @@ const goDetail = (item: IPlayerItem) => {
                     alt="cover"
                     loading="lazy"
                   />
-                  <div v-else-if="isCoverLoading(item)" class="cover-empty skeleton-block"></div>
+                  <div
+                    v-else-if="isCoverLoading(item)"
+                    class="cover-empty skeleton-block"
+                  ></div>
                   <div v-else class="cover-empty">暂无照片</div>
                   <span
                     class="status-dot"
