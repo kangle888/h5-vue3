@@ -32,30 +32,6 @@ const resultPrize = ref("");
 const inviteFromLink = ref(false);
 const drawStage = ref<"idle" | "running" | "finished">("idle");
 
-const banners = [
-  {
-    title: "活动抽奖",
-    desc: "邀请好友来参与活动，积分越多，中奖机会越多。",
-    badge: "限时活动",
-    visual: "豪礼抽不停",
-    bg: "linear-gradient(135deg, #ffb36a, #ff7a45)"
-  },
-  {
-    title: "新用户首进即送",
-    desc: "首次进入活动页直接获得 1 次抽奖机会，轻松开局。",
-    badge: "新用户福利",
-    visual: "首进有礼",
-    bg: "linear-gradient(135deg, #ffd89b, #f6a13b)"
-  },
-  {
-    title: "积分兑换再抽一次",
-    desc: "每 10 积分自动兑换 1 次抽奖机会，活动奖励循环成长。",
-    badge: "积分兑换",
-    visual: "再抽一次",
-    bg: "linear-gradient(135deg, #ff9966, #ff5e62)"
-  }
-];
-
 const prizes = [
   { name: "100元", rate: 40, accent: "#ff7a45" },
   { name: "200元", rate: 35, accent: "#ffa940" },
@@ -195,27 +171,6 @@ onBeforeUnmount(() => {
     <div class="bg-glow bg-glow-a"></div>
     <div class="bg-glow bg-glow-b"></div>
 
-    <van-swipe class="banner-swipe" :autoplay="3000" indicator-color="#ff7a45">
-      <van-swipe-item v-for="banner in banners" :key="banner.title">
-        <div class="banner-card" :style="{ background: banner.bg }">
-          <div class="banner-content">
-            <div class="badge">{{ banner.badge }}</div>
-            <h1>{{ banner.title }}</h1>
-            <p>{{ banner.desc }}</p>
-            <div class="banner-stats">
-              <span>当前积分 {{ points }}</span>
-              <span>剩余次数 {{ drawChances }}</span>
-              <span>邀请码 {{ inviteCode || "待生成" }}</span>
-            </div>
-            <button class="banner-btn" @click="onDraw">立即参与</button>
-          </div>
-          <div class="banner-visual">
-            <span>{{ banner.visual }}</span>
-          </div>
-        </div>
-      </van-swipe-item>
-    </van-swipe>
-
     <section class="draw-card">
       <div class="draw-header">
         <div>
@@ -235,31 +190,17 @@ onBeforeUnmount(() => {
           <button class="draw-btn" :disabled="loading" @click="onDraw">
             {{ loading ? "抽奖中..." : "立即抽奖" }}
           </button>
-          <p class="draw-desc">当前可抽 {{ drawChances }} 次，10 积分可再兑换 1 次</p>
+          <p class="draw-desc">当前可抽 {{ drawChances }} 次</p>
         </div>
       </div>
-      <div class="draw-hint">中奖结果由后端直接返回，页面展示抽奖动效</div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>奖品说明</h2>
-        <span>概率写死在后端</span>
-      </div>
-      <div class="prize-grid">
-        <article
-          v-for="item in prizes"
-          :key="item.name"
-          class="prize-item"
-          :style="{ '--accent': item.accent }"
-        >
-          <div class="prize-value">{{ item.name }}</div>
-          <div class="prize-rate">中奖概率 {{ item.rate }}%</div>
-        </article>
-      </div>
+      <div class="draw-hint">中奖结果会直接展示在下方</div>
     </section>
 
     <section class="panel info-panel">
+      <div class="panel-head">
+        <h2>我的信息</h2>
+        <span>积分与抽奖次数</span>
+      </div>
       <div class="info-row">
         <div class="info-item">
           <span>当前积分</span>
@@ -270,42 +211,37 @@ onBeforeUnmount(() => {
           <strong>{{ drawChances }}</strong>
         </div>
       </div>
-      <div class="info-row">
-        <div class="info-item full">
-          <span>我的邀请码</span>
-          <strong class="code">{{ inviteCode }}</strong>
-        </div>
-      </div>
       <div class="action-row">
         <button class="primary-btn" @click="onShare">邀请好友</button>
         <button class="ghost-btn" @click="ruleVisible = true">活动规则</button>
       </div>
-      <button class="secondary-btn" @click="openInviteModal">
-        我已收到邀请，填写邀请码
-      </button>
     </section>
 
-    <section v-if="inviteFromLink" class="invite-banner">
-      <div>
-        <strong>你是通过邀请链接进入的活动页</strong>
-        <p>完成绑定后，邀请人可获得积分奖励，你也可继续参与抽奖。</p>
+    <section class="panel result-panel-inline">
+      <div class="panel-head">
+        <h2>中奖奖品</h2>
+        <span>本次结果</span>
+      </div>
+      <div class="result-box">
+        <div class="result-box__title">{{ resultPrize || "暂无中奖结果" }}</div>
       </div>
     </section>
 
-    <section class="panel">
+    <!-- <section class="panel share-panel">
       <div class="panel-head">
         <h2>活动分享</h2>
-        <span>复制后发送给好友</span>
+        <span>复制链接分享好友</span>
       </div>
-      <div class="link-box">{{ shareLink }}</div>
-      <div class="share-tip">{{ shareMessage }}</div>
-    </section>
+      <div class="share-actions">
+        <div class="link-box">{{ shareLink }}</div>
+        <button class="primary-btn share-btn" @click="onShare">复制</button>
+      </div>
+    </section> -->
 
     <van-popup v-model:show="resultVisible" round closeable position="center">
       <div class="result-panel" :class="{ celebrate: drawStage === 'finished' }">
         <div class="result-badge">恭喜中奖</div>
         <h3>{{ resultPrize }}</h3>
-        <p>中奖结果已由后端按固定概率返回</p>
         <button class="primary-btn full-width" @click="resultVisible = false">知道了</button>
       </div>
     </van-popup>
@@ -468,16 +404,16 @@ onBeforeUnmount(() => {
 
 .draw-title {
   display: block;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 900;
   color: #1f1f1f;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .draw-subtitle {
   margin: 4px 0 0;
   color: #7a7a7a;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .chip {
@@ -571,6 +507,23 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
+.result-box {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fffaf6, #fff3ea);
+  border: 1px solid rgba(255, 122, 69, 0.12);
+}
+
+.result-box__title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ff7a45;
+  text-align: center;
+}
+
 @keyframes beat {
   0%, 100% {
     transform: scale(1);
@@ -635,19 +588,22 @@ onBeforeUnmount(() => {
 
 .panel-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   margin-bottom: 14px;
 
   h2 {
     margin: 0;
     font-size: 16px;
+    line-height: 1.2;
     color: #1f1f1f;
   }
 
   span {
     color: #999;
     font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
   }
 }
 
@@ -761,6 +717,31 @@ onBeforeUnmount(() => {
     color: #555;
     line-height: 1.8;
   }
+}
+
+.share-panel .share-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.share-panel .link-box {
+  flex: 1;
+  margin-top: 0;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  border: 1px solid rgba(255, 122, 69, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.share-btn {
+  min-width: 86px;
+  height: 56px;
+  padding: 0 16px;
+  border-radius: 16px;
+  white-space: nowrap;
+  box-shadow: 0 10px 20px rgba(255, 122, 69, 0.18);
 }
 
 .share-tip {
