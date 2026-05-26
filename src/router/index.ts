@@ -4,7 +4,6 @@ import {
   type RouteLocationNormalized
 } from "vue-router";
 import routes from "./routes";
-import { useCachedViewStoreHook } from "@/store/modules/cached-view";
 import NProgress from "@/utils/progress";
 import setPageTitle from "@/utils/set-page-title";
 
@@ -23,34 +22,12 @@ export interface toRouteType extends RouteLocationNormalized {
 router.beforeEach((to: toRouteType, _from, next) => {
   NProgress.start();
 
-  const token = localStorage.getItem("c_access_token") || localStorage.getItem("token");
-  const isLoginPage = to.name === "Login";
-  const isPublicLandingPage = to.name === "LandingPage";
-
-  // 公开页：落地页不受 token 影响
-  if (isPublicLandingPage) {
-    useCachedViewStoreHook().addCachedView(to);
+  if (!to.meta.title) {
+    setPageTitle("活动抽奖");
+  } else {
     setPageTitle(to.meta.title);
-    next();
-    return;
   }
 
-  // 未登录：仅允许访问登录页
-  if (!token && !isLoginPage) {
-    next({ name: "Login" });
-    return;
-  }
-
-  // 已登录：访问登录页时跳转首页
-  if (token && isLoginPage) {
-    next({ name: "Home" });
-    return;
-  }
-
-  // 路由缓存
-  useCachedViewStoreHook().addCachedView(to);
-  // 页面 title
-  setPageTitle(to.meta.title);
   next();
 });
 

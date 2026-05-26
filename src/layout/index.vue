@@ -20,6 +20,7 @@ const hideNavRouteNames = ["Home", "Tools", "News", "My"];
 
 const showNavBar = computed(() => {
   const currentName = route.name as string | undefined;
+  if (route.meta?.hideNavBar === true) return false;
   return !currentName || !hideNavRouteNames.includes(currentName);
 });
 
@@ -64,7 +65,7 @@ const refreshLocationIfNeeded = async () => {
 </script>
 
 <template>
-  <div class="app-wrapper">
+  <div class="app-wrapper" :class="{ 'app-wrapper--full': route.meta?.fullScreen === true }">
     <nav-bar v-if="showNavBar" :title="navBarTitle" :leftArrow="true" @click-left="router.back" />
 
     <main class="app-content">
@@ -91,6 +92,12 @@ const refreshLocationIfNeeded = async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.app-wrapper--full {
+  .app-content {
+    padding: 0;
+  }
 }
 
 .app-content {

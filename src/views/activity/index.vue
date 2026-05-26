@@ -12,7 +12,7 @@ import {
   activityInfoApi,
   activityInviteClaimApi,
   type ActivityInitResult
-} from "@/api/mock/activity";
+} from "@/api/activity";
 
 defineOptions({ name: "Activity" });
 
@@ -30,10 +30,11 @@ const inviteInput = ref("");
 const resultVisible = ref(false);
 const resultPrize = ref("");
 const inviteFromLink = ref(false);
+const drawStage = ref<"idle" | "running" | "finished">("idle");
 
 const banners = [
   {
-    title: "好运抽奖季",
+    title: "活动抽奖",
     desc: "邀请好友来参与活动，积分越多，中奖机会越多。",
     badge: "限时活动",
     visual: "豪礼抽不停",
@@ -115,22 +116,30 @@ const onDraw = async () => {
   }
   loading.value = true;
   spinning.value = true;
+  drawStage.value = "running";
   showLoadingToast({ message: "抽奖中...", forbidClick: true, duration: 0 });
   try {
     const res = await activityDrawApi({ device_id: deviceId.value });
-    await new Promise((resolve) => window.setTimeout(resolve, 1600));
+    await new Promise((resolve) => window.setTimeout(resolve, 1200));
     prizeResult.value = `恭喜获得 ${res.prize}`;
     resultPrize.value = res.prize;
     points.value = res.points;
     drawChances.value = res.draw_chances;
+    drawStage.value = "finished";
     resultVisible.value = true;
     showSuccessToast(prizeResult.value);
   } catch {
+    drawStage.value = "idle";
     showFailToast("抽奖失败，请稍后重试");
   } finally {
     loading.value = false;
     spinning.value = false;
     closeToast();
+    window.setTimeout(() => {
+      if (drawStage.value === "finished") {
+        drawStage.value = "idle";
+      }
+    }, 800);
   }
 };
 
@@ -183,6 +192,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="activity-page">
+    <div class="bg-glow bg-glow-a"></div>
+    <div class="bg-glow bg-glow-b"></div>
+
     <van-swipe class="banner-swipe" :autoplay="3000" indicator-color="#ff7a45">
       <van-swipe-item v-for="banner in banners" :key="banner.title">
         <div class="banner-card" :style="{ background: banner.bg }">
@@ -190,6 +202,12 @@ onBeforeUnmount(() => {
             <div class="badge">{{ banner.badge }}</div>
             <h1>{{ banner.title }}</h1>
             <p>{{ banner.desc }}</p>
+            <div class="banner-stats">
+              <span>当前积分 {{ points }}</span>
+              <span>剩余次数 {{ drawChances }}</span>
+              <span>邀请码 {{ inviteCode || "待生成" }}</span>
+            </div>
+            <button class="banner-btn" @click="onDraw">立即参与</button>
           </div>
           <div class="banner-visual">
             <span>{{ banner.visual }}</span>
@@ -200,14 +218,22 @@ onBeforeUnmount(() => {
 
     <section class="draw-card">
       <div class="draw-header">
-        <span class="draw-title">幸运抽奖</span>
-        <span class="draw-subtitle">{{ prizeResult || "点击按钮立即抽奖" }}</span>
+        <div>
+          <span class="draw-title">幸运抽奖</span>
+          <p class="draw-subtitle">{{ prizeResult || "点击按钮立即抽奖" }}</p>
+        </div>
+        <span class="chip">{{ inviteCode ? `邀请码 ${inviteCode}` : "活动进行中" }}</span>
       </div>
-      <div class="draw-orbit">
+
+      <div class="draw-stage" :class="drawStage">
+        <div class="draw-glow"></div>
         <div class="draw-center">
-          <div class="progress-ring" :class="{ spinning: spinning }"></div>
+          <div class="draw-core" :class="{ beating: spinning }">
+            <span>抽奖中心</span>
+            <strong>{{ drawChances }}</strong>
+          </div>
           <button class="draw-btn" :disabled="loading" @click="onDraw">
-            立即抽奖
+            {{ loading ? "抽奖中..." : "立即抽奖" }}
           </button>
           <p class="draw-desc">当前可抽 {{ drawChances }} 次，10 积分可再兑换 1 次</p>
         </div>
@@ -276,16 +302,7 @@ onBeforeUnmount(() => {
     </section>
 
     <van-popup v-model:show="resultVisible" round closeable position="center">
-      <div class="result-panel">
-        <div class="result-badge">恭喜中奖</div>
-        <h3>{{ resultPrize }}</h3>
-        <p>中奖结果已由后端按固定概率返回</p>
-        <button class="primary-btn full-width" @click="resultVisible = false">知道了</button>
-      </div>
-    </van-popup>
-
-    <van-popup v-model:show="resultVisible" round closeable position="center">
-      <div class="result-panel">
+      <div class="result-panel" :class="{ celebrate: drawStage === 'finished' }">
         <div class="result-badge">恭喜中奖</div>
         <h3>{{ resultPrize }}</h3>
         <p>中奖结果已由后端按固定概率返回</p>
@@ -322,24 +339,49 @@ onBeforeUnmount(() => {
 .activity-page {
   min-height: 100vh;
   padding: 16px;
-  background:
-    radial-gradient(circle at top, rgba(255, 164, 77, 0.18), transparent 32%),
-    linear-gradient(180deg, #fff8ef 0%, #fff 38%, #f5f7fb 100%);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fff7ef 0%, #fff 40%, #f5f7fb 100%);
+}
+
+.bg-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.bg-glow-a {
+  width: 220px;
+  height: 220px;
+  left: -80px;
+  top: -40px;
+  background: radial-gradient(circle, rgba(255, 164, 77, 0.35), transparent 70%);
+}
+
+.bg-glow-b {
+  width: 180px;
+  height: 180px;
+  right: -70px;
+  top: 140px;
+  background: radial-gradient(circle, rgba(255, 122, 69, 0.22), transparent 70%);
 }
 
 .banner-swipe {
-  margin-bottom: 14px;
-  border-radius: 22px;
+  margin-bottom: 12px;
+  border-radius: 24px;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .banner-card,
 .panel,
 .draw-card {
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 30px rgba(20, 20, 20, 0.08);
-  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 16px 40px rgba(20, 20, 20, 0.08);
+  backdrop-filter: blur(12px);
 }
 
 .banner-card {
@@ -358,135 +400,193 @@ onBeforeUnmount(() => {
     margin: 10px 0 8px;
     font-size: 22px;
     line-height: 1.35;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
 
   p {
     margin: 0;
     font-size: 13px;
     line-height: 1.7;
-    opacity: 0.95;
+    opacity: 0.96;
   }
+}
+
+.banner-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    font-size: 12px;
+  }
+}
+
+.banner-btn {
+  margin-top: 14px;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #ff7a45;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 10px 18px rgba(255, 122, 69, 0.18);
 }
 
 .banner-visual {
   width: 92px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   font-weight: 700;
-}
-
-.hero-card {
-  display: flex;
-  gap: 12px;
-  padding: 18px;
-  margin-bottom: 14px;
-}
-
-.hero-copy {
-  flex: 1;
-
-  h1 {
-    margin: 8px 0 10px;
-    font-size: 22px;
-    line-height: 1.35;
-    color: #1f1f1f;
-  }
-
-  p {
-    margin: 0;
-    color: #666;
-    font-size: 13px;
-    line-height: 1.7;
-  }
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
 }
 
 .draw-card {
-  margin-bottom: 14px;
-  padding: 18px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 12px;
+  padding: 16px;
   text-align: center;
 }
 
 .draw-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
+  align-items: flex-start;
+  margin-bottom: 16px;
 }
 
 .draw-title {
-  font-size: 18px;
-  font-weight: 800;
+  display: block;
+  font-size: 20px;
+  font-weight: 900;
   color: #1f1f1f;
+  letter-spacing: 0.5px;
 }
 
 .draw-subtitle {
-  color: #ff7a45;
+  margin: 4px 0 0;
+  color: #7a7a7a;
   font-size: 12px;
 }
 
-.draw-orbit {
+.chip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 122, 69, 0.14), rgba(255, 179, 106, 0.18));
+  color: #ff7a45;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.draw-stage {
+  position: relative;
   width: 100%;
+  max-width: 320px;
   aspect-ratio: 1 / 1;
-  max-width: 280px;
   margin: 0 auto;
-  border-radius: 50%;
-  padding: 14px;
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.85) 0 56%, transparent 57%),
-    conic-gradient(from 180deg, #ffd29a, #ffb36a, #ff8b4d, #ffd29a);
+  border-radius: 28px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 248, 241, 0.92), rgba(255, 255, 255, 0.98));
+}
+
+.draw-stage.running {
+  animation: pulse-card 0.8s ease-in-out infinite;
+}
+
+.draw-stage.finished {
+  box-shadow: 0 0 0 2px rgba(255, 122, 69, 0.2), 0 18px 42px rgba(255, 122, 69, 0.16);
+}
+
+.draw-glow {
+  position: absolute;
+  inset: 14px;
+  border-radius: 24px;
+  background: radial-gradient(circle at center, rgba(255, 170, 110, 0.18), transparent 65%);
 }
 
 .draw-center {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: #fff;
+  position: absolute;
+  inset: 20px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,248,242,0.98));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 14px;
-  padding: 18px;
+  box-shadow: 0 14px 32px rgba(20,20,20,0.08);
 }
 
-.progress-ring {
+.draw-core {
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  border: 10px solid #ffe2cc;
-  border-top-color: #ff7a45;
-  transition: transform 0.3s ease;
-}
+  background: radial-gradient(circle at top, #fff9f4, #ffe9d8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px rgba(255, 122, 69, 0.08);
+  transition: transform 0.2s ease;
 
-.progress-ring.spinning {
-  animation: spin 1s linear infinite;
+  &.beating {
+    animation: beat 0.5s ease-in-out infinite;
+  }
+
+  span {
+    color: #7a7a7a;
+    font-size: 12px;
+  }
+
+  strong {
+    color: #ff7a45;
+    font-size: 30px;
+    line-height: 1;
+    margin-top: 6px;
+  }
 }
 
 .draw-desc {
   margin: 0;
   color: #666;
   font-size: 12px;
+  line-height: 1.5;
 }
 
 .draw-hint {
-  margin-top: 14px;
+  margin-top: 12px;
   color: #8b8b8b;
   font-size: 12px;
+}
+
+@keyframes beat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes pulse-card {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
 }
 
 .draw-btn,
@@ -499,7 +599,12 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.draw-btn,
+.draw-btn {
+  color: #fff;
+  background: linear-gradient(90deg, #ff9b47, #ff6b2c);
+  box-shadow: 0 10px 20px rgba(255, 122, 69, 0.28);
+}
+
 .primary-btn {
   color: #fff;
   background: linear-gradient(90deg, #ff9b47, #ff6b2c);
@@ -522,8 +627,10 @@ onBeforeUnmount(() => {
 }
 
 .panel {
-  padding: 16px;
-  margin-bottom: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
 }
 
 .panel-head {
@@ -662,10 +769,25 @@ onBeforeUnmount(() => {
   color: #ff7a45;
 }
 
+@keyframes pop-in {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .result-panel {
   padding: 24px 20px;
   text-align: center;
   min-width: 260px;
+
+  &.celebrate {
+    animation: pop-in 0.35s ease-out;
+  }
 
   h3 {
     margin: 12px 0 8px;
@@ -690,6 +812,7 @@ onBeforeUnmount(() => {
   color: #fff;
   font-size: 12px;
   font-weight: 700;
+  box-shadow: 0 10px 18px rgba(255, 122, 69, 0.18);
 }
 
 .invite-banner {

@@ -6,7 +6,6 @@ import Components from "unplugin-vue-components/vite";
 import { VantResolver } from "unplugin-vue-components/resolvers";
 import { createSvgIconsPlugin } from "vite-plugin-svg-icons";
 import path from "path";
-import mockDevServerPlugin from "vite-plugin-mock-dev-server";
 import viteCompression from "vite-plugin-compression";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { enableCDN } from "./build/cdn";
@@ -23,7 +22,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       vueJsx(),
-      mockDevServerPlugin(),
       // vant 组件自动按需引入
       Components({
         dts: "src/typings/components.d.ts",
@@ -56,14 +54,12 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
-      port: 9000,
-      // 仅在 proxy 中配置的代理前缀， mock-dev-server 才会拦截并 mock
-      // doc: https://github.com/pengzhanbo/vite-plugin-mock-dev-server
+      port: 5173,
       proxy: {
-        "^/play": {
-          target: "http://192.168.31.83:8080/play",
+        "/api/v1": {
+          target: "http://192.168.31.83:9000",
           changeOrigin: true,
-          rewrite: path => path.replace(/^\/play/, "")
+          rewrite: path => path.replace(/^\/api\/v1/, "/api/v1")
         }
       }
     },
