@@ -499,9 +499,9 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="title-wrap">
-        <div class="school-name">名门美妆学院</div>
+        <h2 class="page-title-zh">名门美妆学院</h2>
         <!-- <h1 class="page-title">Aesthetics Salon Event</h1> -->
-        <h2 class="page-title-zh">幸运大转盘</h2>
+        <div class="school-name">幸运大转盘</div>
         <!-- <p class="page-sub">转动命运 · 向美而生</p> -->
       </div>
     </header>
@@ -689,17 +689,18 @@ onBeforeUnmount(() => {
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&display=swap');
 
 // ---- 主页面 ----
-.pull-refresh-wrap {
-  min-height: 100vh;
-}
 .activity-page {
-  min-height: 100vh;
-  padding-bottom: 40px;
+  height: 100vh;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden;
   background: linear-gradient(160deg, #f2c7cb 0%, #e9959e 40%, #768a64 100%);
   font-family: 'Outfit', 'PingFang SC', 'Helvetica Neue', sans-serif;
   color: #fff;
+}
+.pull-refresh-wrap {
+  height: 100vh;
+  overflow-y: auto;
+  padding-bottom: 40px;
 }
 
 // ---- 背景光效 ----
