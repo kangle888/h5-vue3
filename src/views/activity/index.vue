@@ -27,6 +27,7 @@ const inviteCount = ref(0);
 const inviterCode = ref<string | null>(null);
 const loading = ref(false);
 const spinning = ref(false);
+const refreshing = ref(false);
 const ruleVisible = ref(false);
 const inviteVisible = ref(false);
 const historyVisible = ref(false);
@@ -119,6 +120,17 @@ const refreshInfo = async () => {
   points.value = res.points;
   drawChances.value = res.draw_chances;
   inviteCount.value = res.invite_count;
+};
+
+const onRefresh = async () => {
+  try {
+    await refreshInfo();
+    showSuccessToast("刷新成功");
+  } catch (error) {
+    showFailToast("刷新失败");
+  } finally {
+    refreshing.value = false;
+  }
 };
 
 // ===================== 转盘绘制 =====================
@@ -473,8 +485,9 @@ onBeforeUnmount(() => {
     <!-- 烟花画布（全屏） -->
     <canvas ref="confettiCanvas" class="confetti-canvas" />
 
-    <!-- 顶部标题区 -->
-    <header class="page-header">
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="pull-refresh-wrap">
+      <!-- 顶部标题区 -->
+      <header class="page-header">
       <div class="header-glow"></div>
       <div class="header-top">
         <span class="live-badge">
@@ -606,6 +619,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
     </section>
+    </van-pull-refresh>
 
     <!-- 中奖结果弹窗 -->
     <van-popup v-model:show="resultVisible" round closeable position="center" :style="{ background: 'transparent' }">
@@ -675,6 +689,9 @@ onBeforeUnmount(() => {
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&display=swap');
 
 // ---- 主页面 ----
+.pull-refresh-wrap {
+  min-height: 100vh;
+}
 .activity-page {
   min-height: 100vh;
   padding-bottom: 40px;
