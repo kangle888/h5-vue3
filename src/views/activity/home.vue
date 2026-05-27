@@ -150,7 +150,7 @@ onMounted(() => {
   width: 52px;
   height: 52px;
   border: 0;
-  font-size: 12px !important;
+  font-size: 10px !important;
   font-weight: 400;
   border-radius: 50%;
   color: #fff;
@@ -174,9 +174,9 @@ onMounted(() => {
   position: absolute;
   display: flex;
   color: #ffffff;
-  font-size: 12px;
+  font-size: 10px;
   width: 100%;
-  top: 80%;
+  top: 84%;
   left: 70%;
   transform: translate(-50%, -50%);
 }
