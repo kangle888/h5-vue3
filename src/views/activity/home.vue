@@ -2,34 +2,23 @@
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import drawIcon from "@/assets/img1.png";
+import { k } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
 
 const router = useRouter();
 const inviteCode = ref("");
 
 const banners = [
   {
-    title: "活动抽奖",
-    desc: "首次进入送 1 次抽奖机会，邀请好友还能继续赚积分。",
-    badge: "限时活动",
-    visual: "好运来袭",
-    bg: "linear-gradient(135deg, #ffb36a, #ff7a45)",
-    image: "https://xxx.xxx.com/activity/banner-1.jpg"
+    key: 1,
+    image: "https://xklandlxy.art/images/activity3.jpg"
   },
   {
-    title: "抽奖赢奖品",
-    desc: "奖品概率固定，中奖结果由后端直接返回。",
-    badge: "中奖概率",
-    visual: "马上抽奖",
-    bg: "linear-gradient(135deg, #ffd89b, #f6a13b)",
-    image: "https://xxx.xxx.com/activity/banner-2.jpg"
+    key: 2,
+    image: "https://xklandlxy.art/images/activity2.jpg"
   },
   {
-    title: "分享拿积分",
-    desc: "每邀请 1 位新用户，邀请人 +1 积分，10 积分可兑换 1 次抽奖。",
-    badge: "邀请奖励",
-    visual: "分享好友",
-    bg: "linear-gradient(135deg, #ff9966, #ff5e62)",
-    image: "https://xxx.xxx.com/activity/banner-3.jpg"
+    key: 3,
+    image: "https://xklandlxy.art/images/activity2.jpg"
   }
 ];
 
@@ -47,23 +36,23 @@ onMounted(() => {
 
 <template>
   <div class="home-page">
-    <van-swipe class="home-swipe" :autoplay="3000" @change="index => (currentBanner = index)" indicator-color="#fff">
-      <van-swipe-item v-for="banner in banners" :key="banner.title">
-        <div class="home-banner" :style="{ background: banner.bg }">
-          <img class="home-banner-img" :src="banner.image" :alt="banner.title" />
-          <div class="home-copy">
-            <div class="badge">{{ banner.badge }}</div>
-            <h1>{{ banner.title }}</h1>
-            <p>{{ banner.desc }}</p>
-          </div>
-          <div class="home-visual">{{ banner.visual }}</div>
+    <van-swipe
+      class="home-swipe"
+      :autoplay="3000"
+      @change="index => (currentBanner = index)"
+      indicator-color="#fff"
+    >
+      <van-swipe-item v-for="banner in banners" :key="banner.key">
+        <div class="home-banner">
+          <img class="home-banner-img" :src="banner.image" />
         </div>
       </van-swipe-item>
     </van-swipe>
 
-    <button class="go-draw-fab" @click="goDraw" aria-label="去抽奖">
+    <div class="go-draw-fab" @click="goDraw">
       <img :src="drawIcon" alt="" />
-    </button>
+      <div class="text">去抽奖</div>
+    </div>
   </div>
 </template>
 
@@ -102,7 +91,7 @@ onMounted(() => {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.28));
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.28));
   z-index: 1;
 }
 
@@ -129,7 +118,7 @@ onMounted(() => {
   display: inline-flex;
   padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   font-size: 12px;
   font-weight: 700;
 }
@@ -161,10 +150,10 @@ onMounted(() => {
   width: 52px;
   height: 52px;
   border: 0;
+  font-size: 12px !important;
+  font-weight: 400;
   border-radius: 50%;
   color: #fff;
-  font-size: 12px;
-  font-weight: 900;
   background: linear-gradient(90deg, #ff9b47, #ff6b2c);
   box-shadow: 0 14px 28px rgba(255, 122, 69, 0.3);
   z-index: 20;
@@ -175,14 +164,26 @@ onMounted(() => {
 }
 
 .go-draw-fab img {
-  width: 28px;
-  height: 28px;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   display: block;
+  position: relative;
+}
+.text {
+  position: absolute;
+  display: flex;
+  color: #ffffff;
+  font-size: 12px;
+  width: 100%;
+  top: 80%;
+  left: 70%;
+  transform: translate(-50%, -50%);
 }
 
 @keyframes floatPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
     box-shadow: 0 14px 28px rgba(255, 122, 69, 0.3);
   }
