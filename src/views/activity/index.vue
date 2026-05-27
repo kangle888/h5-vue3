@@ -46,14 +46,14 @@ const animationId = ref(0);
 const confettiCanvas = ref<HTMLCanvasElement | null>(null);
 
 const prizes = [
-  { name: "100元", color: "#FF6B35", textColor: "#fff", shadow: "#d44a1a" },
-  { name: "谢谢\n参与", color: "#1a1a2e", textColor: "#aaa", shadow: "#111" },
-  { name: "200元", color: "#FFD700", textColor: "#7a4a00", shadow: "#b89a00" },
-  { name: "谢谢\n参与", color: "#16213e", textColor: "#aaa", shadow: "#0d1527" },
-  { name: "500元", color: "#FF4757", textColor: "#fff", shadow: "#c0392b" },
-  { name: "谢谢\n参与", color: "#0f3460", textColor: "#aaa", shadow: "#09223d" },
-  { name: "1000元", color: "#C0392B", textColor: "#fff", shadow: "#922b21" },
-  { name: "谢谢\n参与", color: "#1a1a2e", textColor: "#aaa", shadow: "#111" }
+  { name: "100元", color: "#e49a9b", textColor: "#fff", shadow: "#c07a7b" },
+  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" },
+  { name: "200元", color: "#d46b77", textColor: "#fff", shadow: "#b0505a" },
+  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" },
+  { name: "500元", color: "#899475", textColor: "#fff", shadow: "#6a7558" },
+  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" },
+  { name: "1000元", color: "#44563a", textColor: "#fff", shadow: "#2b3823" },
+  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" }
 ];
 
 const SEGMENT_COUNT = prizes.length;
@@ -162,7 +162,7 @@ const drawWheel = (angle: number) => {
     ctx.fill();
 
     // 边框
-    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -188,13 +188,13 @@ const drawWheel = (angle: number) => {
     ctx.restore();
   }
 
-  // 外圈装饰环 - 金色
+  // 外圈装饰环 - 粉/白
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, 2 * Math.PI);
   const ringGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-  ringGrad.addColorStop(0, "#FFD700");
-  ringGrad.addColorStop(0.5, "#FFF0A0");
-  ringGrad.addColorStop(1, "#B8860B");
+  ringGrad.addColorStop(0, "#ffffff");
+  ringGrad.addColorStop(0.5, "#fbe3e6");
+  ringGrad.addColorStop(1, "#d46b77");
   ctx.strokeStyle = ringGrad;
   ctx.lineWidth = 5;
   ctx.stroke();
@@ -213,11 +213,11 @@ const drawCenter = (ctx: CanvasRenderingContext2D, cx: number, cy: number) => {
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // 金色边
+  // 柔和粉边
   const centerGrad = ctx.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 24);
-  centerGrad.addColorStop(0, "#FFF5C0");
-  centerGrad.addColorStop(0.5, "#FFD700");
-  centerGrad.addColorStop(1, "#B8860B");
+  centerGrad.addColorStop(0, "#ffffff");
+  centerGrad.addColorStop(0.5, "#fbe3e6");
+  centerGrad.addColorStop(1, "#d46b77");
   ctx.beginPath();
   ctx.arc(cx, cy, 24, 0, 2 * Math.PI);
   ctx.fillStyle = centerGrad;
@@ -227,7 +227,7 @@ const drawCenter = (ctx: CanvasRenderingContext2D, cx: number, cy: number) => {
   ctx.font = "bold 11px 'PingFang SC', sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#5a3200";
+  ctx.fillStyle = "#fff";
   ctx.fillText("点击", cx, cy - 6);
   ctx.fillText("抽奖", cx, cy + 8);
 };
@@ -288,7 +288,7 @@ const launchConfetti = (isBigWin = false) => {
   const colors = ["#FFD700","#FF4757","#FF6B35","#FFF","#C0392B","#FFB700","#00D2FF"];
   const particles: Confetti[] = [];
   const count = isBigWin ? 250 : 120;
-  
+
   for (let i = 0; i < count; i++) {
     particles.push({
       x: canvas.width * (0.2 + Math.random() * 0.6),
@@ -354,7 +354,7 @@ const onDraw = async () => {
   loading.value = true;
   spinning.value = true;
   drawStage.value = "running";
-  
+
   // 假装网络慢一点，避免toast太快消失
   showLoadingToast({ message: "抽奖中...", forbidClick: true, duration: 0 });
 
@@ -364,7 +364,7 @@ const onDraw = async () => {
     resultPrize.value = res.prize;
     points.value = res.points;
     drawChances.value = res.draw_chances;
-    
+
     saveHistory(res.prize);
 
     const idx = getPrizeIndex(res.prize);
@@ -373,7 +373,7 @@ const onDraw = async () => {
       spinning.value = false;
       loading.value = false;
       resultVisible.value = true;
-      
+
       // 大奖放更多烟花
       if (res.prize === "1000元" || res.prize === "500元") {
         launchConfetti(true);
@@ -429,12 +429,12 @@ const handleWheelClick = () => {
 onMounted(async () => {
   // 解析 invite_code（多重降级策略保证不丢失）
   let finalInviteCode = route.query.invite_code as string;
-  
+
   if (!finalInviteCode) {
     const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
     finalInviteCode = params.get("invite_code") || "";
   }
-  
+
   if (!finalInviteCode) {
     finalInviteCode = sessionStorage.getItem("activity_from_invite_code") || "";
   }
@@ -445,7 +445,7 @@ onMounted(async () => {
   // 初始化画布尺寸
   await new Promise(r => setTimeout(r, 100));
   if (wheelCanvas.value) {
-    const size = Math.min(window.innerWidth - 48, 340);
+    const size = Math.min(window.innerWidth - 80, 280);
     wheelCanvas.value.width = size;
     wheelCanvas.value.height = size;
     drawWheel(wheelAngle.value);
@@ -485,8 +485,12 @@ onBeforeUnmount(() => {
           <span v-if="inviteCode" class="invite-chip" @click="onCopyInvite">我的邀请码：{{ inviteCode }}</span>
         </div>
       </div>
-      <h1 class="page-title">幸运大转盘</h1>
-      <p class="page-sub">转动命运，赢取丰厚奖励</p>
+      <div class="title-wrap">
+        <div class="school-name">名门美妆学院</div>
+        <!-- <h1 class="page-title">Aesthetics Salon Event</h1> -->
+        <h2 class="page-title-zh">幸运大转盘</h2>
+        <!-- <p class="page-sub">转动命运 · 向美而生</p> -->
+      </div>
     </header>
 
     <!-- 转盘区域 -->
@@ -503,12 +507,12 @@ onBeforeUnmount(() => {
             <svg class="pointer-svg" viewBox="0 0 28 42" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#FF4040"/>
-                  <stop offset="100%" stop-color="#8B0000"/>
+                  <stop offset="0%" stop-color="#e49a9b"/>
+                  <stop offset="100%" stop-color="#d46b77"/>
                 </linearGradient>
               </defs>
               <polygon points="14,42 0,4 28,4" fill="url(#pg)" stroke="white" stroke-width="1.5"/>
-              <circle cx="14" cy="4" r="7" fill="#FF4040" stroke="white" stroke-width="2"/>
+              <circle cx="14" cy="4" r="7" fill="#e49a9b" stroke="white" stroke-width="2"/>
             </svg>
           </div>
 
@@ -527,7 +531,7 @@ onBeforeUnmount(() => {
           @click="onDraw"
         >
           <span class="fab-inner">
-            <span class="fab-text">{{ spinning ? "祈愿中..." : "立即抽奖" }}</span>
+            <span class="fab-text">{{ spinning ? "抽奖中..." : "立即抽奖" }}</span>
             <span v-if="!spinning" class="fab-count">剩余 {{ drawChances }} 次</span>
           </span>
           <span class="fab-glow"></span>
@@ -612,7 +616,7 @@ onBeforeUnmount(() => {
         <div class="result-icon">🎉</div>
         <div class="result-badge-text">恭喜获得！</div>
         <div class="result-prize">{{ resultPrize }}</div>
-        <p class="result-tip">奖励将在活动结束后统一发放</p>
+        <p class="result-tip">在活动期间可以使用立减券！</p>
         <button class="result-btn" @click="resultVisible = false">好的，继续抽！</button>
       </div>
     </van-popup>
@@ -626,7 +630,7 @@ onBeforeUnmount(() => {
           <li>🎟️ 用户首次进入活动页，赠送 <strong>1 次</strong>抽奖机会</li>
           <li>🔗 分享邀请链接，新用户首次进入后，邀请人 <strong>+1 积分</strong></li>
           <li>💎 <strong>10 积分</strong>可兑换 1 次抽奖机会</li>
-          <li>🏆 奖品为 100元 / 200元 / 500元 / 1000元</li>
+          <li>🏆 奖品为 100元 / 200元 / 500元 / 1000元立减券，活动期间可以享受满减</li>
           <li>⚠️ 同设备仅可被邀请一次，避免重复领取</li>
         </ul>
       </div>
@@ -668,7 +672,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="less">
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&display=swap');
 
 // ---- 主页面 ----
 .activity-page {
@@ -676,7 +680,7 @@ onBeforeUnmount(() => {
   padding-bottom: 40px;
   position: relative;
   overflow-x: hidden;
-  background: linear-gradient(160deg, #0d0d1a 0%, #1a0a2e 40%, #2d0b0b 100%);
+  background: linear-gradient(160deg, #f2c7cb 0%, #e9959e 40%, #768a64 100%);
   font-family: 'Outfit', 'PingFang SC', 'Helvetica Neue', sans-serif;
   color: #fff;
 }
@@ -689,20 +693,20 @@ onBeforeUnmount(() => {
   z-index: 0;
 }
 .bg-r1 {
-  width: 400px; height: 400px;
-  left: -150px; top: -100px;
-  background: radial-gradient(circle, rgba(255,100,50,0.18) 0%, transparent 70%);
+  width: 500px; height: 500px;
+  left: -200px; top: -100px;
+  background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
 }
 .bg-r2 {
-  width: 300px; height: 300px;
+  width: 400px; height: 400px;
   right: -100px; top: 200px;
-  background: radial-gradient(circle, rgba(180,0,200,0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(118,138,100,0.6) 0%, transparent 70%);
 }
 .bg-r3 {
-  width: 350px; height: 350px;
+  width: 450px; height: 450px;
   left: 50%; top: 60%;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(255,215,0,0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(228,154,155,0.4) 0%, transparent 70%);
 }
 
 // ---- 烟花画布 ----
@@ -783,21 +787,42 @@ onBeforeUnmount(() => {
   font-size: 10px;
 }
 
+.title-wrap {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.school-name {
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2px;
+}
 .page-title {
-  font-size: 28px;
-  font-weight: 900;
-  margin: 0 0 4px;
-  background: linear-gradient(135deg, #FFD700 0%, #FF9A3C 50%, #FF4040 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 2px;
-  text-shadow: none;
+  font-size: 26px;
+  font-weight: 400;
+  margin: 0;
+  color: #fff;
+  letter-spacing: 1px;
+  font-family: 'Playfair Display', serif;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.page-title-zh {
+  font-size: 30px;
+  font-weight: 600;
+  margin: 6px 0 0;
+  color: #fff;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 .page-sub {
-  margin: 0;
-  color: rgba(255,255,255,0.5);
-  font-size: 13px;
+  margin: 8px 0 0;
+  color: rgba(255,255,255,0.85);
+  font-size: 14px;
+  letter-spacing: 2px;
 }
 
 // ---- 转盘区 ----
@@ -819,16 +844,16 @@ onBeforeUnmount(() => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 360px;
-  height: 360px;
+  width: 300px;
+  height: 300px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,180,0,0.12) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 65%);
   pointer-events: none;
   animation: halopulse 2.5s ease-in-out infinite;
 }
 .wheel-halo-2 {
-  width: 420px; height: 420px;
-  background: radial-gradient(circle, rgba(255,80,0,0.07) 0%, transparent 65%);
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 65%);
   animation: halopulse 2.5s ease-in-out 1.25s infinite;
 }
 @keyframes halopulse {
@@ -898,11 +923,11 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #FF6B35 0%, #FF4040 50%, #C0392B 100%);
-  box-shadow: 0 8px 24px rgba(255,100,50,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+  background: linear-gradient(90deg, #df8992 0%, #d46b77 100%);
+  box-shadow: 0 8px 24px rgba(212,107,119,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 .draw-fab.loading .fab-inner {
-  background: linear-gradient(90deg, #888 0%, #666 100%);
+  background: linear-gradient(90deg, #b0a5a0 0%, #998f8a 100%);
 }
 .fab-text {
   font-size: 16px;
@@ -1053,9 +1078,9 @@ onBeforeUnmount(() => {
   &:active { transform: scale(0.97); }
 }
 .primary-action {
-  background: linear-gradient(90deg, #FF9A3C 0%, #FF6B35 50%, #FF4040 100%);
+  background: linear-gradient(90deg, #df8992 0%, #d46b77 100%);
   color: #fff;
-  box-shadow: 0 8px 24px rgba(255,100,50,0.35);
+  box-shadow: 0 8px 24px rgba(212,107,119,0.35);
   margin-bottom: 10px;
 }
 .action-row-2 {
@@ -1081,9 +1106,9 @@ onBeforeUnmount(() => {
   text-align: center;
   border-radius: 28px;
   overflow: hidden;
-  background: linear-gradient(160deg, #1a0a2e 0%, #2d0b0b 100%);
-  border: 1px solid rgba(255,215,0,0.3);
-  box-shadow: 0 0 60px rgba(255,100,0,0.3);
+  background: linear-gradient(160deg, #f2c7cb 0%, #e9959e 100%);
+  border: 1px solid rgba(255,255,255,0.4);
+  box-shadow: 0 0 60px rgba(212,107,119,0.3);
   animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes popIn {
@@ -1122,11 +1147,9 @@ onBeforeUnmount(() => {
 .result-prize {
   font-size: 36px;
   font-weight: 900;
-  background: linear-gradient(135deg, #FFD700, #FF9A3C);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #fff;
   margin-bottom: 8px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 .result-tip {
   font-size: 12px;
@@ -1138,19 +1161,19 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 999px;
   padding: 13px;
-  background: linear-gradient(90deg, #FFD700, #FF9A3C);
-  color: #5a2800;
+  background: linear-gradient(90deg, #ffffff, #fbe3e6);
+  color: #d46b77;
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(255,180,0,0.35);
+  box-shadow: 0 8px 20px rgba(255,255,255,0.35);
   &:active { transform: scale(0.97); }
 }
 
 // ---- 弹窗面板 ----
 .popup-panel {
   padding: 16px 20px 32px;
-  background: #1a1a2e;
+  background: #df8992;
   color: #fff;
   border-radius: 28px 28px 0 0;
 }
