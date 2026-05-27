@@ -19,7 +19,7 @@ const banners = [
   },
   {
     key: 3,
-    image: "https://xklandlxy.art/images/activity2.jpg"
+    image: "https://xklandlxy.art/images/activity1.jpg"
   }
 ];
 
@@ -81,11 +81,10 @@ onMounted(() => {
         <div class="home-banner">
           <img class="home-banner-img" :src="banner.image" />
           <!-- 底部渐变遮罩文案 -->
-          <div class="home-banner-copy">
+          <!-- <div class="home-banner-copy">
             <div class="home-badge">限时活动</div>
-            <h1>幸运大转盘</h1>
-            <p>邀请好友一起来，赢取现金大奖</p>
-          </div>
+            <p>邀请好友一起来，赢取大奖</p>
+          </div> -->
         </div>
       </van-swipe-item>
     </van-swipe>
@@ -163,7 +162,7 @@ onMounted(() => {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.05) 0%,
-    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.1) 80%,
     rgba(0, 0, 0, 0.65) 100%
   );
   z-index: 1;
@@ -171,7 +170,7 @@ onMounted(() => {
 
 .home-banner-copy {
   position: absolute;
-  bottom: 100px;
+  bottom: 250px;
   left: 0;
   right: 0;
   padding: 0 24px;
