@@ -233,108 +233,59 @@ onMounted(() => {
           <div class="base-card">
             <div class="name-row">
               <div class="name-wrap">
-                <div
-                  class="skeleton-block"
-                  style="width: 120px; height: 28px; border-radius: 4px"
-                ></div>
-                <div
-                  class="skeleton-block"
-                  style="width: 32px; height: 16px; border-radius: 4px"
-                ></div>
+                <div class="skeleton-block" style="width: 120px; height: 28px; border-radius: 4px"></div>
+                <div class="skeleton-block" style="width: 32px; height: 16px; border-radius: 4px"></div>
               </div>
-              <div
-                class="skeleton-block"
-                style="width: 24px; height: 24px; border-radius: 50%"
-              ></div>
+              <div class="skeleton-block" style="width: 24px; height: 24px; border-radius: 50%"></div>
             </div>
 
             <div class="meta-list" style="gap: 10px; margin-top: 16px">
-              <div
-                class="skeleton-block"
-                style="width: 60%; height: 16px; border-radius: 4px"
-              ></div>
-              <div
-                class="skeleton-block"
-                style="width: 80%; height: 16px; border-radius: 4px"
-              ></div>
-              <div
-                class="skeleton-block"
-                style="width: 40%; height: 16px; border-radius: 4px"
-              ></div>
+              <div class="skeleton-block" style="width: 60%; height: 16px; border-radius: 4px"></div>
+              <div class="skeleton-block" style="width: 80%; height: 16px; border-radius: 4px"></div>
+              <div class="skeleton-block" style="width: 40%; height: 16px; border-radius: 4px"></div>
             </div>
 
             <div class="tag-row mt-4">
-              <div
-                class="skeleton-block"
-                style="width: 48px; height: 24px; border-radius: 4px"
-              ></div>
-              <div
-                class="skeleton-block"
-                style="width: 64px; height: 24px; border-radius: 4px"
-              ></div>
-              <div
-                class="skeleton-block"
-                style="width: 56px; height: 24px; border-radius: 4px"
-              ></div>
-              <div
-                class="skeleton-block"
-                style="width: 60px; height: 24px; border-radius: 4px"
-              ></div>
+              <div class="skeleton-block" style="width: 48px; height: 24px; border-radius: 4px"></div>
+              <div class="skeleton-block" style="width: 64px; height: 24px; border-radius: 4px"></div>
+              <div class="skeleton-block" style="width: 56px; height: 24px; border-radius: 4px"></div>
+              <div class="skeleton-block" style="width: 60px; height: 24px; border-radius: 4px"></div>
             </div>
 
             <!-- Content Sections -->
             <div class="section">
               <div class="section-title">
                 <div class="divider"></div>
-                <div
-                  class="skeleton-block"
-                  style="width: 40px; height: 20px; border-radius: 4px"
-                ></div>
+                <div class="skeleton-block" style="width: 40px; height: 20px; border-radius: 4px"></div>
               </div>
               <div class="album-grid">
-                <div
-                  v-for="i in 8"
-                  :key="i"
-                  class="album-item-wrap skeleton-block"
-                ></div>
+                <div v-for="i in 8" :key="i" class="album-item-wrap skeleton-block"></div>
               </div>
             </div>
 
             <div class="section">
               <div class="section-title">
                 <div class="divider"></div>
-                <div
-                  class="skeleton-block"
-                  style="width: 40px; height: 20px; border-radius: 4px"
-                ></div>
+                <div class="skeleton-block" style="width: 40px; height: 20px; border-radius: 4px"></div>
               </div>
               <div class="activity-list">
                 <div v-for="j in 2" :key="'act' + j" class="activity-item">
                   <div class="activity-date">
-                    <div
-                      class="skeleton-block"
-                      style="width: 28px; height: 28px; border-radius: 4px"
-                    ></div>
+                    <div class="skeleton-block" style="width: 28px; height: 28px; border-radius: 4px"></div>
                   </div>
                   <div class="activity-body">
-                    <div
-                      class="skeleton-block"
-                      style="
+                    <div class="skeleton-block" style="
                         width: 100%;
                         height: 16px;
                         border-radius: 4px;
                         margin-bottom: 8px;
-                      "
-                    ></div>
-                    <div
-                      class="skeleton-block"
-                      style="
+                      "></div>
+                    <div class="skeleton-block" style="
                         width: 70%;
                         height: 16px;
                         border-radius: 4px;
                         margin-bottom: 12px;
-                      "
-                    ></div>
+                      "></div>
                     <div class="activity-image-grid">
                       <div class="activity-image skeleton-block"></div>
                       <div class="activity-image skeleton-block"></div>
@@ -350,12 +301,7 @@ onMounted(() => {
       <div v-else class="content-wrap">
         <div v-if="player" class="hero-section">
           <div class="hero-img-box">
-            <img
-              v-if="coverPreview"
-              :src="coverPreview"
-              class="hero-cover"
-              alt="cover"
-            />
+            <img v-if="coverPreview" :src="coverPreview" class="hero-cover" alt="cover" />
             <div v-else class="hero-empty">暂无图片</div>
           </div>
 
@@ -369,16 +315,8 @@ onMounted(() => {
                     <span class="badge-text">真颜</span>
                   </span>
                 </div>
-                <div
-                  class="like-btn"
-                  :class="{ 'is-liked': collectId }"
-                  @click.stop="toggleCollect"
-                >
-                  <van-icon
-                    :name="collectId ? 'like' : 'like-o'"
-                    size="20"
-                    :color="collectId ? '#ff4d4f' : '#888'"
-                  />
+                <div class="like-btn" :class="{ 'is-liked': collectId }" @click.stop="toggleCollect">
+                  <van-icon :name="collectId ? 'like' : 'like-o'" size="20" :color="collectId ? '#ff4d4f' : '#888'" />
                 </div>
               </div>
 
@@ -389,7 +327,7 @@ onMounted(() => {
                 </div>
                 <div class="meta-item">
                   <van-icon name="location-o" class="mr-1" />
-                  {{ player.area || "" }}
+                  {{ player.city || "" }}
                 </div>
                 <div class="meta-item van-ellipsis">
                   <van-icon name="records-o" class="mr-1" />
@@ -399,15 +337,9 @@ onMounted(() => {
 
               <div class="tag-row mt-4">
                 <span class="tag-pill">🎂{{ player.age || "25" }}岁</span>
-                <span class="tag-pill" v-if="player.constellation"
-                  >⭐{{ player.constellation }}</span
-                >
-                <span class="tag-pill" v-if="player.height"
-                  >🧍{{ player.height }}CM</span
-                >
-                <span class="tag-pill" v-if="player.weight"
-                  >⚖️{{ player.weight }}KG</span
-                >
+                <span class="tag-pill" v-if="player.constellation">⭐{{ player.constellation }}</span>
+                <span class="tag-pill" v-if="player.height">🧍{{ player.height }}CM</span>
+                <span class="tag-pill" v-if="player.weight">⚖️{{ player.weight }}KG</span>
                 <span class="tag-pill">💼{{ occupationText }}</span>
               </div>
 
@@ -418,17 +350,10 @@ onMounted(() => {
                   相册
                 </div>
                 <div class="album-grid" v-if="albumPreviewList.length > 0">
-                  <div
-                    v-for="(img, idx) in albumPreviewList.slice(0, 8)"
-                    :key="img + idx"
-                    class="album-item-wrap"
-                    @click="openAlbumPreview(idx)"
-                  >
+                  <div v-for="(img, idx) in albumPreviewList.slice(0, 8)" :key="img + idx" class="album-item-wrap"
+                    @click="openAlbumPreview(idx)">
                     <img class="album-item" :src="img" alt="album" />
-                    <div
-                      class="overlay-more"
-                      v-if="idx === 7 && albumPreviewList.length > 8"
-                    >
+                    <div class="overlay-more" v-if="idx === 7 && albumPreviewList.length > 8">
                       +{{ albumPreviewList.length - 8 }}
                     </div>
                   </div>
@@ -442,11 +367,7 @@ onMounted(() => {
                   动态
                 </div>
                 <div v-if="activities.length" class="activity-list">
-                  <div
-                    v-for="act in activities.slice(0, 2)"
-                    :key="act.id"
-                    class="activity-item"
-                  >
+                  <div v-for="act in activities.slice(0, 2)" :key="act.id" class="activity-item">
                     <div class="activity-date">
                       <span class="date-day">14</span>
                     </div>
@@ -454,20 +375,11 @@ onMounted(() => {
                       <div class="activity-content">
                         {{ act.content || "半夜睡醒了咋整" }}
                       </div>
-                      <div
-                        class="activity-image-grid"
-                        v-if="(activityImageMap[act.id || ''] || []).length"
-                      >
-                        <img
-                          v-for="(img, idx) in activityImageMap[
-                            act.id || ''
-                          ].slice(0, 2)"
-                          :key="img + idx"
-                          class="activity-image"
-                          :src="img"
-                          alt="activity-image"
-                          @click="openActivityPreview(act.id || '', idx)"
-                        />
+                      <div class="activity-image-grid" v-if="(activityImageMap[act.id || ''] || []).length">
+                        <img v-for="(img, idx) in activityImageMap[
+                          act.id || ''
+                        ].slice(0, 2)" :key="img + idx" class="activity-image" :src="img" alt="activity-image"
+                          @click="openActivityPreview(act.id || '', idx)" />
                       </div>
                     </div>
                   </div>
@@ -480,11 +392,7 @@ onMounted(() => {
 
         <div v-else class="empty-wrap">
           <div class="empty">暂无数据</div>
-          <van-button
-            round
-            class="back-home-btn"
-            @click="router.replace({ name: 'Home' })"
-          >
+          <van-button round class="back-home-btn" @click="router.replace({ name: 'Home' })">
             返回首页
           </van-button>
         </div>
@@ -843,9 +751,11 @@ onMounted(() => {
   0% {
     opacity: 0.4;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     opacity: 0.4;
   }

@@ -35,7 +35,7 @@ const pageNum = ref(1);
 const pageSize = 10;
 
 const filterForm = reactive({
-  name: ""
+  city: ""
 });
 
 const showSearch = ref(false);
@@ -110,7 +110,7 @@ const buildPreviewMap = (rows: IPlayerItem[]) => {
       try {
         const cover = await getAttachmentObjectUrl(coverFile);
         if (cover) coverPreviewMap.value[id] = cover;
-      } catch {}
+      } catch { }
     }
 
     if (firstThree.length > 0 && !albumPreviewMap.value[id]) {
@@ -123,7 +123,7 @@ const buildPreviewMap = (rows: IPlayerItem[]) => {
         if (validUrls.length > 0) {
           albumPreviewMap.value[id] = validUrls;
         }
-      } catch {}
+      } catch { }
     }
 
     imageLoadStatus.value[id] = "done";
@@ -207,7 +207,7 @@ let inFlight = false;
 
 const buildTabQuery = () => {
   const query: Record<string, any> = {
-    name: filterForm.name || undefined
+    city: filterForm.city || undefined
   };
 
   if (activeTab.value === 1) {
@@ -340,13 +340,14 @@ const openSearch = () => {
 };
 
 const onSearch = async (val?: string) => {
-  filterForm.name = (val || "").trim();
+  filterForm.city = (val || "").trim();
   showSearch.value = false;
   await fetchPlayers(true);
 };
 
 const clearSearch = async () => {
-  filterForm.name = "";
+  filterForm.city = "";
+  showSearch.value = false;
   await fetchPlayers(true);
 };
 
@@ -365,13 +366,8 @@ const goDetail = (item: IPlayerItem) => {
     <div class="box-border" style="height: 100%">
       <div class="sticky-header">
         <div class="top-tabs">
-          <div
-            v-for="(tab, index) in tabs"
-            :key="tab"
-            class="tab-item"
-            :class="{ active: activeTab === index }"
-            @click="onTabChange(index)"
-          >
+          <div v-for="(tab, index) in tabs" :key="tab" class="tab-item" :class="{ active: activeTab === index }"
+            @click="onTabChange(index)">
             {{ tab }}
           </div>
         </div>
@@ -381,19 +377,9 @@ const goDetail = (item: IPlayerItem) => {
         </div>
       </div>
 
-      <van-popup
-        v-model:show="showSearch"
-        position="top"
-        :style="{ width: '100%' }"
-      >
+      <van-popup v-model:show="showSearch" position="top" :style="{ width: '100%' }">
         <div class="search-bar">
-          <van-search
-            v-model="filterForm.name"
-            placeholder="搜索人物名称"
-            show-action
-            @search="onSearch"
-            @clear="clearSearch"
-          >
+          <van-search v-model="filterForm.city" placeholder="搜索地区" show-action @search="onSearch" @clear="clearSearch">
             <template #action>
               <div class="search-action" @click="closeSearch">取消</div>
             </template>
@@ -401,19 +387,9 @@ const goDetail = (item: IPlayerItem) => {
         </div>
       </van-popup>
 
-      <van-pull-refresh
-        v-model="refreshing"
-        @refresh="onRefresh"
-        class="page-refresh"
-      >
-        <van-list
-          v-model:loading="loading"
-          v-model:error="error"
-          :finished="finished"
-          finished-text="没有更多了"
-          error-text="加载失败，点击重试"
-          @load="onLoad"
-        >
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="page-refresh">
+        <van-list v-model:loading="loading" v-model:error="error" :finished="finished" finished-text="没有更多了"
+          error-text="加载失败，点击重试" @load="onLoad">
           <div class="list-wrap">
             <!-- 首次加载骨架屏 -->
             <template v-if="loading && pageNum === 1 && !cardList.length">
@@ -423,42 +399,20 @@ const goDetail = (item: IPlayerItem) => {
                 </div>
                 <div class="info-wrap">
                   <div class="name-row mt-1">
-                    <div
-                      class="skeleton-block"
-                      style="width: 120px; height: 20px; border-radius: 4px"
-                    ></div>
-                    <div
-                      class="skeleton-block"
-                      style="width: 24px; height: 24px; border-radius: 50%"
-                    ></div>
+                    <div class="skeleton-block" style="width: 120px; height: 20px; border-radius: 4px"></div>
+                    <div class="skeleton-block" style="width: 24px; height: 24px; border-radius: 50%"></div>
                   </div>
                   <div class="meta-row" style="margin-top: 12px">
-                    <div
-                      class="skeleton-block"
-                      style="width: 48px; height: 20px; border-radius: 4px"
-                    ></div>
-                    <div
-                      class="skeleton-block"
-                      style="width: 56px; height: 20px; border-radius: 4px"
-                    ></div>
-                    <div
-                      class="skeleton-block"
-                      style="width: 64px; height: 20px; border-radius: 4px"
-                    ></div>
+                    <div class="skeleton-block" style="width: 48px; height: 20px; border-radius: 4px"></div>
+                    <div class="skeleton-block" style="width: 56px; height: 20px; border-radius: 4px"></div>
+                    <div class="skeleton-block" style="width: 64px; height: 20px; border-radius: 4px"></div>
                   </div>
                   <div class="city-row" style="margin-top: 10px">
-                    <div
-                      class="skeleton-block"
-                      style="width: 80px; height: 14px; border-radius: 4px"
-                    ></div>
+                    <div class="skeleton-block" style="width: 80px; height: 14px; border-radius: 4px"></div>
                   </div>
                   <div class="album-row" style="margin-top: 10px">
-                    <div
-                      class="skeleton-block"
-                      style="width: 32px; height: 32px; border-radius: 4px"
-                      v-for="j in 3"
-                      :key="j"
-                    ></div>
+                    <div class="skeleton-block" style="width: 32px; height: 32px; border-radius: 4px" v-for="j in 3"
+                      :key="j"></div>
                   </div>
                 </div>
               </div>
@@ -466,29 +420,13 @@ const goDetail = (item: IPlayerItem) => {
 
             <!-- 真实数据 -->
             <template v-else>
-              <div
-                v-for="(item, index) in cardList"
-                :key="item.id || index"
-                class="player-card"
-                @click="goDetail(item)"
-              >
+              <div v-for="(item, index) in cardList" :key="item.id || index" class="player-card"
+                @click="goDetail(item)">
                 <div class="cover-wrap">
-                  <img
-                    v-if="coverUrl(item)"
-                    :src="coverUrl(item)"
-                    class="cover"
-                    alt="cover"
-                    loading="lazy"
-                  />
-                  <div
-                    v-else-if="isCoverLoading(item)"
-                    class="cover-empty skeleton-block"
-                  ></div>
+                  <img v-if="coverUrl(item)" :src="coverUrl(item)" class="cover" alt="cover" loading="lazy" />
+                  <div v-else-if="isCoverLoading(item)" class="cover-empty skeleton-block"></div>
                   <div v-else class="cover-empty">暂无照片</div>
-                  <span
-                    class="status-dot"
-                    :class="{ online: item.onlineStatus === 'ONLINE' }"
-                  ></span>
+                  <span class="status-dot" :class="{ online: item.onlineStatus === 'ONLINE' }"></span>
                   <div class="badge">
                     <span class="badge-text">真人认证</span>
                   </div>
@@ -498,17 +436,14 @@ const goDetail = (item: IPlayerItem) => {
                   <div class="name-row">
                     <div class="name">{{ item.name || "神秘玩家" }}</div>
                     <div class="like-btn" @click.stop="toggleCollect(item)">
-                      <van-icon
-                        :name="isCollected(item) ? 'like' : 'like-o'"
-                        size="20"
-                        :color="isCollected(item) ? '#ff4d4f' : '#666'"
-                      />
+                      <van-icon :name="isCollected(item) ? 'like' : 'like-o'" size="20"
+                        :color="isCollected(item) ? '#ff4d4f' : '#666'" />
                     </div>
                   </div>
 
                   <div class="city-row">
                     <van-icon name="location-o" class="mr-1" />
-                    <span>{{ item.area || "" }} </span>
+                    <span>{{ item.city || "" }} </span>
                   </div>
                   <div class="meta-row">
                     <span class="pill">{{ item.age || "20" }}岁</span>
@@ -519,36 +454,22 @@ const goDetail = (item: IPlayerItem) => {
                   </div>
 
                   <div class="album-row" v-if="cardImages(item).length > 0">
-                    <div
-                      v-for="(img, imgIdx) in cardImages(item)"
-                      :key="img"
-                      class="mini-wrap"
-                    >
+                    <div v-for="(img, imgIdx) in cardImages(item)" :key="img" class="mini-wrap">
                       <img class="mini" :src="img" alt="album" loading="lazy" />
-                      <div
-                        v-if="imgIdx === 2 && cardAlbumCount(item) > 3"
-                        class="more"
-                      >
+                      <div v-if="imgIdx === 2 && cardAlbumCount(item) > 3" class="more">
                         +{{ cardAlbumCount(item) - 3 }} >
                       </div>
                     </div>
                   </div>
                   <div class="album-row" v-else-if="isAlbumLoading(item)">
-                    <div
-                      class="skeleton-block"
-                      style="width: 32px; height: 32px; border-radius: 4px"
-                      v-for="j in albumSkelCount(item)"
-                      :key="'skel-' + j"
-                    ></div>
+                    <div class="skeleton-block" style="width: 32px; height: 32px; border-radius: 4px"
+                      v-for="j in albumSkelCount(item)" :key="'skel-' + j"></div>
                   </div>
                 </div>
               </div>
             </template>
 
-            <van-empty
-              v-if="!loading && !cardList.length"
-              description="暂无数据"
-            />
+            <van-empty v-if="!loading && !cardList.length" description="暂无数据" />
           </div>
         </van-list>
       </van-pull-refresh>
@@ -761,9 +682,11 @@ const goDetail = (item: IPlayerItem) => {
   0% {
     opacity: 0.4;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     opacity: 0.4;
   }
