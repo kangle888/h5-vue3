@@ -1,16 +1,27 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { showFailToast, Swipe, SwipeItem } from "vant";
+import { computed, onMounted, ref } from "vue";
+import { showFailToast, showSuccessToast, Swipe, SwipeItem } from "vant";
+import { useRoute } from "vue-router";
 import iosQr from "@/assets/download.png";
-import { useRouter } from "vue-router";
-import { getAttachmentObjectUrl } from "@/api/home";
+import { getAttachmentObjectUrl, getPromotionDownloadUrl, getPromotionPageInfo, trackPromotionEvent, type IPromotionPageInfo } from "@/api/home";
 import { getSysBannerInfoApi, type ISysBannerItem } from "@/api/sys-banner";
 
 defineOptions({ name: "LandingPage" });
-
-const router = useRouter();
+const route = useRoute();
 const loading = ref(false);
 const banners = ref<(ISysBannerItem & { imageSrc: string })[]>([]);
+const pageInfo = ref<IPromotionPageInfo>({});
+const trackedVisitKey = ref("");
+
+const promotionParams = computed(() => {
+  const query = route.query;
+  return {
+    pageId: String(query.pageId || query.pid || ""),
+    channelId: String(query.channelId || query.cid || ""),
+    staffId: String(query.staffId || query.sid || ""),
+    traceId: String(query.traceId || "")
+  };
+});
 
 const normalizeList = (res: ISysBannerItem[] | ISysBannerItem) => {
   if (Array.isArray(res)) return res;
@@ -64,12 +75,72 @@ const loadBanners = async () => {
   }
 };
 
-const goWebApp = () => {
-  router.push({ name: "Login" });
+const loadPromotionPageInfo = async () => {
+  try {
+    const res = await getPromotionPageInfo(promotionParams.value);
+    pageInfo.value = res || {};
+  } catch {
+    pageInfo.value = {};
+  }
 };
 
-onMounted(() => {
-  loadBanners();
+const buildTrackPayload = (eventType: "visit" | "download_click" | "install_open") => ({
+  ...promotionParams.value,
+  eventType,
+  sourcePath: route.fullPath,
+  userAgent: navigator.userAgent,
+  platform: route.query.platform ? String(route.query.platform) : "h5",
+  extra: {
+    pageTitle: pageInfo.value.title || ""
+  }
+});
+
+const trackEvent = async (eventType: "visit" | "download_click" | "install_open") => {
+  const cacheKey = `${eventType}-${promotionParams.value.pageId}-${promotionParams.value.channelId}-${promotionParams.value.staffId}`;
+  if (eventType === "visit" && trackedVisitKey.value === cacheKey) return;
+  try {
+    await trackPromotionEvent(buildTrackPayload(eventType));
+    if (eventType === "visit") trackedVisitKey.value = cacheKey;
+  } catch {
+    // ignore track error
+  }
+};
+
+const copyText = async (text: string) => {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    showSuccessToast("已复制链接");
+  } catch {
+    showFailToast("复制失败，请手动复制");
+  }
+};
+
+const downloadUrl = computed(() => pageInfo.value.downloadUrl || pageInfo.value.qrLink || "");
+const iosQrUrl = computed(() => pageInfo.value.iosQr || iosQr);
+const androidQrUrl = computed(() => pageInfo.value.androidQr || iosQr);
+const pageTitle = computed(() => pageInfo.value.title || "遇见");
+
+const buildDownloadUrl = (platform: "ios" | "android") => {
+  return getPromotionDownloadUrl({
+    pageId: promotionParams.value.pageId,
+    channelId: promotionParams.value.channelId,
+    staffId: promotionParams.value.staffId,
+    traceId: promotionParams.value.traceId,
+    platform
+  });
+};
+
+const handleDownload = async (platform: "ios" | "android") => {
+  await trackEvent("download_click");
+  const url = buildDownloadUrl(platform);
+  window.location.href = url;
+};
+
+onMounted(async () => {
+  await loadPromotionPageInfo();
+  await trackEvent("visit");
+  await loadBanners();
 });
 </script>
 
@@ -88,31 +159,26 @@ onMounted(() => {
             <div class="overlay"></div>
 
             <div class="center-content">
-              <h1 class="brand">遇见</h1>
+              <h1 class="brand">{{ pageTitle }}</h1>
               <p class="slogan">达人认证 · 超高颜值</p>
-
-              <!-- <div class="invite-box">
-                <span class="invite-label">邀请码</span>
-                <span class="invite-code">{{ inviteCode }}</span>
-                <button class="copy-btn" @click="copyInviteCode">复制</button>
-              </div> -->
 
               <div class="download-section">
                 <div class="download-title">扫码下载 App</div>
                 <div class="qr-grid">
                   <div class="qr-card">
-                    <img :src="iosQr" class="qr-img" alt="ios-qr" />
+                    <img :src="iosQrUrl" class="qr-img" alt="ios-qr" />
                     <p class="qr-label">iOS 下载</p>
+                    <button class="download-link" @click="handleDownload('ios')">下载 iOS</button>
                   </div>
                   <div class="qr-card">
-                    <img :src="iosQr" class="qr-img" alt="android-qr" />
+                    <img :src="androidQrUrl" class="qr-img" alt="android-qr" />
                     <p class="qr-label">Android 下载</p>
+                    <button class="download-link" @click="handleDownload('android')">下载 Android</button>
                   </div>
                 </div>
-                <p class="qr-tip">请使用系统相机扫码下载</p>
+                <p class="qr-tip">安装完成后返回桌面打开 App，系统将自动记录激活</p>
+                <button class="download-link full-btn" @click="copyText(downloadUrl || buildDownloadUrl('android'))">复制真实下载链接</button>
               </div>
-
-              <!-- <button class="cta-btn web-btn" @click="goWebApp">进入网页版</button> -->
             </div>
           </div>
         </SwipeItem>
@@ -208,40 +274,6 @@ onMounted(() => {
   color: #e6caa0;
 }
 
-.invite-box {
-  margin-top: 26px;
-  height: 42px;
-  border-radius: 21px;
-  background: rgba(245, 223, 189, 0.9);
-  color: #2c1d0e;
-  display: flex;
-  align-items: center;
-  padding: 0 10px 0 14px;
-  gap: 8px;
-}
-
-.invite-label {
-  font-size: 14px;
-  color: #6d5133;
-}
-
-.invite-code {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: #3b2a17;
-}
-
-.copy-btn {
-  border: none;
-  height: 30px;
-  padding: 0 14px;
-  border-radius: 15px;
-  background: #f3e4cc;
-  color: #4f3620;
-  font-size: 14px;
-}
-
 .download-section {
   width: 100%;
   margin-top: 18px;
@@ -298,18 +330,19 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.72);
 }
 
-.cta-btn {
-  margin-top: 14px;
-  width: 270px;
-  height: 46px;
-  border-radius: 23px;
+.download-link {
+  width: 100%;
   border: none;
-  font-size: 18px;
-  font-weight: 600;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 15px;
+  background: #f3e4cc;
+  color: #4f3620;
+  font-size: 12px;
+  margin-top: 8px;
 }
 
-.web-btn {
-  background: #73cfee;
-  color: #0d2f40;
+.full-btn {
+  width: 100%;
 }
 </style>
