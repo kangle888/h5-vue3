@@ -57,13 +57,11 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 9000,
-      // 仅在 proxy 中配置的代理前缀， mock-dev-server 才会拦截并 mock
-      // doc: https://github.com/pengzhanbo/vite-plugin-mock-dev-server
+      // 本地开发直接代理到后端，保持和后端 /play2 路径一致
       proxy: {
-        "^/play": {
-          target: "http://192.168.31.83:8080/play",
-          changeOrigin: true,
-          rewrite: path => path.replace(/^\/play/, "")
+        '/play2': {
+          target: 'http://localhost:9099',
+          changeOrigin: true
         }
       }
     },
