@@ -3,7 +3,14 @@ import { computed, onMounted, ref } from "vue";
 import { showFailToast, showSuccessToast, Swipe, SwipeItem } from "vant";
 import { useRoute } from "vue-router";
 import iosQr from "@/assets/download.png";
-import { getAttachmentObjectUrl, getPromotionDownloadUrl, getPromotionPageInfo, trackPromotionEvent, type IPromotionPageInfo } from "@/api/home";
+import {
+  getAttachmentObjectUrl,
+  getPromotionPageInfo,
+  initTraceApi,
+  trackPromotionEvent,
+  writeClipboard,
+  type IPromotionPageInfo
+} from "@/api/home";
 import { getSysBannerInfoApi, type ISysBannerItem } from "@/api/sys-banner";
 
 defineOptions({ name: "LandingPage" });
@@ -11,7 +18,8 @@ const route = useRoute();
 const loading = ref(false);
 const banners = ref<(ISysBannerItem & { imageSrc: string })[]>([]);
 const pageInfo = ref<IPromotionPageInfo>({});
-const trackedVisitKey = ref("");
+// traceId: 服务端生成，存入 localStorage 和剪贴板，用于 App 首次登录归因
+const currentTraceId = ref("");
 
 const promotionParams = computed(() => {
   const query = route.query;
@@ -30,7 +38,13 @@ const normalizeList = (res: ISysBannerItem[] | ISysBannerItem) => {
 };
 
 const getBannerFiles = (item: ISysBannerItem) => {
-  const list = [item.banner1, item.banner2, item.banner3, item.banner4, item.banner5];
+  const list = [
+    item.banner1,
+    item.banner2,
+    item.banner3,
+    item.banner4,
+    item.banner5
+  ];
   return list.map(v => (v || "").trim()).filter(Boolean);
 };
 
@@ -49,7 +63,11 @@ const loadBanners = async () => {
         const fallback = item.imageUrl || item.image || "";
         if (fallback) {
           let imageSrc = "";
-          if (fallback.startsWith("http://") || fallback.startsWith("https://") || fallback.startsWith("blob:")) {
+          if (
+            fallback.startsWith("http://") ||
+            fallback.startsWith("https://") ||
+            fallback.startsWith("blob:")
+          ) {
             imageSrc = fallback;
           } else {
             imageSrc = await getAttachmentObjectUrl(fallback);
@@ -84,62 +102,67 @@ const loadPromotionPageInfo = async () => {
   }
 };
 
-const buildTrackPayload = (eventType: "visit" | "download_click" | "install_open") => ({
-  ...promotionParams.value,
-  eventType,
-  sourcePath: route.fullPath,
-  userAgent: navigator.userAgent,
-  platform: route.query.platform ? String(route.query.platform) : "h5",
-  extra: {
-    pageTitle: pageInfo.value.title || ""
-  }
-});
-
-const trackEvent = async (eventType: "visit" | "download_click" | "install_open") => {
-  const cacheKey = `${eventType}-${promotionParams.value.pageId}-${promotionParams.value.channelId}-${promotionParams.value.staffId}`;
-  if (eventType === "visit" && trackedVisitKey.value === cacheKey) return;
+const trackEvent = async (eventType: "download_click") => {
   try {
-    await trackPromotionEvent(buildTrackPayload(eventType));
-    if (eventType === "visit") trackedVisitKey.value = cacheKey;
+    await trackPromotionEvent({
+      ...promotionParams.value,
+      traceId: currentTraceId.value,
+      eventType,
+      sourcePath: route.fullPath,
+      userAgent: navigator.userAgent,
+      platform: route.query.platform ? String(route.query.platform) : "h5"
+    });
   } catch {
-    // ignore track error
+    // ignore
   }
 };
 
-const copyText = async (text: string) => {
-  if (!text) return;
+/** 初始化推广追踪：由服务端生成 traceId，并将其写入剪贴板和 localStorage */
+const initTrace = async () => {
   try {
-    await navigator.clipboard.writeText(text);
-    showSuccessToast("已复制链接");
+    const res = await initTraceApi(promotionParams.value);
+    const traceId = (res as any)?.data?.traceId || (res as any)?.traceId || "";
+    if (!traceId) return;
+    currentTraceId.value = traceId;
+    // 写入 localStorage（供同域 H5 登录页读取）
+    localStorage.setItem("promotion_trace_id", traceId);
+    localStorage.setItem(
+      "promotion_page_id",
+      promotionParams.value.pageId || ""
+    );
+    localStorage.setItem(
+      "promotion_channel_id",
+      promotionParams.value.channelId || ""
+    );
+    localStorage.setItem(
+      "promotion_staff_id",
+      promotionParams.value.staffId || ""
+    );
+    // 写入剪贴板（格式固定，App 读取后解析）
+    await writeClipboard(
+      `PROMO:${traceId}:${promotionParams.value.channelId || ""}:${promotionParams.value.staffId || ""}`
+    );
   } catch {
-    showFailToast("复制失败，请手动复制");
+    // ignore
   }
 };
 
-const downloadUrl = computed(() => pageInfo.value.downloadUrl || pageInfo.value.qrLink || "");
-const iosQrUrl = computed(() => pageInfo.value.iosQr || iosQr);
-const androidQrUrl = computed(() => pageInfo.value.androidQr || iosQr);
-const pageTitle = computed(() => pageInfo.value.title || "遇见");
-
-const buildDownloadUrl = (platform: "ios" | "android") => {
-  return getPromotionDownloadUrl({
-    pageId: promotionParams.value.pageId,
-    channelId: promotionParams.value.channelId,
-    staffId: promotionParams.value.staffId,
-    traceId: promotionParams.value.traceId,
-    platform
-  });
-};
-
-const handleDownload = async (platform: "ios" | "android") => {
+/**
+ * 下载处理：自动检测平台（iOS/Android），无需用户手动选择
+ * 一门 App iOS 和 Android 共用同一个下载链接时，也能正确归因平台
+ */
+const handleDownload = async () => {
   await trackEvent("download_click");
-  const url = buildDownloadUrl(platform);
-  window.location.href = url;
+  // 直接访问指定的下载链接
+  const directUrl = "https://beta4.appdone.club/UlWG";
+  const newWindow = window.open(directUrl, "_blank");
+  if (newWindow) newWindow.opener = null;
 };
 
 onMounted(async () => {
   await loadPromotionPageInfo();
-  await trackEvent("visit");
+  // initTrace 替代旧的 visit track：服务端生成 traceId，写剪贴板，写 localStorage
+  await initTrace();
   await loadBanners();
 });
 </script>
@@ -151,33 +174,36 @@ onMounted(async () => {
     </div>
 
     <template v-else>
-      <Swipe v-if="banners.length" class="landing-swiper" vertical :loop="true" :autoplay="3500" :show-indicators="true"
-        indicator-color="#d7b98f">
+      <Swipe
+        v-if="banners.length"
+        class="landing-swiper"
+        vertical
+        :loop="true"
+        :autoplay="3500"
+        :show-indicators="true"
+        indicator-color="#d7b98f"
+      >
         <SwipeItem v-for="item in banners" :key="item.id || item.imageSrc">
           <div class="slide-page">
             <img class="hero-bg" :src="item.imageSrc" alt="banner" />
             <div class="overlay"></div>
 
             <div class="center-content">
-              <h1 class="brand">{{ pageTitle }}</h1>
-              <p class="slogan">达人认证 · 超高颜值</p>
-
               <div class="download-section">
-                <div class="download-title">扫码下载 App</div>
                 <div class="qr-grid">
                   <div class="qr-card">
-                    <img :src="iosQrUrl" class="qr-img" alt="ios-qr" />
                     <p class="qr-label">iOS 下载</p>
-                    <button class="download-link" @click="handleDownload('ios')">下载 iOS</button>
+                    <button class="download-link" @click="handleDownload()">
+                      下载 iOS
+                    </button>
                   </div>
                   <div class="qr-card">
-                    <img :src="androidQrUrl" class="qr-img" alt="android-qr" />
                     <p class="qr-label">Android 下载</p>
-                    <button class="download-link" @click="handleDownload('android')">下载 Android</button>
+                    <button class="download-link" @click="handleDownload()">
+                      下载 Android
+                    </button>
                   </div>
                 </div>
-                <p class="qr-tip">安装完成后返回桌面打开 App，系统将自动记录激活</p>
-                <button class="download-link full-btn" @click="copyText(downloadUrl || buildDownloadUrl('android'))">复制真实下载链接</button>
               </div>
             </div>
           </div>
@@ -193,7 +219,7 @@ onMounted(async () => {
 
 <style scoped lang="less">
 .landing-page {
-  height: 100vh;
+  min-height: 100vh;
   background: #030412;
   color: #fff;
 }
@@ -230,9 +256,13 @@ onMounted(async () => {
 
 .slide-page {
   position: relative;
-  height: 100vh;
+  min-height: 100vh;
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 40px;
 }
 
 .hero-bg {
@@ -246,14 +276,16 @@ onMounted(async () => {
 .overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(4, 6, 20, 0.4) 0%, rgba(4, 6, 20, 0.75) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(4, 6, 20, 0.4) 0%,
+    rgba(4, 6, 20, 0.75) 100%
+  );
 }
 
 .center-content {
-  position: absolute;
-  left: 24px;
-  right: 24px;
-  bottom: 120px;
+  position: relative;
+  margin: 0 24px 40px;
   z-index: 3;
   display: flex;
   flex-direction: column;
@@ -279,8 +311,12 @@ onMounted(async () => {
   margin-top: 18px;
   padding: 14px 14px 12px;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(12, 17, 36, 0.66) 0%, rgba(12, 17, 36, 0.42) 100%);
-  border: 1px solid rgba(215, 185, 143, 0.3);
+  background: linear-gradient(
+    180deg,
+    rgba(12, 17, 36, 0.36) 0%,
+    rgba(12, 17, 36, 0.12) 100%
+  );
+  border: 1px solid rgba(215, 185, 143, 0.18);
   backdrop-filter: blur(4px);
 }
 
@@ -301,8 +337,8 @@ onMounted(async () => {
 .qr-card {
   padding: 10px 8px 8px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -336,7 +372,7 @@ onMounted(async () => {
   height: 30px;
   padding: 0 14px;
   border-radius: 15px;
-  background: #f3e4cc;
+  background: rgba(243, 228, 204, 0.9);
   color: #4f3620;
   font-size: 12px;
   margin-top: 8px;

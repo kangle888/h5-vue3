@@ -13,6 +13,7 @@ import {
   sendCodeApi,
   type ICAuthLoginResult
 } from "@/api/c-auth";
+import { reportLoginApi } from "@/api/home";
 
 defineOptions({ name: "Login" });
 
@@ -54,6 +55,69 @@ const saveLogin = (res: ICAuthLoginResult, mobile: string) => {
   localStorage.setItem("c_refresh_token", res?.refreshToken || "");
   localStorage.setItem("c_user_info", JSON.stringify(res?.userInfo || {}));
   localStorage.setItem("c_last_mobile", mobile);
+};
+
+/**
+ * 解析剪贴板中的推广数据（跨沙盒归因核心逻辑）
+ */
+const parseClipboardPromo = async () => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      const text = await navigator.clipboard.readText();
+      // 格式：PROMO:traceId:channelId:staffId
+      if (text && text.startsWith('PROMO:')) {
+        const parts = text.split(':');
+        if (parts.length >= 2) {
+          return {
+            traceId: parts[1],
+            channelId: parts[2] || '',
+            staffId: parts[3] || ''
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('读取剪贴板归因数据失败', err);
+  }
+  return null;
+};
+
+/**
+ * 登录/注册成功后，异步上报推广归因（不阻塞登录流程）
+ * 优先读 localStorage，若无则读系统剪贴板（用于跨浏览器到App的归因），归因成功后清除数据
+ */
+const reportPromotion = async (userId: string) => {
+  // 1. 优先从 localStorage 读取（适用于没有跨沙盒的纯 H5 环境）
+  let traceId   = localStorage.getItem("promotion_trace_id") || "";
+  let pageId    = localStorage.getItem("promotion_page_id") || "";
+  let channelId = localStorage.getItem("promotion_channel_id") || "";
+  let staffId   = localStorage.getItem("promotion_staff_id") || "";
+
+  // 2. 若无缓存（因为独立 App Webview 存在沙盒隔离），则尝试读取系统剪贴板
+  if (!traceId) {
+    const clipData = await parseClipboardPromo();
+    if (clipData) {
+      traceId = clipData.traceId;
+      channelId = clipData.channelId;
+      staffId = clipData.staffId;
+    }
+  }
+
+  if (!traceId && !channelId && !staffId) return; // 没有推广数据，不上报
+
+  reportLoginApi({ traceId, userId, pageId, channelId, staffId, eventType: "register" })
+    .then(() => {
+      // 归因成功后清除数据，防止后续重复上报
+      localStorage.removeItem("promotion_trace_id");
+      localStorage.removeItem("promotion_page_id");
+      localStorage.removeItem("promotion_channel_id");
+      localStorage.removeItem("promotion_staff_id");
+      // 尝试清空剪贴板中的归因标记（不强制要求成功）
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText("").catch(() => {});
+      }
+    })
+    .catch(() => { /* 归因失败不影响登录 */ });
 };
 
 const switchMode = (nextMode: "password" | "verify") => {
@@ -157,6 +221,9 @@ const submitVerify = async () => {
       deviceId: getDeviceId()
     });
     saveLogin(res, form.mobile);
+    // 登录/注册成功后异步上报推广归因（不阻塞跳转）
+    const userId = res?.userInfo?.id || "";
+    if (userId) reportPromotion(userId);
     showSuccessToast("验证成功，已登录");
     router.replace({ name: "Home" });
   } catch {

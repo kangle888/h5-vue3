@@ -1,7 +1,7 @@
 import axios from "axios";
 import { http } from "@/utils/http";
 
-export type PromotionEventType = "visit" | "download_click" | "install_open";
+export type PromotionEventType = "visit" | "download_click" | "install_open" | "register";
 
 export interface IPromotionTrackPayload {
   pageId?: string;
@@ -62,6 +62,69 @@ export const getPromotionDownloadUrl = (params: {
       return acc;
     }, {})
   ).toString()}`;
+};
+
+/** 初始化推广追踪：服务端生成 traceId，记录 visit 事件 */
+export const initTraceApi = (data: {
+  pageId?: string;
+  channelId?: string;
+  staffId?: string;
+}) => {
+  return http.request<{ traceId: string }>({
+    url: "/promotion/initTrace",
+    method: "post",
+    data
+  });
+};
+
+/** 登录归因回传：登录/注册成功后将 userId 与 traceId 绑定 */
+export const reportLoginApi = (data: {
+  traceId?: string;
+  userId?: string;
+  pageId?: string;
+  channelId?: string;
+  staffId?: string;
+  eventType?: string;
+}) => {
+  return http.request<any>({
+    url: "/promotion/reportLogin",
+    method: "post",
+    data
+  });
+};
+
+/**
+ * 检测当前设备平台
+ * 一门 App iOS/Android 共用同一下载链接，落地页需自动识别
+ */
+export const detectPlatform = (): "ios" | "android" | "h5" => {
+  const ua = navigator.userAgent.toLowerCase();
+  if (/iphone|ipad|ipod/.test(ua)) return "ios";
+  if (/android/.test(ua)) return "android";
+  return "h5";
+};
+
+/** 写入剪贴板（失败时静默，不影响主流程） */
+export const writeClipboard = async (text: string): Promise<void> => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    }
+  } catch {
+    // 部分浏览器不支持，静默处理
+  }
+};
+
+/** 读取剪贴板（失败时返回空字符串） */
+export const readClipboard = async (): Promise<string> => {
+  try {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      return await navigator.clipboard.readText();
+    }
+  } catch {
+    // 部分浏览器不支持，静默处理
+  }
+  return "";
 };
 
 export interface IPlayerItem {
