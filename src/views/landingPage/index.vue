@@ -20,14 +20,19 @@ const banners = ref<(ISysBannerItem & { imageSrc: string })[]>([]);
 const pageInfo = ref<IPromotionPageInfo>({});
 // traceId: 服务端生成，存入 localStorage 和剪贴板，用于 App 首次登录归因
 const currentTraceId = ref("");
+// initTrace 返回的真实 channelId / pageId（URL 里可能只有 channelCode）
+const resolvedChannelId = ref("");
+const resolvedPageId    = ref("");
 
 const promotionParams = computed(() => {
   const query = route.query;
   return {
-    pageId: String(query.pageId || query.pid || ""),
-    channelId: String(query.channelId || query.cid || ""),
-    staffId: String(query.staffId || query.sid || ""),
-    traceId: String(query.traceId || "")
+    pageId:      String(query.pageId      || query.pid  || ""),
+    channelId:   String(query.channelId   || query.cid  || ""),
+    channelCode: String(query.channelCode || query.cc   || ""),  // 后端将用于反查真实 channelId
+    staffId:     String(query.staffId     || query.sid  || ""),
+    staffName:   String(query.staffName   || query.sn   || ""),
+    traceId:     String(query.traceId     || "")
   };
 });
 
@@ -120,27 +125,32 @@ const trackEvent = async (eventType: "download_click") => {
 /** 初始化推广追踪：由服务端生成 traceId，并将其写入剪贴板和 localStorage */
 const initTrace = async () => {
   try {
-    const res = await initTraceApi(promotionParams.value);
-    const traceId = (res as any)?.data?.traceId || (res as any)?.traceId || "";
+    // 把 channelCode/staffName 一并传给后端，后端自动通过 channelCode 反查并返回真实 channelId
+    const res = await initTraceApi({
+      pageId:      promotionParams.value.pageId,
+      channelId:   promotionParams.value.channelId,
+      channelCode: promotionParams.value.channelCode,
+      staffId:     promotionParams.value.staffId,
+      staffName:   promotionParams.value.staffName,
+    } as any);
+    const data    = (res as any)?.data || {};
+    const traceId = data.traceId || "";
     if (!traceId) return;
     currentTraceId.value = traceId;
+
+    // 使用后端返回的真实 channelId（可能是通过 channelCode 反查得到的）
+    resolvedChannelId.value = data.channelId || promotionParams.value.channelId || "";
+    resolvedPageId.value    = data.pageId    || promotionParams.value.pageId    || "";
+
     // 写入 localStorage（供同域 H5 登录页读取）
-    localStorage.setItem("promotion_trace_id", traceId);
-    localStorage.setItem(
-      "promotion_page_id",
-      promotionParams.value.pageId || ""
-    );
-    localStorage.setItem(
-      "promotion_channel_id",
-      promotionParams.value.channelId || ""
-    );
-    localStorage.setItem(
-      "promotion_staff_id",
-      promotionParams.value.staffId || ""
-    );
+    localStorage.setItem("promotion_trace_id",  traceId);
+    localStorage.setItem("promotion_page_id",    resolvedPageId.value);
+    localStorage.setItem("promotion_channel_id", resolvedChannelId.value);
+    localStorage.setItem("promotion_staff_id",   promotionParams.value.staffId || "");
+
     // 写入剪贴板（格式固定，App 读取后解析）
     await writeClipboard(
-      `PROMO:${traceId}:${promotionParams.value.channelId || ""}:${promotionParams.value.staffId || ""}`
+      `PROMO:${traceId}:${resolvedChannelId.value}:${promotionParams.value.staffId || ""}`
     );
   } catch {
     // ignore
@@ -149,40 +159,43 @@ const initTrace = async () => {
 
 /**
  * 下载处理：
- * 1. 先调后端记录 download_click 事件（等待完成再跳转，防止网络差导致没记到）
- * 2. 通过后端 /promotion/download 中转跳转，自动携带 pageId/channelId/staffId/traceId 等归因参数
- * 3. 如果后端中转失败，应急备用直连下载URL，不阻塞用户
+ * 1. 先用真实 channelId 记录 download_click 事件
+ * 2. 通过后端 /promotion/download 中转，携带完整归因参数
  */
 const handleDownload = async () => {
+  // 使用 resolvedChannelId（initTrace 反查得到的）而非 URL 里的空 channelId
+  const cid = resolvedChannelId.value || promotionParams.value.channelId;
+  const pid = resolvedPageId.value    || promotionParams.value.pageId;
+  const sid = promotionParams.value.staffId;
+  const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android";
+
   // 先记录下载点击事件（await 确保记录到了再跳转）
   try {
     await trackPromotionEvent({
-      ...promotionParams.value,
-      traceId: currentTraceId.value,
+      pageId:    pid,
+      channelId: cid,
+      staffId:   sid,
+      traceId:   currentTraceId.value,
       eventType: "download_click",
       userAgent: navigator.userAgent,
-      platform: /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android"
+      platform
     });
   } catch {
     // 记录失败不阻塞下载
   }
 
-  // 构建带归因参数的后端中转地址
-  const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android";
+  // 构建后端中转地址（后端会 302 跳转到真实下载地址）
   const params = new URLSearchParams();
-  if (promotionParams.value.pageId)    params.set("pageId",    promotionParams.value.pageId);
-  if (promotionParams.value.channelId) params.set("channelId", promotionParams.value.channelId);
-  if (promotionParams.value.staffId)   params.set("staffId",   promotionParams.value.staffId);
-  if (currentTraceId.value)            params.set("traceId",   currentTraceId.value);
+  if (pid) params.set("pageId",    pid);
+  if (cid) params.set("channelId", cid);
+  if (sid) params.set("staffId",   sid);
+  if (currentTraceId.value) params.set("traceId", currentTraceId.value);
   params.set("platform", platform);
 
   const baseApi = import.meta.env.VITE_BASE_API || "";
-  const redirectUrl = baseApi
+  window.location.href = baseApi
     ? `${baseApi}/promotion/download?${params.toString()}`
-    : "https://beta4.appdone.club/UlWG";  // 备用，不应该走到这里
-
-  // 跳转：后端会 302 重定向到真实下载地址
-  window.location.href = redirectUrl;
+    : "https://beta4.appdone.club/UlWG";
 };
 
 onMounted(async () => {
