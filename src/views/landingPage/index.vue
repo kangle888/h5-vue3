@@ -148,15 +148,41 @@ const initTrace = async () => {
 };
 
 /**
- * 下载处理：自动检测平台（iOS/Android），无需用户手动选择
- * 一门 App iOS 和 Android 共用同一个下载链接时，也能正确归因平台
+ * 下载处理：
+ * 1. 先调后端记录 download_click 事件（等待完成再跳转，防止网络差导致没记到）
+ * 2. 通过后端 /promotion/download 中转跳转，自动携带 pageId/channelId/staffId/traceId 等归因参数
+ * 3. 如果后端中转失败，应急备用直连下载URL，不阻塞用户
  */
 const handleDownload = async () => {
-  await trackEvent("download_click");
-  // 直接访问指定的下载链接
-  const directUrl = "https://beta4.appdone.club/UlWG";
-  const newWindow = window.open(directUrl, "_blank");
-  if (newWindow) newWindow.opener = null;
+  // 先记录下载点击事件（await 确保记录到了再跳转）
+  try {
+    await trackPromotionEvent({
+      ...promotionParams.value,
+      traceId: currentTraceId.value,
+      eventType: "download_click",
+      userAgent: navigator.userAgent,
+      platform: /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android"
+    });
+  } catch {
+    // 记录失败不阻塞下载
+  }
+
+  // 构建带归因参数的后端中转地址
+  const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android";
+  const params = new URLSearchParams();
+  if (promotionParams.value.pageId)    params.set("pageId",    promotionParams.value.pageId);
+  if (promotionParams.value.channelId) params.set("channelId", promotionParams.value.channelId);
+  if (promotionParams.value.staffId)   params.set("staffId",   promotionParams.value.staffId);
+  if (currentTraceId.value)            params.set("traceId",   currentTraceId.value);
+  params.set("platform", platform);
+
+  const baseApi = import.meta.env.VITE_BASE_API || "";
+  const redirectUrl = baseApi
+    ? `${baseApi}/promotion/download?${params.toString()}`
+    : "https://beta4.appdone.club/UlWG";  // 备用，不应该走到这里
+
+  // 跳转：后端会 302 重定向到真实下载地址
+  window.location.href = redirectUrl;
 };
 
 onMounted(async () => {
