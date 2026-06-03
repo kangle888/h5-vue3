@@ -188,6 +188,8 @@ const submitPassword = async () => {
       deviceId: getDeviceId()
     });
     saveLogin(res, form.mobile);
+    const userId = res?.userInfo?.id || "";
+    if (userId) reportPromotion(userId);
     showSuccessToast("登录成功");
     router.replace({ name: "Home" });
   } catch {

@@ -186,6 +186,7 @@ const handleDownload = async () => {
       staffId:   sid,
       traceId:   currentTraceId.value,
       eventType: "download_click",
+      sourcePath: route.fullPath,
       userAgent: navigator.userAgent,
       platform
     });
@@ -204,7 +205,7 @@ const handleDownload = async () => {
   const baseApi = import.meta.env.VITE_BASE_API || "";
   const downloadUrl = baseApi
     ? `${baseApi}/promotion/download?${params.toString()}`
-    : "https://beta4.appdone.club/UlWG";
+    : "https://beta3.appdone.club/UlWG";
 
   // iOS Safari 对直接 location.href + 302 跳转兼容性较差，改为新开标签页，避免当前页被打断
   if (platform === "ios") {
