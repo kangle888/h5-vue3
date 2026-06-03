@@ -178,22 +178,6 @@ const handleDownload = async () => {
   const sid = promotionParams.value.staffId;
   const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android";
 
-  // 先记录下载点击事件（await 确保记录到了再跳转）
-  try {
-    await trackPromotionEvent({
-      pageId:    pid,
-      channelId: cid,
-      staffId:   sid,
-      traceId:   currentTraceId.value,
-      eventType: "download_click",
-      sourcePath: route.fullPath,
-      userAgent: navigator.userAgent,
-      platform
-    });
-  } catch {
-    // 记录失败不阻塞下载
-  }
-
   // 构建后端中转地址（后端会 302 跳转到真实下载地址）
   const params = new URLSearchParams();
   if (pid) params.set("pageId",    pid);
@@ -206,6 +190,8 @@ const handleDownload = async () => {
   const downloadUrl = baseApi
     ? `${baseApi}/promotion/download?${params.toString()}`
     : "https://beta3.appdone.club/UlWG";
+
+  // 仅保留后端中转埋点，避免前端重复记一次下载导致总量翻倍
 
   // iOS Safari 对直接 location.href + 302 跳转兼容性较差，改为新开标签页，避免当前页被打断
   if (platform === "ios") {
