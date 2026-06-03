@@ -111,9 +111,10 @@ const loadPromotionPageInfo = async () => {
 
 const trackEvent = async (eventType: "download_click") => {
   try {
+    const traceId = currentTraceId.value || localStorage.getItem("promotion_trace_id") || "";
     await trackPromotionEvent({
       ...promotionParams.value,
-      traceId: currentTraceId.value,
+      traceId,
       eventType,
       sourcePath: route.fullPath,
       userAgent: navigator.userAgent,
