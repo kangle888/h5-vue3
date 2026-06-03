@@ -17,7 +17,7 @@ defineOptions({ name: "LandingPage" });
 const route = useRoute();
 const loading = ref(false);
 const banners = ref<(ISysBannerItem & { imageSrc: string })[]>([]);
-const pageInfo = ref<IPromotionPageInfo>({});
+
 // traceId: 服务端生成，存入 localStorage 和剪贴板，用于 App 首次登录归因
 const currentTraceId = ref("");
 // initTrace 返回的真实 channelId / pageId（URL 里可能只有 channelCode）
@@ -100,14 +100,7 @@ const loadBanners = async () => {
   }
 };
 
-const loadPromotionPageInfo = async () => {
-  try {
-    const res = await getPromotionPageInfo(promotionParams.value);
-    pageInfo.value = res || {};
-  } catch {
-    pageInfo.value = {};
-  }
-};
+
 
 const trackEvent = async (eventType: "download_click") => {
   try {
@@ -211,7 +204,11 @@ const handleDownload = async () => {
 };
 
 onMounted(async () => {
-  await loadPromotionPageInfo();
+  // 每次进入落地页先清理上一轮推广归因，避免旧 traceId / channelId 干扰本次点击下载
+  localStorage.removeItem("promotion_trace_id");
+  localStorage.removeItem("promotion_page_id");
+  localStorage.removeItem("promotion_channel_id");
+  localStorage.removeItem("promotion_staff_id");
   // initTrace 替代旧的 visit track：服务端生成 traceId，写剪贴板，写 localStorage
   await initTrace();
   await loadBanners();
