@@ -186,6 +186,9 @@ const handleDownload = async () => {
   if (currentTraceId.value) params.set("traceId", currentTraceId.value);
   params.set("platform", platform);
 
+  const traceId = currentTraceId.value || localStorage.getItem("promotion_trace_id") || "";
+  if (traceId) params.set("traceId", traceId);
+
   const baseApi = import.meta.env.VITE_BASE_API || "";
   const downloadUrl = baseApi
     ? `${baseApi}/promotion/download?${params.toString()}`
