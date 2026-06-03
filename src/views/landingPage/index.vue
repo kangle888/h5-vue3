@@ -23,6 +23,8 @@ const currentTraceId = ref("");
 // initTrace 返回的真实 channelId / pageId（URL 里可能只有 channelCode）
 const resolvedChannelId = ref("");
 const resolvedPageId    = ref("");
+const traceReady = ref(false);
+let traceInitPromise: Promise<void> | null = null;
 
 const promotionParams = computed(() => {
   const query = route.query;
@@ -124,37 +126,42 @@ const trackEvent = async (eventType: "download_click") => {
 
 /** 初始化推广追踪：由服务端生成 traceId，并将其写入剪贴板和 localStorage */
 const initTrace = async () => {
-  try {
-    // 把 channelCode/staffName 一并传给后端，后端自动通过 channelCode 反查并返回真实 channelId
-    const res = await initTraceApi({
-      pageId:      promotionParams.value.pageId,
-      channelId:   promotionParams.value.channelId,
-      channelCode: promotionParams.value.channelCode,
-      staffId:     promotionParams.value.staffId,
-      staffName:   promotionParams.value.staffName,
-    } as any);
-    const data    = (res as any)?.data || {};
-    const traceId = data.traceId || "";
-    if (!traceId) return;
-    currentTraceId.value = traceId;
+  if (traceInitPromise) return traceInitPromise;
+  traceInitPromise = (async () => {
+    try {
+      // 把 channelCode/staffName 一并传给后端，后端自动通过 channelCode 反查并返回真实 channelId
+      const res = await initTraceApi({
+        pageId:      promotionParams.value.pageId,
+        channelId:   promotionParams.value.channelId,
+        channelCode: promotionParams.value.channelCode,
+        staffId:     promotionParams.value.staffId,
+        staffName:   promotionParams.value.staffName,
+      } as any);
+      const data    = (res as any)?.data || {};
+      const traceId = data.traceId || "";
+      if (!traceId) return;
+      currentTraceId.value = traceId;
 
-    // 使用后端返回的真实 channelId（可能是通过 channelCode 反查得到的）
-    resolvedChannelId.value = data.channelId || promotionParams.value.channelId || "";
-    resolvedPageId.value    = data.pageId    || promotionParams.value.pageId    || "";
+      // 使用后端返回的真实 channelId（可能是通过 channelCode 反查得到的）
+      resolvedChannelId.value = data.channelId || promotionParams.value.channelId || "";
+      resolvedPageId.value    = data.pageId    || promotionParams.value.pageId    || "";
 
-    // 写入 localStorage（供同域 H5 登录页读取）
-    localStorage.setItem("promotion_trace_id",  traceId);
-    localStorage.setItem("promotion_page_id",    resolvedPageId.value);
-    localStorage.setItem("promotion_channel_id", resolvedChannelId.value);
-    localStorage.setItem("promotion_staff_id",   promotionParams.value.staffId || "");
+      // 写入 localStorage（供同域 H5 登录页读取）
+      localStorage.setItem("promotion_trace_id",  traceId);
+      localStorage.setItem("promotion_page_id",    resolvedPageId.value);
+      localStorage.setItem("promotion_channel_id", resolvedChannelId.value);
+      localStorage.setItem("promotion_staff_id",   promotionParams.value.staffId || "");
 
-    // 写入剪贴板（格式固定，App 读取后解析）
-    await writeClipboard(
-      `PROMO:${traceId}:${resolvedChannelId.value}:${promotionParams.value.staffId || ""}`
-    );
-  } catch {
-    // ignore
-  }
+      // 写入剪贴板（格式固定，App 读取后解析）
+      await writeClipboard(
+        `PROMO:${traceId}:${resolvedChannelId.value}:${promotionParams.value.staffId || ""}`
+      );
+      traceReady.value = true;
+    } catch {
+      // ignore
+    }
+  })();
+  return traceInitPromise;
 };
 
 /**
@@ -163,6 +170,8 @@ const initTrace = async () => {
  * 2. 通过后端 /promotion/download 中转，携带完整归因参数
  */
 const handleDownload = async () => {
+  await initTrace();
+
   // 使用 resolvedChannelId（initTrace 反查得到的）而非 URL 里的空 channelId
   const cid = resolvedChannelId.value || promotionParams.value.channelId;
   const pid = resolvedPageId.value    || promotionParams.value.pageId;
@@ -193,9 +202,21 @@ const handleDownload = async () => {
   params.set("platform", platform);
 
   const baseApi = import.meta.env.VITE_BASE_API || "";
-  window.location.href = baseApi
+  const downloadUrl = baseApi
     ? `${baseApi}/promotion/download?${params.toString()}`
     : "https://beta4.appdone.club/UlWG";
+
+  // iOS Safari 对直接 location.href + 302 跳转兼容性较差，改为新开标签页，避免当前页被打断
+  if (platform === "ios") {
+    const newWindow = window.open(downloadUrl, "_blank", "noopener,noreferrer");
+    if (!newWindow) {
+      // 被浏览器拦截时降级为当前页跳转
+      window.location.href = downloadUrl;
+    }
+    return;
+  }
+
+  window.location.href = downloadUrl;
 };
 
 onMounted(async () => {
