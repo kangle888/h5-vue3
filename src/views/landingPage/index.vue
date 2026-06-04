@@ -102,22 +102,6 @@ const loadBanners = async () => {
 
 
 
-const trackEvent = async (eventType: "download_click") => {
-  try {
-    const traceId = currentTraceId.value || localStorage.getItem("promotion_trace_id") || "";
-    await trackPromotionEvent({
-      ...promotionParams.value,
-      traceId,
-      eventType,
-      sourcePath: route.fullPath,
-      userAgent: navigator.userAgent,
-      platform: route.query.platform ? String(route.query.platform) : "h5"
-    });
-  } catch {
-    // ignore
-  }
-};
-
 /** 初始化推广追踪：由服务端生成 traceId，并将其写入剪贴板和 localStorage */
 const initTrace = async () => {
   if (traceInitPromise) return traceInitPromise;
@@ -167,9 +151,9 @@ const handleDownload = async () => {
   await initTrace();
 
   // 使用 resolvedChannelId（initTrace 反查得到的）而非 URL 里的空 channelId
-  const cid = resolvedChannelId.value || promotionParams.value.channelId;
-  const pid = resolvedPageId.value    || promotionParams.value.pageId;
-  const sid = promotionParams.value.staffId || promotionParams.value.staffName;
+  const cid = resolvedChannelId.value || localStorage.getItem("promotion_channel_id") || promotionParams.value.channelId;
+  const pid = resolvedPageId.value    || localStorage.getItem("promotion_page_id") || promotionParams.value.pageId;
+  const sid = promotionParams.value.staffId;
   const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android";
 
   // 构建后端中转地址（后端会 302 跳转到真实下载地址）
@@ -177,11 +161,9 @@ const handleDownload = async () => {
   if (pid) params.set("pageId",    pid);
   if (cid) params.set("channelId", cid);
   if (sid) params.set("staffId",   sid);
-  if (currentTraceId.value) params.set("traceId", currentTraceId.value);
-  params.set("platform", platform);
-
   const traceId = currentTraceId.value || localStorage.getItem("promotion_trace_id") || "";
   if (traceId) params.set("traceId", traceId);
+  params.set("platform", platform);
 
   const baseApi = import.meta.env.VITE_BASE_API || "";
   const downloadUrl = baseApi
