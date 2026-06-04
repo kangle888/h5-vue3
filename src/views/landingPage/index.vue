@@ -169,7 +169,7 @@ const handleDownload = async () => {
   // 使用 resolvedChannelId（initTrace 反查得到的）而非 URL 里的空 channelId
   const cid = resolvedChannelId.value || promotionParams.value.channelId;
   const pid = resolvedPageId.value    || promotionParams.value.pageId;
-  const sid = promotionParams.value.staffId;
+  const sid = promotionParams.value.staffId || promotionParams.value.staffName;
   const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android";
 
   // 构建后端中转地址（后端会 302 跳转到真实下载地址）
