@@ -42,7 +42,7 @@ const drawHistory = ref<{ time: string; prize: string }[]>([]);
 // 转盘相关
 const wheelCanvas = ref<HTMLCanvasElement | null>(null);
 const wheelAngle = ref(0);
-const targetAngle = ref(0);
+
 const animationId = ref(0);
 const confettiCanvas = ref<HTMLCanvasElement | null>(null);
 
@@ -257,12 +257,13 @@ const easeOut = (t: number) => 1 - Math.pow(1 - t, 4);
 
 const spinWheel = (prizeIndex: number, onDone: () => void) => {
   const startAngle = wheelAngle.value;
-  // 保证转至少5圈 + 落在目标格
-  const extra = Math.PI * 2 * (5 + Math.random() * 3);
-  // 使指针(顶部, -π/2)停在该格中央
-  const segCenter = prizeIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
-  const landAngle = -Math.PI / 2 - segCenter + Math.PI * 2;
-  const total = extra + ((landAngle - (startAngle % (Math.PI * 2)) + Math.PI * 4) % (Math.PI * 2));
+  const TAU = Math.PI * 2;
+  const fullTurns = TAU * (5 + Math.floor(Math.random() * 3));
+  const targetAngle = -Math.PI / 2 - (prizeIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2);
+  const startNormalized = ((startAngle % TAU) + TAU) % TAU;
+  const targetNormalized = ((targetAngle % TAU) + TAU) % TAU;
+  const delta = (targetNormalized - startNormalized + TAU) % TAU;
+  const total = fullTurns + delta;
 
   const duration = 4500;
   let start: number | null = null;
@@ -347,15 +348,21 @@ const launchConfetti = (isBigWin = false) => {
 };
 
 // ===================== 抽奖逻辑 =====================
+const normalizePrizeName = (prizeName: string) => prizeName.trim().replace(/\s+/g, "");
+
 const getPrizeIndex = (prizeName: string): number => {
-  const map: Record<string, number> = {
-    "100元": 0,
-    "200元": 2,
-    "500元": 4,
-    "1000元": 6
-  };
-  return map[prizeName] ?? 1; // 默认给谢谢参与格子
+  const normalized = normalizePrizeName(prizeName);
+
+  if (/1000/.test(normalized)) return 6;
+  if (/500/.test(normalized)) return 4;
+  if (/200/.test(normalized)) return 2;
+  if (/100/.test(normalized)) return 0;
+
+  // 默认给谢谢参与格子，兼容“谢谢参与 / 谢谢惠顾 / 未中奖”等返回值
+  return 1;
 };
+
+const getPrizeNameByIndex = (index: number): string => prizes[index]?.name.replace("\n", "") || "谢谢参与";
 
 const onDraw = async () => {
   if (loading.value || spinning.value) return;
@@ -373,13 +380,15 @@ const onDraw = async () => {
   try {
     const res = await activityDrawApi({ device_id: deviceId.value });
     closeToast();
-    resultPrize.value = res.prize;
+
+    const idx = getPrizeIndex(res.prize);
+    resultPrize.value = getPrizeNameByIndex(idx);
     points.value = res.points;
     drawChances.value = res.draw_chances;
 
-    saveHistory(res.prize);
+    saveHistory(resultPrize.value);
 
-    const idx = getPrizeIndex(res.prize);
+    // 以转盘扇区索引为准，保证弹窗和落点一致
     spinWheel(idx, () => {
       drawStage.value = "finished";
       spinning.value = false;
@@ -686,8 +695,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="less">
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&display=swap');
-
 // ---- 主页面 ----
 .activity-page {
   height: 100vh;
