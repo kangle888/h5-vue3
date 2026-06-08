@@ -168,7 +168,7 @@ const handleDownload = async () => {
   const baseApi = import.meta.env.VITE_BASE_API || "";
   const downloadUrl = baseApi
     ? `${baseApi}/promotion/download?${params.toString()}`
-    : "https://beta3.appdone.club/UlWG";
+    : "https://duktig.art/UlWG";
 
   // 仅保留后端中转埋点，避免前端重复记一次下载导致总量翻倍
 
