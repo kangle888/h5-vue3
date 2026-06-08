@@ -16,7 +16,7 @@ const cachedViews = computed(() => {
 
 const route = useRoute();
 const router = useRouter();
-const hideNavRouteNames = ["Home", "Tools", "News", "My"];
+const hideNavRouteNames = ["Home", "News", "Tools", "My"];
 
 const showNavBar = computed(() => {
   const currentName = route.name as string | undefined;
@@ -65,7 +65,12 @@ const refreshLocationIfNeeded = async () => {
 
 <template>
   <div class="app-wrapper">
-    <nav-bar v-if="showNavBar" :title="navBarTitle" :leftArrow="true" @click-left="router.back" />
+    <nav-bar
+      v-if="showNavBar"
+      :title="navBarTitle"
+      :leftArrow="true"
+      @click-left="router.back"
+    />
 
     <main class="app-content">
       <router-view v-slot="{ Component }">

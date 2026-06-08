@@ -41,15 +41,15 @@ const tabbarData = reactive<TabItem[]>([
     to: { name: "Home" }
   },
   {
-    icon: "guide-o",
-    title: "动态",
-    to: { name: "Tools" }
-  },
-  {
     icon: "chat-o",
     title: "消息",
     to: { name: "News" },
     badge: ""
+  },
+  {
+    icon: "guide-o",
+    title: "动态",
+    to: { name: "Tools" }
   },
   {
     icon: "user-o",
