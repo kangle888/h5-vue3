@@ -1,7 +1,11 @@
 import axios from "axios";
 import { http } from "@/utils/http";
 
-export type PromotionEventType = "visit" | "download_click" | "install_open" | "register";
+export type PromotionEventType =
+  | "visit"
+  | "download_click"
+  | "install_open"
+  | "register";
 
 export interface IPromotionTrackPayload {
   pageId?: string;
@@ -27,7 +31,6 @@ export interface IPromotionPageInfo {
   [key: string]: any;
 }
 
-
 export const getPromotionPageInfo = (params: {
   pageId?: string;
   channelId?: string;
@@ -48,7 +51,6 @@ export const trackPromotionEvent = (data: IPromotionTrackPayload) => {
   });
 };
 
-
 export const getPromotionDownloadUrl = (params: {
   pageId?: string;
   channelId?: string;
@@ -57,10 +59,14 @@ export const getPromotionDownloadUrl = (params: {
   platform?: string;
 }) => {
   return `${import.meta.env.VITE_BASE_API}/promotion/download?${new URLSearchParams(
-    Object.entries(params).reduce<Record<string, string>>((acc, [key, value]) => {
-      if (value !== undefined && value !== null && String(value).trim()) acc[key] = String(value);
-      return acc;
-    }, {})
+    Object.entries(params).reduce<Record<string, string>>(
+      (acc, [key, value]) => {
+        if (value !== undefined && value !== null && String(value).trim())
+          acc[key] = String(value);
+        return acc;
+      },
+      {}
+    )
   ).toString()}`;
 };
 
@@ -175,12 +181,42 @@ export interface IPageResult<T> {
   pageSize: number;
 }
 
-export const listPlayer = (data: IPageParam<Partial<IPlayerItem>>) => http.request<IPageResult<IPlayerItem>>({ url: "/player/listPlayer", method: "post", data });
-export const listPlayerClient = (data: IPageParam<Partial<IPlayerItem>>) => http.request<IPageResult<IPlayerItem>>({ url: "/player/listPlayerClient", method: "post", data });
-export const queryById = (playerId: string) => http.request<IPlayerItem>({ url: "/player/queryById", method: "get", params: { playerId } });
-export const addPlayerCollect = (data: any) => http.request<any>({ url: "/playerCollect/addPlayerCollect", method: "post", data });
-export const deletePlayerCollect = (id: string) => http.request<any>({ url: "/playerCollect/cancelPlayerCollect", method: "get", params: { id } });
-export const queryByIdPlayerCollect = (collectPlayerId: string) => http.request<any>({ url: "/playerCollect/queryByCollectPlayerId", method: "get", params: { collectPlayerId } });
+export const listPlayer = (data: IPageParam<Partial<IPlayerItem>>) =>
+  http.request<IPageResult<IPlayerItem>>({
+    url: "/player/listPlayer",
+    method: "post",
+    data
+  });
+export const listPlayerClient = (data: IPageParam<Partial<IPlayerItem>>) =>
+  http.request<IPageResult<IPlayerItem>>({
+    url: "/player/listPlayerClient",
+    method: "post",
+    data
+  });
+export const queryById = (playerId: string) =>
+  http.request<IPlayerItem>({
+    url: "/player/queryById",
+    method: "get",
+    params: { playerId }
+  });
+export const addPlayerCollect = (data: any) =>
+  http.request<any>({
+    url: "/playerCollect/addPlayerCollect",
+    method: "post",
+    data
+  });
+export const deletePlayerCollect = (id: string) =>
+  http.request<any>({
+    url: "/playerCollect/cancelPlayerCollect",
+    method: "get",
+    params: { id }
+  });
+export const queryByIdPlayerCollect = (collectPlayerId: string) =>
+  http.request<any>({
+    url: "/playerCollect/queryByCollectPlayerId",
+    method: "get",
+    params: { collectPlayerId }
+  });
 
 export const downloadAttachment = async (fileName: string) => {
   const token = localStorage.getItem("token") || "";
@@ -196,7 +232,8 @@ export const downloadAttachment = async (fileName: string) => {
 const attachmentUrlCache = new Map<string, string>();
 export const getAttachmentObjectUrl = async (fileName?: string) => {
   if (!fileName) return "";
-  if (attachmentUrlCache.has(fileName)) return attachmentUrlCache.get(fileName) as string;
+  if (attachmentUrlCache.has(fileName))
+    return attachmentUrlCache.get(fileName) as string;
   const res = await downloadAttachment(fileName);
   const blob = res?.data as Blob;
   if (!blob) return "";
@@ -211,7 +248,14 @@ export interface IPlayerCollectItem {
   collectPlayerId?: string;
   isCancel?: string;
 }
-export const pagePlayerCollect = (data: IPageParam<Partial<IPlayerCollectItem>>) => http.request<IPageResult<IPlayerCollectItem>>({ url: "/playerCollect/pagePlayerCollect", method: "post", data });
+export const pagePlayerCollect = (
+  data: IPageParam<Partial<IPlayerCollectItem>>
+) =>
+  http.request<IPageResult<IPlayerCollectItem>>({
+    url: "/playerCollect/pagePlayerCollect",
+    method: "post",
+    data
+  });
 
 export interface IPlayerActivityItem {
   id?: string;
@@ -225,8 +269,30 @@ export interface IPlayerActivityItem {
   image2?: string;
   image3?: string;
 }
-export const getPlayerActivity = (data: { pageNum: number; pageSize: number; playerId?: string; query?: { playerId?: string } }) => {
+export const getPlayerActivity = (data: {
+  pageNum: number;
+  pageSize: number;
+  playerId?: string;
+  query?: { playerId?: string };
+}) => {
   const payload = { ...data, query: data.query ?? { playerId: data.playerId } };
-  return http.request<IPageResult<IPlayerActivityItem>>({ url: "/playerActivity/page", method: "post", data: payload });
+  return http.request<IPageResult<IPlayerActivityItem>>({
+    url: "/playerActivity/page",
+    method: "post",
+    data: payload
+  });
 };
-export const pagePlayerCollectList = (data: any) => http.request<any>({ url: "/playerCollect/pagePlayerCollectList", method: "post", data });
+export const pagePlayerCollectList = (data: any) =>
+  http.request<any>({
+    url: "/playerCollect/pagePlayerCollectList",
+    method: "post",
+    data
+  });
+
+//commonDic/tree
+export const getCommonDicTree = (data: { dictCode: string }) =>
+  http.request<any>({
+    url: "/commonDic/tree",
+    method: "post",
+    data
+  });

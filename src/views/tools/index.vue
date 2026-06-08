@@ -7,6 +7,7 @@ import {
   getAttachmentObjectUrl,
   getPlayerActivity,
   pagePlayerCollectList,
+  getCommonDicTree,
   type IPlayerActivityItem,
   type IPlayerItem
 } from "@/api/home";
@@ -21,6 +22,9 @@ type FeedItem = IPlayerActivityItem & {
   playerName?: string;
   playerAvatar?: string;
   dynamicImageUrl?: string;
+  playerAge?: number;
+  playerOccupation?: string;
+  playerOccupationName?: string;
 };
 
 const activeTab = ref<"recommend" | "heartbeat">("recommend");
@@ -43,11 +47,19 @@ const pageSize = 10;
 const playerMap = ref<Record<string, PlayerWithAvatar>>({});
 
 const router = useRouter();
+const occupationList = ref<any[]>([]);
 
 // const currentList = computed(() => {
 //   if (activeTab.value === "recommend") return feedList.value;
 //   return collectList.value;
 // });
+
+const getCommonDicTreeListist = async () => {
+  const res = await getCommonDicTree({
+    dictCode: "Occupation"
+  });
+  occupationList.value = res[0].children || [];
+};
 
 const formatDateText = (value?: string) => {
   if (!value) return "刚刚";
@@ -64,8 +76,7 @@ const formatDateText = (value?: string) => {
 };
 
 const getPlayerBrief = (item: FeedItem) => {
-  const p = item.player;
-  return `${p?.age || "20"}岁 · ${p?.occupation_dictText || "模特"}`;
+  return `${item?.playerAge || "20"}岁 · ${item?.playerOccupationName || "模特"}`;
 };
 
 const getImageFileName = (item: IPlayerActivityItem) => {
@@ -124,9 +135,26 @@ const loadFeedPage = async (reset = false) => {
     const list = await mapFeed(records);
 
     if (reset) {
-      feedList.value = list;
+      feedList.value = list.map(item => {
+        return {
+          ...item,
+          playerOccupationName: occupationList.value?.find(
+            v => v.dictCode == item.playerOccupation
+          )?.dictName
+        } as FeedItem;
+      });
     } else {
-      feedList.value = [...feedList.value, ...list];
+      feedList.value = [
+        ...feedList.value,
+        ...list.map(item => {
+          return {
+            ...item,
+            playerOccupationName: occupationList.value?.find(
+              v => v.dictCode == item.playerOccupation
+            )?.dictName
+          } as FeedItem;
+        })
+      ];
     }
 
     if (records.length < pageSize) {
@@ -154,17 +182,21 @@ const loadFeedPage = async (reset = false) => {
 const onRefresh = async () => {
   if (activeTab.value === "recommend") {
     await loadFeedPage(true);
+    await getCommonDicTreeListist();
   } else {
     await loadCollectPage(true);
+    await getCommonDicTreeListist();
   }
 };
 
 const onFeedLoad = async () => {
   await loadFeedPage(false);
+  await getCommonDicTreeListist();
 };
 
 const onCollectLoad = async () => {
   await loadCollectPage(false);
+  await getCommonDicTreeListist();
 };
 
 // 加载pagePlayerCollectList  这个分页接口
