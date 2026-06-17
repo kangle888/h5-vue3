@@ -22,19 +22,19 @@ const banners = ref<(ISysBannerItem & { imageSrc: string })[]>([]);
 const currentTraceId = ref("");
 // initTrace 返回的真实 channelId / pageId（URL 里可能只有 channelCode）
 const resolvedChannelId = ref("");
-const resolvedPageId    = ref("");
+const resolvedPageId = ref("");
 const traceReady = ref(false);
 let traceInitPromise: Promise<void> | null = null;
 
 const promotionParams = computed(() => {
   const query = route.query;
   return {
-    pageId:      String(query.pageId      || query.pid  || ""),
-    channelId:   String(query.channelId   || query.cid  || ""),
-    channelCode: String(query.channelCode || query.cc   || ""),  // 后端将用于反查真实 channelId
-    staffId:     String(query.staffId     || query.sid  || ""),
-    staffName:   String(query.staffName   || query.sn   || ""),
-    traceId:     String(query.traceId     || "")
+    pageId: String(query.pageId || query.pid || ""),
+    channelId: String(query.channelId || query.cid || ""),
+    channelCode: String(query.channelCode || query.cc || ""), // 后端将用于反查真实 channelId
+    staffId: String(query.staffId || query.sid || ""),
+    staffName: String(query.staffName || query.sn || ""),
+    traceId: String(query.traceId || "")
   };
 });
 
@@ -100,8 +100,6 @@ const loadBanners = async () => {
   }
 };
 
-
-
 /** 初始化推广追踪：由服务端生成 traceId，并将其写入剪贴板和 localStorage */
 const initTrace = async () => {
   if (traceInitPromise) return traceInitPromise;
@@ -109,26 +107,30 @@ const initTrace = async () => {
     try {
       // 把 channelCode/staffName 一并传给后端，后端自动通过 channelCode 反查并返回真实 channelId
       const res = await initTraceApi({
-        pageId:      promotionParams.value.pageId,
-        channelId:   promotionParams.value.channelId,
+        pageId: promotionParams.value.pageId,
+        channelId: promotionParams.value.channelId,
         channelCode: promotionParams.value.channelCode,
-        staffId:     promotionParams.value.staffId,
-        staffName:   promotionParams.value.staffName,
+        staffId: promotionParams.value.staffId,
+        staffName: promotionParams.value.staffName
       } as any);
-      const data    = (res as any)?.data || {};
+      const data = (res as any)?.data || {};
       const traceId = data.traceId || "";
       if (!traceId) return;
       currentTraceId.value = traceId;
 
       // 使用后端返回的真实 channelId（可能是通过 channelCode 反查得到的）
-      resolvedChannelId.value = data.channelId || promotionParams.value.channelId || "";
-      resolvedPageId.value    = data.pageId    || promotionParams.value.pageId    || "";
+      resolvedChannelId.value =
+        data.channelId || promotionParams.value.channelId || "";
+      resolvedPageId.value = data.pageId || promotionParams.value.pageId || "";
 
       // 写入 localStorage（供同域 H5 登录页读取）
-      localStorage.setItem("promotion_trace_id",  traceId);
-      localStorage.setItem("promotion_page_id",    resolvedPageId.value);
+      localStorage.setItem("promotion_trace_id", traceId);
+      localStorage.setItem("promotion_page_id", resolvedPageId.value);
       localStorage.setItem("promotion_channel_id", resolvedChannelId.value);
-      localStorage.setItem("promotion_staff_id",   promotionParams.value.staffId || "");
+      localStorage.setItem(
+        "promotion_staff_id",
+        promotionParams.value.staffId || ""
+      );
 
       // 写入剪贴板（格式固定，App 读取后解析）
       await writeClipboard(
@@ -147,21 +149,39 @@ const initTrace = async () => {
  * 1. 先用真实 channelId 记录 download_click 事件
  * 2. 通过后端 /promotion/download 中转，携带完整归因参数
  */
+const copyLandingUrl = async () => {
+  try {
+    await navigator.clipboard.writeText("https://duktig.art/h5/");
+    showSuccessToast("复制成功");
+  } catch {
+    showFailToast("复制失败，请手动复制");
+  }
+};
+
 const handleDownload = async () => {
   await initTrace();
 
   // 使用 resolvedChannelId（initTrace 反查得到的）而非 URL 里的空 channelId
-  const cid = resolvedChannelId.value || localStorage.getItem("promotion_channel_id") || promotionParams.value.channelId;
-  const pid = resolvedPageId.value    || localStorage.getItem("promotion_page_id") || promotionParams.value.pageId;
+  const cid =
+    resolvedChannelId.value ||
+    localStorage.getItem("promotion_channel_id") ||
+    promotionParams.value.channelId;
+  const pid =
+    resolvedPageId.value ||
+    localStorage.getItem("promotion_page_id") ||
+    promotionParams.value.pageId;
   const sid = promotionParams.value.staffId;
-  const platform = /iphone|ipad|ipod/i.test(navigator.userAgent) ? "ios" : "android";
+  const platform = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    ? "ios"
+    : "android";
 
   // 构建后端中转地址（后端会 302 跳转到真实下载地址）
   const params = new URLSearchParams();
-  if (pid) params.set("pageId",    pid);
+  if (pid) params.set("pageId", pid);
   if (cid) params.set("channelId", cid);
-  if (sid) params.set("staffId",   sid);
-  const traceId = currentTraceId.value || localStorage.getItem("promotion_trace_id") || "";
+  if (sid) params.set("staffId", sid);
+  const traceId =
+    currentTraceId.value || localStorage.getItem("promotion_trace_id") || "";
   if (traceId) params.set("traceId", traceId);
   params.set("platform", platform);
 
@@ -231,6 +251,18 @@ onMounted(async () => {
                     <p class="qr-label">Android 下载</p>
                     <button class="download-link" @click="handleDownload()">
                       下载 Android
+                    </button>
+                  </div>
+                </div>
+                <div class="share-link-box">
+                  <div class="share-link-tip">
+                    暂不支持纯血鸿蒙系统下载app，请使用浏览器打开访问
+                  </div>
+                  <div class="share-link-row">
+                    <span class="share-link-text">https://duktig.art/h5/</span>
+                    <button class="copy-link-btn" @click="copyLandingUrl">
+                      <van-icon name="copy" size="14" />
+                      <span>复制</span>
                     </button>
                   </div>
                 </div>
@@ -406,6 +438,52 @@ onMounted(async () => {
   color: #4f3620;
   font-size: 12px;
   margin-top: 8px;
+}
+
+.share-link-box {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(10, 13, 28, 0.68);
+  border: 1px solid rgba(215, 185, 143, 0.18);
+  backdrop-filter: blur(4px);
+}
+
+.share-link-tip {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #f1d8b3;
+  margin-bottom: 8px;
+}
+
+.share-link-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.share-link-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.9);
+  word-break: break-all;
+}
+
+.copy-link-btn {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(215, 185, 143, 0.3);
+  background: rgba(215, 185, 143, 0.14);
+  color: #f1d8b3;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
 }
 
 .full-btn {

@@ -96,6 +96,15 @@ const handleQrError = () => {
   showFailToast("二维码加载失败，请稍后重试");
 };
 
+const copyLandingUrl = async () => {
+  try {
+    await navigator.clipboard.writeText(landingUrl.value);
+    showSuccessToast("复制成功");
+  } catch {
+    showFailToast("复制失败，请手动复制");
+  }
+};
+
 const shareLandingPage = async () => {
   const shareData = {
     url: landingUrl.value
@@ -106,9 +115,8 @@ const shareLandingPage = async () => {
       await navigator.share(shareData);
       return;
     }
-    await navigator.clipboard.writeText(landingUrl.value);
-    showSuccessToast("复制成功");
-  } catch { }
+    await copyLandingUrl();
+  } catch {}
 };
 
 const openFeedbackPopup = () => {
@@ -163,7 +171,12 @@ onMounted(() => {
   <div class="my-page-wrapper w-full">
     <div class="header-card">
       <div class="avatar-wrap">
-        <img v-if="avatarUrl()" :src="avatarUrl()" class="avatar" alt="avatar" />
+        <img
+          v-if="avatarUrl()"
+          :src="avatarUrl()"
+          class="avatar"
+          alt="avatar"
+        />
         <div v-else class="avatar placeholder">
           <van-icon name="user-circle-o" size="32" color="#666" />
         </div>
@@ -225,28 +238,54 @@ onMounted(() => {
         </div>
         <van-icon name="arrow" class="entry-arrow" />
       </div>
-
     </div>
 
     <div class="mt-12 text-center text-[11px] text-[#666] tracking-widest">
       探索你的专属陪伴 v1.0.0
     </div>
 
-    <van-popup v-model:show="showSharePopup" round position="bottom" class="dark-popup">
+    <van-popup
+      v-model:show="showSharePopup"
+      round
+      position="bottom"
+      class="dark-popup"
+    >
       <div class="share-popup">
         <div class="popup-header">
           <span class="popup-title">遇见App分享</span>
-          <van-icon name="cross" class="close-icon" @click="showSharePopup = false" />
+          <van-icon
+            name="cross"
+            class="close-icon"
+            @click="showSharePopup = false"
+          />
         </div>
         <div class="share-card">
           <div class="qr-wrap">
             <div class="qr-bg" :class="{ 'is-loading': qrLoading }">
-              <van-image class="qr-image" fit="cover" :src="qrSrc || qrUrl" alt="landing-qrcode" @load="handleQrLoad"
-                @error="handleQrError" />
+              <van-image
+                class="qr-image"
+                fit="cover"
+                :src="qrSrc || qrUrl"
+                alt="landing-qrcode"
+                @load="handleQrLoad"
+                @error="handleQrError"
+              />
               <div v-if="qrLoading" class="qr-loading">
                 <van-loading size="24" color="#dfc293" />
                 <span>生成中...</span>
               </div>
+            </div>
+          </div>
+          <div class="share-link-box">
+            <div class="share-link-tip">
+              暂不支持华为纯血鸿蒙系统下载app，请使用浏览器打开访问
+            </div>
+            <div class="share-link-row">
+              <span class="share-link-text">https://duktig.art/h5/</span>
+              <button class="copy-link-btn" @click="copyLandingUrl">
+                <van-icon name="copy" size="14" />
+                <span>复制</span>
+              </button>
             </div>
           </div>
 
@@ -258,20 +297,49 @@ onMounted(() => {
       </div>
     </van-popup>
 
-    <van-popup v-model:show="showFeedbackPopup" round position="bottom" class="dark-popup">
+    <van-popup
+      v-model:show="showFeedbackPopup"
+      round
+      position="bottom"
+      class="dark-popup"
+    >
       <div class="feedback-popup">
         <div class="popup-header">
           <span class="popup-title">客服留言</span>
-          <van-icon name="cross" class="close-icon" @click="showFeedbackPopup = false" />
+          <van-icon
+            name="cross"
+            class="close-icon"
+            @click="showFeedbackPopup = false"
+          />
         </div>
 
         <div class="feedback-content">
-          <div class="feedback-tip">请留下你的问题，建议附上联系方式，方便客服与你沟通。</div>
-          <van-field v-model="feedbackForm.contact" label="联系方式" placeholder="手机号/微信/邮箱（选填）" maxlength="50" clearable />
-          <van-field v-model="feedbackForm.content" type="textarea" rows="5" autosize label="留言内容" maxlength="500"
-            show-word-limit placeholder="请输入你想反馈的问题或建议" />
+          <div class="feedback-tip">
+            请留下你的问题，建议附上联系方式，方便客服与你沟通。
+          </div>
+          <van-field
+            v-model="feedbackForm.contact"
+            label="联系方式"
+            placeholder="手机号/微信/邮箱（选填）"
+            maxlength="50"
+            clearable
+          />
+          <van-field
+            v-model="feedbackForm.content"
+            type="textarea"
+            rows="5"
+            autosize
+            label="留言内容"
+            maxlength="500"
+            show-word-limit
+            placeholder="请输入你想反馈的问题或建议"
+          />
 
-          <button class="share-btn" :disabled="feedbackSubmitting" @click="submitFeedback">
+          <button
+            class="share-btn"
+            :disabled="feedbackSubmitting"
+            @click="submitFeedback"
+          >
             <van-loading v-if="feedbackSubmitting" size="16" color="#000" />
             <span>{{ feedbackSubmitting ? "提交中..." : "提交留言" }}</span>
           </button>
@@ -511,6 +579,51 @@ onMounted(() => {
   align-items: center;
 }
 
+.share-link-box {
+  width: 100%;
+  margin-top: 14px;
+  padding: 8px 10px;
+  background: rgba(26, 26, 26, 0.92);
+  border: 1px solid #262626;
+  border-radius: 12px;
+}
+
+.share-link-tip {
+  color: #dfc293;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.share-link-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.share-link-text {
+  flex: 1;
+  min-width: 0;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.3;
+  word-break: break-all;
+}
+
+.copy-link-btn {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(223, 194, 147, 0.35);
+  background: rgba(223, 194, 147, 0.12);
+  color: #dfc293;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
 .qr-wrap {
   display: flex;
   justify-content: center;
@@ -554,14 +667,14 @@ onMounted(() => {
 }
 
 .share-btn {
-  margin-top: 32px;
+  margin-top: 20px;
   width: 100%;
-  height: 48px;
-  border-radius: 24px;
+  height: 44px;
+  border-radius: 22px;
   background: #dfc293;
   color: #000;
   border: none;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   display: flex;
   align-items: center;
