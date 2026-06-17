@@ -105,6 +105,15 @@ const copyLandingUrl = async () => {
   }
 };
 
+const copyLandingUrl1 = async () => {
+  try {
+    await navigator.clipboard.writeText("https://duktig.art/h5/");
+    showSuccessToast("复制成功");
+  } catch {
+    showFailToast("复制失败，请手动复制");
+  }
+};
+
 const shareLandingPage = async () => {
   const shareData = {
     url: landingUrl.value
@@ -282,7 +291,7 @@ onMounted(() => {
             </div>
             <div class="share-link-row">
               <span class="share-link-text">https://duktig.art/h5/</span>
-              <button class="copy-link-btn" @click="copyLandingUrl">
+              <button class="copy-link-btn" @click="copyLandingUrl1">
                 <van-icon name="copy" size="14" />
                 <span>复制</span>
               </button>
