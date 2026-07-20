@@ -549,6 +549,7 @@ onMounted(() => {
 :deep(.dark-popup) {
   background: #111;
   color: #fff;
+  margin-bottom: 20px;
 }
 
 .share-popup {
