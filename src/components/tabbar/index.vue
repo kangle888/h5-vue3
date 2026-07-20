@@ -85,6 +85,7 @@ onBeforeUnmount(() => {
   z-index: 3000;
   background-color: #0d0d0d !important; /* Very dark background */
   border-top: 1px solid #1a1a1a;
+  height: 70px !important;
 }
 
 :deep(.van-tabbar) {
@@ -95,7 +96,9 @@ onBeforeUnmount(() => {
 :deep(.van-tabbar-item--active) {
   background-color: transparent !important;
 }
-
+:deep(.van-tabbar--fixed ){
+  bottom: 15px;
+}
 :deep(.van-badge) {
   background-color: #ec4899; /* Pinkish red badge */
   border: 1px solid #0d0d0d;
