@@ -593,7 +593,6 @@ onBeforeUnmount(() => {
             :disabled="spinning || drawChances <= 0"
             @click="onDraw"
           >
-            <span class="btn-sparkle">✨</span>
             <span class="btn-text">{{ spinning ? "好运计算中..." : "立即点击抽奖" }}</span>
             <span class="btn-sub">（剩余 {{ drawChances }} 次机会）</span>
           </button>
@@ -993,8 +992,8 @@ onBeforeUnmount(() => {
 
 .fab-title {
   color: #FFF9E6;
-  font-size: 15px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 500;
   letter-spacing: 1px;
 }
 
@@ -1041,7 +1040,7 @@ onBeforeUnmount(() => {
 }
 .btn-text {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 600;
 }
 .btn-sub {
   font-size: 12px;
