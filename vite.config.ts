@@ -57,7 +57,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         "/api/v1": {
-          target: "http://192.168.31.83:9000",
+          target: env.VITE_PROXY_TARGET || "http://127.0.0.1:9000",
           changeOrigin: true,
           rewrite: path => path.replace(/^\/api\/v1/, "/api/v1")
         }

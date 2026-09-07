@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, reactive } from "vue";
-import { countUnreadApi } from "@/api/news";
+const countUnreadApi = async () => 0;
 
 interface TabItem {
   icon: string;

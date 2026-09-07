@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import {
   showFailToast,
   showLoadingToast,
@@ -10,314 +9,333 @@ import {
 import {
   activityDrawApi,
   activityInitApi,
-  activityInfoApi,
-  activityInviteClaimApi,
-  type ActivityInitResult
+  activityRecordsApi,
+  type DrawRecordItem
 } from "@/api/activity";
+import {
+  PRIZE_LIST,
+  INITIAL_DRAW_CHANCES,
+  type PrizeConfig
+} from "./config/prizes";
 
-defineOptions({ name: "Activity" });
+defineOptions({ name: "ActivityDraw" });
 
-const route = useRoute();
-
+// ===================== 状态定义 =====================
 const deviceId = ref("");
-const inviteCode = ref("");
-const points = ref(0);
-const drawChances = ref(0);
-const inviteCount = ref(0);
-const inviterCode = ref<string | null>(null);
-const loading = ref(false);
+const drawChances = ref(INITIAL_DRAW_CHANCES);
 const spinning = ref(false);
+const loading = ref(false);
 const refreshing = ref(false);
-const ruleVisible = ref(false);
-const inviteVisible = ref(false);
-const historyVisible = ref(false);
-const inviteInput = ref("");
+
+// 弹窗状态
 const resultVisible = ref(false);
-const resultPrize = ref("");
-const drawStage = ref<"idle" | "running" | "finished">("idle");
+const winningPrize = ref<PrizeConfig | null>(null);
+const winningRecordId = ref<number | null>(null);
 
-// 抽奖历史记录
-const drawHistory = ref<{ time: string; prize: string }[]>([]);
+const recordsVisible = ref(false);
+const recordList = ref<DrawRecordItem[]>([]);
+const recordDetailVisible = ref(false);
+const currentDetailRecord = ref<DrawRecordItem | null>(null);
 
-// 转盘相关
+const ruleVisible = ref(false);
+
+// ===================== Canvas 转盘相关 =====================
 const wheelCanvas = ref<HTMLCanvasElement | null>(null);
-const wheelAngle = ref(0);
-const targetAngle = ref(0);
-const animationId = ref(0);
 const confettiCanvas = ref<HTMLCanvasElement | null>(null);
+const wheelAngle = ref(0);
+const animationId = ref(0);
+let confettiAnim = 0;
 
-const prizes = [
-  { name: "100元", color: "#e49a9b", textColor: "#fff", shadow: "#c07a7b" },
-  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" },
-  { name: "200元", color: "#d46b77", textColor: "#fff", shadow: "#b0505a" },
-  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" },
-  { name: "500元", color: "#899475", textColor: "#fff", shadow: "#6a7558" },
-  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" },
-  { name: "1000元", color: "#44563a", textColor: "#fff", shadow: "#2b3823" },
-  { name: "谢谢\n参与", color: "#ffffff", textColor: "#d46b77", shadow: "transparent" }
-];
+const SEGMENT_COUNT = PRIZE_LIST.length; // 6 个扇区
+const SEGMENT_ANGLE = (2 * Math.PI) / SEGMENT_COUNT; // 60 度
 
-const SEGMENT_COUNT = prizes.length;
-const SEGMENT_ANGLE = (2 * Math.PI) / SEGMENT_COUNT;
+// 图片缓存对象
+const loadedImages = ref<Map<number, HTMLImageElement>>(new Map());
 
-// 分享链接 - 指向 home 页进行引导
-const shareLink = computed(() => {
-  return `${window.location.origin}${window.location.pathname}#/activity/home?invite_code=${inviteCode.value}`;
-});
-
+// 设备唯一标识
 const ensureDeviceId = () => {
   let id = localStorage.getItem("activity_device_id");
   if (!id) {
     id =
       crypto.randomUUID?.() ||
-      `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      `dev_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     localStorage.setItem("activity_device_id", id);
   }
   deviceId.value = id;
   return id;
 };
 
-const saveState = (res: ActivityInitResult) => {
-  inviteCode.value = res.invite_code;
-  inviterCode.value = res.inviter_code || null;
-  points.value = res.points;
-  drawChances.value = res.draw_chances;
-  inviteCount.value = res.invite_count;
-  localStorage.setItem("activity_invite_code", res.invite_code);
-};
-
-const loadHistory = () => {
-  try {
-    const hist = JSON.parse(localStorage.getItem("activity_draw_history") || "[]");
-    drawHistory.value = hist;
-  } catch (e) {
-    drawHistory.value = [];
-  }
-};
-
-const saveHistory = (prize: string) => {
-  const now = new Date();
-  const timeStr = `${now.getMonth() + 1}-${now.getDate()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  const newRecord = { time: timeStr, prize };
-  const hist = [newRecord, ...drawHistory.value].slice(0, 10);
-  drawHistory.value = hist;
-  localStorage.setItem("activity_draw_history", JSON.stringify(hist));
-};
-
-const initActivity = async (inviteCodeParam?: string) => {
-  const id = ensureDeviceId();
-  const res = await activityInitApi({
-    device_id: id,
-    invite_code: inviteCodeParam || undefined
+// ===================== 预加载 6 款奖品图片 =====================
+const preloadImages = async () => {
+  const promises = PRIZE_LIST.map(prize => {
+    return new Promise<void>((resolve) => {
+      const img = new Image();
+      img.src = prize.image;
+      img.onload = () => {
+        loadedImages.value.set(prize.id, img);
+        resolve();
+      };
+      img.onerror = () => {
+        console.warn(`Failed to load image for prize ${prize.id}`);
+        resolve();
+      };
+    });
   });
-  saveState(res);
+  await Promise.all(promises);
 };
 
-const refreshInfo = async () => {
-  if (!deviceId.value) return;
-  const res = await activityInfoApi(deviceId.value);
-  inviteCode.value = res.invite_code;
-  points.value = res.points;
-  drawChances.value = res.draw_chances;
-  inviteCount.value = res.invite_count;
-};
-
-const onRefresh = async () => {
-  try {
-    await refreshInfo();
-    showSuccessToast("刷新成功");
-  } catch (error) {
-    showFailToast("刷新失败");
-  } finally {
-    refreshing.value = false;
-  }
-};
-
-// ===================== 转盘绘制 =====================
+// ===================== 绘制 6 扇区带图转盘 =====================
 const drawWheel = (angle: number) => {
   const canvas = wheelCanvas.value;
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const r = cx - 6;
+  const dpr = window.devicePixelRatio || 2;
+  const width = canvas.width / dpr;
+  const height = canvas.height / dpr;
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = cx - 8;
 
+  ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(dpr, dpr);
 
-  // 外圈光晕
-  const outerGlow = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r + 4);
-  outerGlow.addColorStop(0, "rgba(255,215,0,0.0)");
-  outerGlow.addColorStop(1, "rgba(255,215,0,0.35)");
+  // 1. 最外层金色立体光晕与外圈
+  const outerGlow = ctx.createRadialGradient(cx, cy, radius * 0.85, cx, cy, radius + 8);
+  outerGlow.addColorStop(0, "rgba(255, 195, 18, 0)");
+  outerGlow.addColorStop(1, "rgba(255, 159, 26, 0.45)");
   ctx.beginPath();
-  ctx.arc(cx, cy, r + 4, 0, 2 * Math.PI);
+  ctx.arc(cx, cy, radius + 6, 0, 2 * Math.PI);
   ctx.fillStyle = outerGlow;
   ctx.fill();
 
-  // 绘制各扇形
+  // 2. 外部华丽金属装饰底环
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius + 4, 0, 2 * Math.PI);
+  const ringGradient = ctx.createLinearGradient(0, 0, width, height);
+  ringGradient.addColorStop(0, "#FEE180");
+  ringGradient.addColorStop(0.3, "#F39C12");
+  ringGradient.addColorStop(0.7, "#FEE180");
+  ringGradient.addColorStop(1, "#D35400");
+  ctx.strokeStyle = ringGradient;
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  // 3. 装饰发光灯珠 (12颗)
+  const bulbCount = 12;
+  for (let b = 0; b < bulbCount; b++) {
+    const bulbAngle = (2 * Math.PI / bulbCount) * b;
+    const bx = cx + (radius + 4) * Math.cos(bulbAngle);
+    const by = cy + (radius + 4) * Math.sin(bulbAngle);
+    ctx.beginPath();
+    ctx.arc(bx, by, 3, 0, 2 * Math.PI);
+    ctx.fillStyle = b % 2 === 0 ? "#FFF9D2" : "#FF7675";
+    ctx.shadowColor = b % 2 === 0 ? "#FFD700" : "#FF4757";
+    ctx.shadowBlur = 6;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // 4. 绘制 6 个扇区
   for (let i = 0; i < SEGMENT_COUNT; i++) {
     const startAngle = angle + i * SEGMENT_ANGLE;
     const endAngle = startAngle + SEGMENT_ANGLE;
-    const prize = prizes[i];
+    const prize = PRIZE_LIST[i];
 
-    // 扇形
+    // 扇形背景
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.arc(cx, cy, radius, startAngle, endAngle);
     ctx.closePath();
 
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    grad.addColorStop(0, lightenColor(prize.color, 30));
-    grad.addColorStop(1, prize.color);
-    ctx.fillStyle = grad;
+    ctx.fillStyle = prize.bgColor;
     ctx.fill();
 
-    // 边框
-    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    // 扇形金边分隔线
+    ctx.strokeStyle = "rgba(224, 164, 88, 0.35)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // 文字
+    // 5. 绘制扇区内的奖品图片与奖品名称
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(startAngle + SEGMENT_ANGLE / 2);
+
+    // 绘制奖品文字 (靠近外圈，横向沿圆弧切线水平排布)
+    ctx.save();
+    const textDistance = radius * 0.81;
+    ctx.translate(textDistance, 0);
+    ctx.rotate(Math.PI / 2); // 旋转 90 度，让文字横着展示！
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-
-    const lines = prize.name.split("\n");
-    const fontSize = lines[0].length <= 3 ? 15 : 13;
-    ctx.font = `bold ${fontSize}px 'PingFang SC', 'Helvetica Neue', sans-serif`;
+    ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.fillStyle = prize.textColor;
-    ctx.shadowColor = prize.shadow;
-    ctx.shadowBlur = 4;
+    ctx.fillText(prize.shortName, 0, 0);
+    ctx.restore();
 
-    const lineH = fontSize + 3;
-    const totalH = lines.length * lineH;
-    lines.forEach((line, li) => {
-      ctx.fillText(line, r * 0.58, -totalH / 2 + li * lineH + lineH / 2);
-    });
+    // 绘制奖品图片 (在扇区中间，带精致圆形遮罩与金边，方向正向)
+    const img = loadedImages.value.get(prize.id);
+    const imgDistance = radius * 0.47; // 图片中心离转盘圆心的距离
+    const imgSize = radius * 0.28; // 图片直径 (约42px)
+
+    if (img && img.complete) {
+      ctx.save();
+      ctx.translate(imgDistance, 0);
+      ctx.rotate(Math.PI / 2); // 旋转 90 度，使图片朝向与横向文字一致且正向！
+
+      // 图片白色底圆与阴影
+      ctx.beginPath();
+      ctx.arc(0, 0, imgSize / 2, 0, Math.PI * 2);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.shadowColor = "rgba(0,0,0,0.12)";
+      ctx.shadowBlur = 4;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // 裁剪圆形展示图片
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, imgSize / 2 - 1, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(
+        img,
+        -imgSize / 2,
+        -imgSize / 2,
+        imgSize,
+        imgSize
+      );
+      ctx.restore();
+
+      // 图片外层金色圆环描边
+      ctx.beginPath();
+      ctx.arc(0, 0, imgSize / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(243, 156, 18, 0.65)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
     ctx.restore();
   }
 
-  // 外圈装饰环 - 粉/白
+  // 6. 转盘中心圆盘与底座
   ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-  const ringGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-  ringGrad.addColorStop(0, "#ffffff");
-  ringGrad.addColorStop(0.5, "#fbe3e6");
-  ringGrad.addColorStop(1, "#d46b77");
-  ctx.strokeStyle = ringGrad;
-  ctx.lineWidth = 5;
-  ctx.stroke();
-
-  // 圆心装饰
-  drawCenter(ctx, cx, cy);
-};
-
-const drawCenter = (ctx: CanvasRenderingContext2D, cx: number, cy: number) => {
-  // 外圈白圆
-  ctx.beginPath();
-  ctx.arc(cx, cy, 28, 0, 2 * Math.PI);
-  ctx.fillStyle = "#fff";
-  ctx.shadowColor = "rgba(0,0,0,0.3)";
-  ctx.shadowBlur = 12;
+  ctx.arc(cx, cy, 32, 0, 2 * Math.PI);
+  const centerBg = ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, 32);
+  centerBg.addColorStop(0, "#FFFFFF");
+  centerBg.addColorStop(0.6, "#FFF2E2");
+  centerBg.addColorStop(1, "#FAD390");
+  ctx.fillStyle = centerBg;
+  ctx.shadowColor = "rgba(0, 0, 0, 0.25)";
+  ctx.shadowBlur = 10;
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  // 柔和粉边
-  const centerGrad = ctx.createRadialGradient(cx - 4, cy - 4, 2, cx, cy, 24);
-  centerGrad.addColorStop(0, "#ffffff");
-  centerGrad.addColorStop(0.5, "#fbe3e6");
-  centerGrad.addColorStop(1, "#d46b77");
   ctx.beginPath();
-  ctx.arc(cx, cy, 24, 0, 2 * Math.PI);
-  ctx.fillStyle = centerGrad;
-  ctx.fill();
+  ctx.arc(cx, cy, 32, 0, 2 * Math.PI);
+  ctx.strokeStyle = "#F39C12";
+  ctx.lineWidth = 3;
+  ctx.stroke();
 
   // 中心文字
-  ctx.font = "bold 11px 'PingFang SC', sans-serif";
+  ctx.font = "bold 12px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#fff";
-  ctx.fillText("点击", cx, cy - 6);
+  ctx.fillStyle = "#D63031";
+  ctx.fillText("LUCKY", cx, cy - 7);
+  ctx.font = "bold 11px sans-serif";
   ctx.fillText("抽奖", cx, cy + 8);
+
+  ctx.restore();
 };
 
-function lightenColor(hex: string, amount: number): string {
-  const num = parseInt(hex.replace("#", ""), 16);
-  const r = Math.min(255, (num >> 16) + amount);
-  const g = Math.min(255, ((num >> 8) & 0xff) + amount);
-  const b = Math.min(255, (num & 0xff) + amount);
-  return `rgb(${r},${g},${b})`;
-}
-
-// 转盘旋转动画
+// 减速缓动曲线 (Ease Out Quart)
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 4);
 
-const spinWheel = (prizeIndex: number, onDone: () => void) => {
+// ===================== 转盘旋转动画 =====================
+const spinWheelToPrize = (targetPrizeIndex: number, onDone: () => void) => {
   const startAngle = wheelAngle.value;
-  // 保证转至少5圈 + 落在目标格
-  const extra = Math.PI * 2 * (5 + Math.random() * 3);
-  // 使指针(顶部, -π/2)停在该格中央
-  const segCenter = prizeIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
-  const landAngle = -Math.PI / 2 - segCenter + Math.PI * 2;
-  const total = extra + ((landAngle - (startAngle % (Math.PI * 2)) + Math.PI * 4) % (Math.PI * 2));
 
-  const duration = 4500;
-  let start: number | null = null;
+  // 目标扇区中心相对于转盘自身的角度
+  const segCenter = targetPrizeIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
 
-  const step = (ts: number) => {
-    if (!start) start = ts;
-    const elapsed = ts - start;
+  // 指针位于顶部 (12 点钟方向，即 -π/2 或 3π/2)
+  // 要让目标扇区中心停在 -π/2 处：(startAngle + totalDelta + segCenter) ≡ -π/2
+  const pointerAngle = -Math.PI / 2;
+  const currentNormalized = (startAngle % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  let targetAngleMod = (pointerAngle - segCenter) % (Math.PI * 2);
+  if (targetAngleMod < 0) targetAngleMod += Math.PI * 2;
+
+  // 计算需要顺时针额外旋转的弧度
+  let diff = targetAngleMod - currentNormalized;
+  if (diff < 0) diff += Math.PI * 2;
+
+  // 保证至少旋转 6 圈 (12π)，让抽奖视觉效果更震撼
+  const totalRotation = Math.PI * 2 * 6 + diff;
+
+  const duration = 4600; // 4.6 秒减速旋转
+  let startTime: number | null = null;
+
+  const step = (timestamp: number) => {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
     const progress = Math.min(elapsed / duration, 1);
     const eased = easeOut(progress);
-    wheelAngle.value = startAngle + total * eased;
+
+    wheelAngle.value = startAngle + totalRotation * eased;
     drawWheel(wheelAngle.value);
 
     if (progress < 1) {
       animationId.value = requestAnimationFrame(step);
     } else {
-      wheelAngle.value = startAngle + total;
+      wheelAngle.value = startAngle + totalRotation;
       drawWheel(wheelAngle.value);
       onDone();
     }
   };
+
   animationId.value = requestAnimationFrame(step);
 };
 
-// ===================== 烟花/彩纸动画 =====================
+// ===================== 烟花 / 彩纸动画 =====================
 interface Confetti {
-  x: number; y: number; vx: number; vy: number;
-  color: string; size: number; rotation: number; rotV: number; alpha: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  rotation: number;
+  rotV: number;
+  alpha: number;
 }
-const confettiParticles = ref<Confetti[]>([]);
-let confettiAnim = 0;
 
-const launchConfetti = (isBigWin = false) => {
+const launchConfetti = () => {
   const canvas = confettiCanvas.value;
   if (!canvas) return;
-  const colors = ["#FFD700","#FF4757","#FF6B35","#FFF","#C0392B","#FFB700","#00D2FF"];
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const colors = ["#FFD700", "#FF4757", "#FF6B35", "#FFFFFF", "#E84393", "#00CEC9", "#FDCB6E"];
+  const count = 160;
   const particles: Confetti[] = [];
-  const count = isBigWin ? 250 : 120;
 
   for (let i = 0; i < count; i++) {
     particles.push({
       x: canvas.width * (0.2 + Math.random() * 0.6),
-      y: canvas.height * 0.4,
-      vx: (Math.random() - 0.5) * (isBigWin ? 18 : 12),
-      vy: -Math.random() * (isBigWin ? 20 : 14) - 4,
+      y: canvas.height * 0.45,
+      vx: (Math.random() - 0.5) * 16,
+      vy: -Math.random() * 18 - 5,
       color: colors[Math.floor(Math.random() * colors.length)],
-      size: 5 + Math.random() * 7,
+      size: 6 + Math.random() * 8,
       rotation: Math.random() * Math.PI * 2,
-      rotV: (Math.random() - 0.5) * 0.2,
+      rotV: (Math.random() - 0.5) * 0.25,
       alpha: 1
     });
   }
-  confettiParticles.value = particles;
-
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
 
   const animate = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -325,10 +343,10 @@ const launchConfetti = (isBigWin = false) => {
     particles.forEach(p => {
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.35;
-      p.vx *= 0.99;
+      p.vy += 0.4;
+      p.vx *= 0.985;
       p.rotation += p.rotV;
-      p.alpha -= 0.012;
+      p.alpha -= 0.013;
       if (p.alpha > 0) {
         alive = true;
         ctx.save();
@@ -346,126 +364,146 @@ const launchConfetti = (isBigWin = false) => {
   confettiAnim = requestAnimationFrame(animate);
 };
 
-// ===================== 抽奖逻辑 =====================
-const getPrizeIndex = (prizeName: string): number => {
-  const map: Record<string, number> = {
-    "100元": 0,
-    "200元": 2,
-    "500元": 4,
-    "1000元": 6
-  };
-  return map[prizeName] ?? 1; // 默认给谢谢参与格子
-};
-
+// ===================== 抽奖操作 =====================
 const onDraw = async () => {
-  if (loading.value || spinning.value) return;
+  if (spinning.value || loading.value) return;
+
   if (drawChances.value <= 0) {
-    showFailToast("抽奖次数不足，邀请好友可获得更多次数");
+    showFailToast("您的抽奖次数已用尽！");
     return;
   }
+
   loading.value = true;
   spinning.value = true;
-  drawStage.value = "running";
-
-  // 假装网络慢一点，避免toast太快消失
-  showLoadingToast({ message: "抽奖中...", forbidClick: true, duration: 0 });
+  showLoadingToast({ message: "正在开奖...", forbidClick: true, duration: 0 });
 
   try {
-    const res = await activityDrawApi({ device_id: deviceId.value });
+    // 将前端配置的 6 款奖品及权重传给后端进行动态抽奖！
+    const payloadPrizes = PRIZE_LIST.map(p => ({
+      id: p.id,
+      name: p.name,
+      image: p.rawImageName,
+      weight: p.weight // 前端直接配置的中奖权重
+    }));
+
+    const res = await activityDrawApi({
+      device_id: deviceId.value,
+      prizes: payloadPrizes,
+      init_chances: INITIAL_DRAW_CHANCES
+    });
+
     closeToast();
-    resultPrize.value = res.prize;
-    points.value = res.points;
     drawChances.value = res.draw_chances;
+    winningRecordId.value = res.record_id || null;
 
-    saveHistory(res.prize);
+    // 找到中奖奖品在 PRIZE_LIST 中的索引
+    const prizeIdx = PRIZE_LIST.findIndex(p => p.id === res.prize_id);
+    const targetIdx = prizeIdx !== -1 ? prizeIdx : 0;
+    winningPrize.value = PRIZE_LIST[targetIdx];
 
-    const idx = getPrizeIndex(res.prize);
-    spinWheel(idx, () => {
-      drawStage.value = "finished";
+    // 旋转转盘平滑停在中奖扇区
+    spinWheelToPrize(targetIdx, () => {
       spinning.value = false;
       loading.value = false;
       resultVisible.value = true;
-
-      // 大奖放更多烟花
-      if (res.prize === "1000元" || res.prize === "500元") {
-        launchConfetti(true);
-      } else {
-        launchConfetti(false);
-      }
+      launchConfetti();
     });
-  } catch {
-    drawStage.value = "idle";
+  } catch (error: any) {
+    closeToast();
     spinning.value = false;
     loading.value = false;
+    showFailToast(error?.response?.data?.message || "抽奖遇到问题，请重试");
+  }
+};
+
+// ===================== 抽奖记录查询 =====================
+const openRecords = async () => {
+  try {
+    showLoadingToast({ message: "加载中...", forbidClick: true });
+    const res = await activityRecordsApi(deviceId.value);
     closeToast();
-    showFailToast("抽奖失败，请稍后重试");
+    recordList.value = res || [];
+    recordsVisible.value = true;
+  } catch (e) {
+    closeToast();
+    showFailToast("获取抽奖记录失败");
   }
 };
 
-const onCopyInvite = async () => {
-  try {
-    await navigator.clipboard.writeText(shareLink.value);
-    showSuccessToast("邀请链接已复制");
-  } catch {
-    showFailToast("复制失败，请手动分享");
-  }
+// 查看单条记录详情
+const openRecordDetail = (record: DrawRecordItem) => {
+  currentDetailRecord.value = record;
+  recordDetailVisible.value = true;
 };
 
-const onInviteClaim = async () => {
-  if (!inviteInput.value.trim()) {
-    showFailToast("请输入邀请人邀请码");
-    return;
-  }
-  try {
-    await activityInviteClaimApi({
+// 从中奖弹窗直接查看记录详情
+const viewDetailFromPopup = () => {
+  resultVisible.value = false;
+  if (winningPrize.value) {
+    currentDetailRecord.value = {
+      id: winningRecordId.value || Date.now(),
       device_id: deviceId.value,
-      inviter_code: inviteInput.value.trim()
+      prize_id: winningPrize.value.id,
+      prize_name: winningPrize.value.name,
+      prize_image: winningPrize.value.rawImageName,
+      created_at: "刚刚"
+    };
+    recordDetailVisible.value = true;
+  }
+};
+
+// 帮助获取对应奖品的图片对象
+const getPrizeImageByRecord = (record: DrawRecordItem) => {
+  const match = PRIZE_LIST.find(p => p.id === record.prize_id || p.name === record.prize_name);
+  return match ? match.image : PRIZE_LIST[0].image;
+};
+
+// ===================== 初始化 =====================
+const initPage = async () => {
+  const id = ensureDeviceId();
+  try {
+    const res = await activityInitApi({
+      device_id: id,
+      init_chances: INITIAL_DRAW_CHANCES
     });
-    showSuccessToast("邀请奖励已领取");
-    inviteVisible.value = false;
-    await refreshInfo();
-  } catch {
-    showFailToast("领取失败，请检查邀请码");
-  }
-};
-
-const openInviteModal = () => {
-  inviteInput.value = "";
-  inviteVisible.value = true;
-};
-
-const handleWheelClick = () => {
-  if (!spinning.value) onDraw();
-};
-
-onMounted(async () => {
-  // 解析 invite_code（多重降级策略保证不丢失）
-  let finalInviteCode = route.query.invite_code as string;
-
-  if (!finalInviteCode) {
-    const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
-    finalInviteCode = params.get("invite_code") || "";
+    drawChances.value = res.draw_chances;
+  } catch (e) {
+    console.error("Init activity failed", e);
   }
 
-  if (!finalInviteCode) {
-    finalInviteCode = sessionStorage.getItem("activity_from_invite_code") || "";
-  }
-
-  await initActivity(finalInviteCode);
-  loadHistory();
-
-  // 初始化画布尺寸
-  await new Promise(r => setTimeout(r, 100));
+  // 初始化画布尺寸 (适配高清屏 DPR)
+  const dpr = window.devicePixelRatio || 2;
   if (wheelCanvas.value) {
-    const size = Math.min(window.innerWidth - 80, 280);
-    wheelCanvas.value.width = size;
-    wheelCanvas.value.height = size;
-    drawWheel(wheelAngle.value);
+    const displaySize = Math.min(window.innerWidth - 64, 320);
+    wheelCanvas.value.width = displaySize * dpr;
+    wheelCanvas.value.height = displaySize * dpr;
+    wheelCanvas.value.style.width = `${displaySize}px`;
+    wheelCanvas.value.style.height = `${displaySize}px`;
   }
+
   if (confettiCanvas.value) {
     confettiCanvas.value.width = window.innerWidth;
     confettiCanvas.value.height = window.innerHeight;
   }
+
+  // 预加载图片并初次绘制转盘
+  await preloadImages();
+  drawWheel(wheelAngle.value);
+};
+
+const onRefresh = async () => {
+  try {
+    await initPage();
+    showSuccessToast("刷新成功");
+  } catch {
+    showFailToast("刷新失败");
+  } finally {
+    refreshing.value = false;
+  }
+};
+
+onMounted(() => {
+  initPage();
 });
 
 onBeforeUnmount(() => {
@@ -476,811 +514,961 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="activity-page">
-    <!-- 背景粒子/光效 -->
-    <div class="bg-radial bg-r1"></div>
-    <div class="bg-radial bg-r2"></div>
-    <div class="bg-radial bg-r3"></div>
+  <div class="lottery-page">
+    <!-- 全屏背景氛围与光斑 -->
+    <div class="bg-glow glow-top"></div>
+    <div class="bg-glow glow-bottom"></div>
 
-    <!-- 烟花画布（全屏） -->
+    <!-- 庆祝彩纸烟花 Canvas -->
     <canvas ref="confettiCanvas" class="confetti-canvas" />
 
-    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="pull-refresh-wrap">
-      <!-- 顶部标题区 -->
-      <header class="page-header">
-      <div class="header-glow"></div>
-      <div class="header-top">
-        <span class="live-badge">
-          <i class="live-dot"></i>活动进行中
-        </span>
-        <div class="top-chips">
-          <span v-if="inviterCode" class="invited-by-chip">由 {{ inviterCode }} 邀请</span>
-          <span v-if="inviteCode" class="invite-chip" @click="onCopyInvite">我的邀请码：{{ inviteCode }}</span>
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="pull-wrap">
+      <!-- 顶部轻奢标题 -->
+      <header class="lottery-header">
+        <div class="header-tags">
+          <span class="live-pill">
+            <span class="dot-pulse"></span>
+            限时狂欢进行中
+          </span>
+          <button class="rule-chip" @click="ruleVisible = true">
+            📜 活动说明
+          </button>
         </div>
-      </div>
-      <div class="title-wrap">
-        <h2 class="page-title-zh">名门美妆学院</h2>
-        <!-- <h1 class="page-title">Aesthetics Salon Event</h1> -->
-        <div class="school-name">幸运大转盘</div>
-        <!-- <p class="page-sub">转动命运 · 向美而生</p> -->
-      </div>
-    </header>
 
-    <!-- 转盘区域 -->
-    <section class="wheel-section">
-      <div class="wheel-wrap">
-        <!-- 外圈装饰光晕 -->
-        <div class="wheel-halo"></div>
-        <div class="wheel-halo wheel-halo-2"></div>
+        <h1 class="main-title">幸运大转盘</h1>
+        <p class="sub-title">100% 惊喜好礼 · 极速开奖</p>
 
-        <!-- 转盘容器 -->
-        <div class="wheel-container" @click="handleWheelClick">
-          <!-- 指针 -->
-          <div class="pointer-wrap">
-            <svg class="pointer-svg" viewBox="0 0 28 42" xmlns="http://www.w3.org/2000/svg">
+        <!-- 剩余抽奖次数卡片 -->
+        <div class="chance-badge">
+          <span class="chance-icon">🎁</span>
+          <span class="chance-text">剩余抽奖机会：</span>
+          <span class="chance-num">{{ drawChances }}</span>
+          <span class="chance-unit">次</span>
+        </div>
+      </header>
+
+      <!-- 转盘核心区 -->
+      <section class="wheel-box">
+        <div class="wheel-stage">
+          <!-- 立体投影底晕 -->
+          <div class="wheel-shadow-ring"></div>
+
+          <!-- 顶部指针 (金色金属尖角指针) -->
+          <div class="pointer-wrapper">
+            <svg class="pointer-svg" viewBox="0 0 32 46" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M16 46L0 8C0 3.58172 3.58172 0 8 0H24C28.4183 0 32 3.58172 32 8L16 46Z"
+                fill="url(#goldGradient)"
+              />
+              <circle cx="16" cy="12" r="6" fill="#FFF2D6" stroke="#D63031" stroke-width="2" />
               <defs>
-                <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#e49a9b"/>
-                  <stop offset="100%" stop-color="#d46b77"/>
+                <linearGradient id="goldGradient" x1="0" y1="0" x2="32" y2="46" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#FFEAA7" />
+                  <stop offset="0.5" stop-color="#F39C12" />
+                  <stop offset="1" stop-color="#D35400" />
                 </linearGradient>
               </defs>
-              <polygon points="14,42 0,4 28,4" fill="url(#pg)" stroke="white" stroke-width="1.5"/>
-              <circle cx="14" cy="4" r="7" fill="#e49a9b" stroke="white" stroke-width="2"/>
             </svg>
           </div>
 
-          <canvas
-            ref="wheelCanvas"
-            class="wheel-canvas"
-            :class="{ spinning }"
-          />
-        </div>
+          <!-- Canvas 转盘本体 -->
+          <canvas ref="wheelCanvas" class="wheel-canvas" />
 
-        <!-- 抽奖按钮（悬浮） -->
-        <button
-          class="draw-fab"
-          :class="{ loading: spinning }"
-          :disabled="spinning || loading"
-          @click="onDraw"
-        >
-          <span class="fab-inner">
-            <span class="fab-text">{{ spinning ? "抽奖中..." : "立即抽奖" }}</span>
-            <span v-if="!spinning" class="fab-count">剩余 {{ drawChances }} 次</span>
-          </span>
-          <span class="fab-glow"></span>
-        </button>
-      </div>
-    </section>
-
-    <!-- 奖品列表 -->
-    <section class="prizes-section">
-      <h2 class="section-title">
-        <span class="title-line"></span>
-        丰厚奖品
-        <span class="title-line"></span>
-      </h2>
-      <div class="prize-grid">
-        <div v-for="p in [prizes[0], prizes[2], prizes[4], prizes[6]]" :key="p.name" class="prize-card">
-          <div class="prize-icon" :style="{ background: p.color }">
-            <span>¥</span>
-          </div>
-          <div class="prize-name">{{ p.name }}</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 我的信息 -->
-    <section class="info-section">
-      <div class="info-card">
-        <div class="info-item">
-          <div class="info-icon points-icon">🏆</div>
-          <div>
-            <div class="info-label">我的积分</div>
-            <div class="info-value">{{ points }}</div>
+          <!-- 中心启动按钮 (点击直接触发抽奖) -->
+          <div
+            class="center-fab"
+            :class="{ disabled: drawChances <= 0 || spinning }"
+            @click="onDraw"
+          >
+            <span class="fab-title">{{ spinning ? "抽奖中" : "GO" }}</span>
           </div>
         </div>
-        <div class="info-divider"></div>
-        <div class="info-item">
-          <div class="info-icon chance-icon">🎰</div>
-          <div>
-            <div class="info-label">抽奖次数</div>
-            <div class="info-value highlight">{{ drawChances }}</div>
-          </div>
-        </div>
-        <div class="info-divider"></div>
-        <div class="info-item">
-          <div class="info-icon invite-icon">👥</div>
-          <div>
-            <div class="info-label">邀请人数</div>
-            <div class="info-value">{{ inviteCount }}</div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- 操作按钮 -->
-    <section class="actions-section">
-      <button class="action-btn primary-action" @click="onCopyInvite">
-        <span class="action-icon">🔗</span>
-        邀请好友 赢抽奖次数
-      </button>
-      <div class="action-row-2">
-        <button class="action-btn ghost-action" @click="openInviteModal">
-          <span class="action-icon">🎁</span>
-          填写邀请码
-        </button>
-        <button class="action-btn ghost-action" @click="historyVisible = true">
-          <span class="action-icon">📜</span>
-          抽奖记录
-        </button>
-        <button class="action-btn ghost-action" @click="ruleVisible = true">
-          <span class="action-icon">📋</span>
-          活动规则
-        </button>
-      </div>
-    </section>
+        <!-- 底部大按钮 -->
+        <div class="action-wrap">
+          <button
+            class="primary-draw-btn"
+            :class="{ loading: spinning, disabled: drawChances <= 0 }"
+            :disabled="spinning || drawChances <= 0"
+            @click="onDraw"
+          >
+            <span class="btn-sparkle">✨</span>
+            <span class="btn-text">{{ spinning ? "好运计算中..." : "立即点击抽奖" }}</span>
+            <span class="btn-sub">（剩余 {{ drawChances }} 次机会）</span>
+          </button>
+
+          <!-- 快捷操作栏：查看中奖记录 -->
+          <div class="quick-nav">
+            <button class="nav-btn" @click="openRecords">
+              <span class="nav-icon">📜</span>
+              <span>查看抽奖记录</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 奖品展台 (6大实物豪礼展示) -->
+      <section class="prizes-showcase">
+        <div class="showcase-header">
+          <span class="header-line"></span>
+          <span class="header-text">豪华奖品一览</span>
+          <span class="header-line"></span>
+        </div>
+
+        <div class="prize-card-grid">
+          <div
+            v-for="item in PRIZE_LIST"
+            :key="item.id"
+            class="prize-item-card"
+          >
+            <div class="card-img-wrap">
+              <img :src="item.image" :alt="item.name" class="card-img" />
+              <div class="card-tag">奖品</div>
+            </div>
+            <div class="card-title">{{ item.name }}</div>
+          </div>
+        </div>
+      </section>
     </van-pull-refresh>
 
-    <!-- 中奖结果弹窗 -->
-    <van-popup v-model:show="resultVisible" round closeable position="center" :style="{ background: 'transparent' }">
-      <div class="result-popup">
-        <div class="result-rays">
-          <div v-for="i in 12" :key="i" class="ray" :style="{ transform: `rotate(${i * 30}deg)` }"></div>
+    <!-- 中奖结果弹窗 (带大图与动效) -->
+    <van-popup
+      v-model:show="resultVisible"
+      round
+      closeable
+      position="center"
+      :style="{ background: 'transparent', width: '88%' }"
+    >
+      <div v-if="winningPrize" class="result-card">
+        <div class="result-burst"></div>
+        <div class="result-badge">🎉 恭喜中奖！</div>
+
+        <div class="result-img-box">
+          <img :src="winningPrize.image" :alt="winningPrize.name" class="result-img" />
         </div>
-        <div class="result-icon">🎉</div>
-        <div class="result-badge-text">恭喜获得！</div>
-        <div class="result-prize">{{ resultPrize }}</div>
-        <p class="result-tip">在活动期间可以使用立减券！</p>
-        <button class="result-btn" @click="resultVisible = false">好的，继续抽！</button>
+
+        <div class="result-prize-title">{{ winningPrize.name }}</div>
+        <p class="result-note">好运爆棚！奖品已存入您的中奖记录</p>
+
+        <div class="result-btn-row">
+          <button class="result-btn secondary" @click="viewDetailFromPopup">
+            查看详情
+          </button>
+          <button
+            class="result-btn primary"
+            @click="resultVisible = false"
+          >
+            {{ drawChances > 0 ? "继续抽奖" : "确定" }}
+          </button>
+        </div>
       </div>
     </van-popup>
 
-    <!-- 活动规则弹窗 -->
-    <van-popup v-model:show="ruleVisible" position="bottom" round>
-      <div class="popup-panel">
-        <div class="popup-handle"></div>
-        <h3 class="popup-title">📋 活动规则</h3>
-        <ul class="rule-list">
-          <li>🎟️ 用户首次进入活动页，赠送 <strong>1 次</strong>抽奖机会</li>
-          <li>🔗 分享邀请链接，新用户首次进入后，邀请人 <strong>+1 积分</strong></li>
-          <li>💎 <strong>10 积分</strong>可兑换 1 次抽奖机会</li>
-          <li>🏆 奖品为 100元 / 200元 / 500元 / 1000元立减券，活动期间可以享受满减</li>
-          <li>⚠️ 同设备仅可被邀请一次，避免重复领取</li>
-        </ul>
-      </div>
-    </van-popup>
+    <!-- 抽奖历史记录弹窗 -->
+    <van-popup
+      v-model:show="recordsVisible"
+      position="bottom"
+      round
+      class="popup-sheet"
+      :style="{ height: '65vh' }"
+    >
+      <div class="sheet-container">
+        <div class="sheet-bar"></div>
+        <div class="sheet-title">
+          <span>📜 我的抽奖记录</span>
+          <van-icon name="cross" class="sheet-close" @click="recordsVisible = false" />
+        </div>
 
-    <!-- 抽奖历史弹窗 -->
-    <van-popup v-model:show="historyVisible" position="bottom" round>
-      <div class="popup-panel history-panel">
-        <div class="popup-handle"></div>
-        <h3 class="popup-title">📜 抽奖记录</h3>
-        <div v-if="drawHistory.length > 0" class="history-list">
-          <div v-for="(item, idx) in drawHistory" :key="idx" class="history-item">
-            <span class="history-time">{{ item.time }}</span>
-            <span class="history-prize">{{ item.prize }}</span>
+        <div v-if="recordList.length > 0" class="records-list">
+          <div
+            v-for="rec in recordList"
+            :key="rec.id"
+            class="record-item"
+            @click="openRecordDetail(rec)"
+          >
+            <img :src="getPrizeImageByRecord(rec)" class="record-thumb" />
+            <div class="record-info">
+              <div class="record-name">{{ rec.prize_name }}</div>
+              <div class="record-time">{{ rec.created_at }}</div>
+            </div>
+            <div class="record-action">
+              <span class="status-tag">已中奖</span>
+              <span class="detail-link">详情 &gt;</span>
+            </div>
           </div>
         </div>
-        <div v-else class="history-empty">
-          暂无抽奖记录，快去抽奖吧~
+
+        <div v-else class="records-empty">
+          <div class="empty-icon">🎁</div>
+          <p class="empty-text">您还没有抽奖记录呢</p>
+          <p class="empty-sub">快去转动大转盘抽取幸运豪礼吧！</p>
         </div>
       </div>
     </van-popup>
 
-    <!-- 填写邀请码弹窗 -->
-    <van-popup v-model:show="inviteVisible" position="bottom" round>
-      <div class="popup-panel">
-        <div class="popup-handle"></div>
-        <h3 class="popup-title">🎁 填写邀请人邀请码</h3>
-        <van-field
-          v-model="inviteInput"
-          placeholder="请输入邀请人邀请码"
-          class="invite-field"
-        />
-        <button class="action-btn primary-action full-w" @click="onInviteClaim">
-          领取邀请奖励
+    <!-- 单条中奖记录详情弹窗 -->
+    <van-popup
+      v-model:show="recordDetailVisible"
+      round
+      closeable
+      position="center"
+      :style="{ background: 'transparent', width: '84%' }"
+    >
+      <div v-if="currentDetailRecord" class="detail-card">
+        <div class="detail-header">奖品详情</div>
+        <div class="detail-img-box">
+          <img :src="getPrizeImageByRecord(currentDetailRecord)" class="detail-img" />
+        </div>
+        <div class="detail-name">{{ currentDetailRecord.prize_name }}</div>
+        <div class="detail-field">
+          <span class="field-label">中奖单号：</span>
+          <span class="field-val">#{{ currentDetailRecord.id }}</span>
+        </div>
+        <div class="detail-field">
+          <span class="field-label">抽奖时间：</span>
+          <span class="field-val">{{ currentDetailRecord.created_at }}</span>
+        </div>
+        <div class="detail-field">
+          <span class="field-label">兑奖状态：</span>
+          <span class="field-val highlight">已中奖 · 待联系核销</span>
+        </div>
+        <div class="detail-instruction">
+          📌 请截图保留本中奖凭证，联系活动官方客服出示进行兑奖与发货。
+        </div>
+        <button class="detail-close-btn" @click="recordDetailVisible = false">
+          返回
         </button>
+      </div>
+    </van-popup>
+
+    <!-- 活动说明弹窗 -->
+    <van-popup
+      v-model:show="ruleVisible"
+      position="bottom"
+      round
+      class="popup-sheet"
+      :style="{ maxHeight: '55vh' }"
+    >
+      <div class="sheet-container">
+        <div class="sheet-bar"></div>
+        <div class="sheet-title">
+          <span>📋 活动规则说明</span>
+          <van-icon name="cross" class="sheet-close" @click="ruleVisible = false" />
+        </div>
+        <div class="rule-content">
+          <p class="rule-p">1. 用户进入页面即可直接免费参与大转盘抽奖。</p>
+          <p class="rule-p">2. 奖品包含 Apple MacBook pro、iPhone 17 Pro Max、iPhone 17/女神礼盒、iPhone 16、珀莱雅红宝石套装及免单红包等。</p>
+          <p class="rule-p">3. 点击“立即抽奖”后大转盘将自动旋转并停留在中奖扇区。</p>
+          <p class="rule-p">4. 抽中奖品将实时保存在“抽奖记录”中，可在页面下方随时查询记录与核销详情。</p>
+          <p class="rule-p">5. 本活动最终解释权归活动举办方所有。</p>
+        </div>
       </div>
     </van-popup>
   </div>
 </template>
 
 <style scoped lang="less">
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=Playfair+Display:wght@400;600;700&display=swap');
-
-// ---- 主页面 ----
-.activity-page {
-  height: 100vh;
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(160deg, #f2c7cb 0%, #e9959e 40%, #768a64 100%);
-  font-family: 'Outfit', 'PingFang SC', 'Helvetica Neue', sans-serif;
+.lottery-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #1C0508 0%, #300C12 40%, #150305 100%);
   color: #fff;
-}
-.pull-refresh-wrap {
-  height: 100vh;
-  overflow-y: auto;
+  position: relative;
+  overflow-x: hidden;
   padding-bottom: 40px;
 }
 
-// ---- 背景光效 ----
-.bg-radial {
-  position: fixed;
+// 全屏光晕背景
+.bg-glow {
+  position: absolute;
   border-radius: 50%;
   pointer-events: none;
+  filter: blur(80px);
   z-index: 0;
 }
-.bg-r1 {
-  width: 500px; height: 500px;
-  left: -200px; top: -100px;
-  background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
-}
-.bg-r2 {
-  width: 400px; height: 400px;
-  right: -100px; top: 200px;
-  background: radial-gradient(circle, rgba(118,138,100,0.6) 0%, transparent 70%);
-}
-.bg-r3 {
-  width: 450px; height: 450px;
-  left: 50%; top: 60%;
+.glow-top {
+  top: -60px;
+  left: 50%;
   transform: translateX(-50%);
-  background: radial-gradient(circle, rgba(228,154,155,0.4) 0%, transparent 70%);
+  width: 320px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(235, 77, 75, 0.45), transparent 70%);
+}
+.glow-bottom {
+  top: 360px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(243, 156, 18, 0.25), transparent 70%);
 }
 
-// ---- 烟花画布 ----
 .confetti-canvas {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: 100;
+  z-index: 999;
 }
 
-// ---- 顶部 ----
-.page-header {
+.pull-wrap {
   position: relative;
   z-index: 1;
-  padding: 20px 20px 8px;
+}
+
+// 头部
+.lottery-header {
+  padding: 24px 20px 12px;
   text-align: center;
-  overflow: hidden;
 }
-.header-glow {
-  position: absolute;
-  inset: -20px;
-  background: radial-gradient(ellipse at 50% 0%, rgba(255,180,0,0.15) 0%, transparent 70%);
-  pointer-events: none;
-}
-.header-top {
+
+.header-tags {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
 }
-.live-badge {
+
+.live-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: rgba(255,70,70,0.18);
-  border: 1px solid rgba(255,70,70,0.35);
-  color: #ff7070;
-  font-size: 12px;
-  font-weight: 600;
-}
-.live-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #ff4040;
-  box-shadow: 0 0 6px #ff4040;
-  animation: blink 1.2s ease-in-out infinite;
-}
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #FFD2D2;
 }
 
-.top-chips {
+.dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FF4757;
+  box-shadow: 0 0 8px #FF4757;
+  animation: blink 1.4s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.rule-chip {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  padding: 4px 10px;
+  color: #F1F2F6;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.main-title {
+  font-size: 28px;
+  font-weight: 900;
+  margin: 0;
+  letter-spacing: 2px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFEAA7 60%, #F39C12 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 8px rgba(243, 156, 18, 0.4));
+}
+
+.sub-title {
+  margin: 4px 0 14px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 1px;
+}
+
+.chance-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, rgba(235, 77, 75, 0.25), rgba(243, 156, 18, 0.25));
+  border: 1px solid rgba(254, 202, 87, 0.4);
+  padding: 6px 16px;
+  border-radius: 30px;
+  backdrop-filter: blur(8px);
+}
+
+.chance-icon {
+  font-size: 14px;
+}
+.chance-text {
+  font-size: 13px;
+  color: #FFD8A8;
+}
+.chance-num {
+  font-size: 18px;
+  font-weight: 900;
+  color: #FFF200;
+  margin: 0 2px;
+}
+.chance-unit {
+  font-size: 12px;
+  color: #FFD8A8;
+}
+
+// 转盘区域
+.wheel-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 10px 0 24px;
+}
+
+.wheel-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.wheel-shadow-ring {
+  position: absolute;
+  width: 88%;
+  height: 88%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 71, 87, 0.35) 0%, transparent 70%);
+  filter: blur(14px);
+  z-index: 0;
+}
+
+.pointer-wrapper {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.pointer-svg {
+  width: 30px;
+  height: 42px;
+}
+
+.wheel-canvas {
+  position: relative;
+  z-index: 2;
+  border-radius: 50%;
+}
+
+// 中心按钮
+.center-fab {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #FF4757, #C0392B);
+  border: 3px solid #FEE180;
+  box-shadow: 0 6px 16px rgba(192, 57, 43, 0.6);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:active:not(.disabled) {
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+
+  &.disabled {
+    filter: grayscale(0.6);
+    cursor: not-allowed;
+  }
+}
+
+.fab-title {
+  color: #FFF9E6;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+// 底部主按钮与快速入口
+.action-wrap {
+  width: 100%;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.primary-draw-btn {
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 20px;
+  border-radius: 40px;
+  border: none;
+  background: linear-gradient(90deg, #FF6B35 0%, #FF4757 50%, #E84393 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(255, 71, 87, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &.disabled {
+    background: #57606F;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+.btn-sparkle {
+  font-size: 16px;
+}
+.btn-text {
+  font-size: 16px;
+  font-weight: 800;
+}
+.btn-sub {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.quick-nav {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
+  padding: 6px 14px;
+  color: #F1F2F6;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+// 奖品展台
+.prizes-showcase {
+  margin-top: 16px;
+  padding: 0 16px;
+}
+
+.showcase-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.header-line {
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+}
+
+.header-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #FFEAA7;
+  letter-spacing: 1px;
+}
+
+.prize-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.prize-item-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+
+.card-img-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  background: #fff;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.card-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.card-tag {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(214, 48, 49, 0.85);
+  color: #fff;
+  font-size: 9px;
+  padding: 1px 0;
+  font-weight: 600;
+}
+
+.card-title {
+  font-size: 11px;
+  color: #F1F2F6;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  height: 30px;
+}
+
+// 中奖弹窗
+.result-card {
+  position: relative;
+  background: linear-gradient(180deg, #2D0A10 0%, #170407 100%);
+  border: 2px solid #F39C12;
+  border-radius: 20px;
+  padding: 28px 20px 22px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+}
+
+.result-badge {
+  font-size: 22px;
+  font-weight: 900;
+  color: #FFD700;
+  margin-bottom: 16px;
+  text-shadow: 0 2px 10px rgba(255, 215, 0, 0.5);
+}
+
+.result-img-box {
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  background: #fff;
+  padding: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(243, 156, 18, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.result-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.result-prize-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-bottom: 6px;
+}
+
+.result-note {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 20px;
+}
+
+.result-btn-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.result-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+
+  &.secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: #FFF;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+
+  &.primary {
+    background: linear-gradient(90deg, #FF6B35, #FF4757);
+    color: #FFF;
+    box-shadow: 0 4px 14px rgba(255, 71, 87, 0.5);
+  }
+}
+
+// 底部弹窗面板通用
+.popup-sheet {
+  background: #1E070B !important;
+  color: #FFF;
+}
+
+.sheet-container {
+  padding: 16px 20px 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-bar {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  margin: 0 auto 12px;
+}
+
+.sheet-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: #FFEAA7;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sheet-close {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+}
+
+// 记录列表
+.records-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.record-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #FFF;
+  object-fit: contain;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.record-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.record-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.record-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.record-action {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
 }
 
-.invite-chip {
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: rgba(255,215,0,0.12);
-  border: 1px solid rgba(255,215,0,0.3);
-  color: #FFD700;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.invited-by-chip {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.1);
-  color: rgba(255,255,255,0.7);
+.status-tag {
+  background: rgba(235, 77, 75, 0.2);
+  color: #FF7675;
+  border: 1px solid rgba(235, 77, 75, 0.4);
   font-size: 10px;
-}
-
-.title-wrap {
-  margin: 16px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-.school-name {
-  font-size: 15px;
-  font-weight: 400;
-  letter-spacing: 3px;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 2px;
-}
-.page-title {
-  font-size: 26px;
-  font-weight: 400;
-  margin: 0;
-  color: #fff;
-  letter-spacing: 1px;
-  font-family: 'Playfair Display', serif;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-.page-title-zh {
-  font-size: 30px;
+  padding: 2px 6px;
+  border-radius: 6px;
   font-weight: 600;
-  margin: 6px 0 0;
-  color: #fff;
-  letter-spacing: 3px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-.page-sub {
-  margin: 8px 0 0;
-  color: rgba(255,255,255,0.85);
-  font-size: 14px;
-  letter-spacing: 2px;
 }
 
-// ---- 转盘区 ----
-.wheel-section {
-  position: relative;
-  z-index: 1;
-  padding: 16px 0 0;
-  display: flex;
-  justify-content: center;
-}
-.wheel-wrap {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.wheel-halo {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 65%);
-  pointer-events: none;
-  animation: halopulse 2.5s ease-in-out infinite;
-}
-.wheel-halo-2 {
-  width: 350px; height: 350px;
-  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 65%);
-  animation: halopulse 2.5s ease-in-out 1.25s infinite;
-}
-@keyframes halopulse {
-  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
-}
-.wheel-container {
-  position: relative;
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.pointer-wrap {
-  position: absolute;
-  top: -18px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  width: 28px;
-  filter: drop-shadow(0 4px 8px rgba(255,0,0,0.5));
-}
-.pointer-svg {
-  width: 28px;
-  height: 42px;
-}
-.wheel-canvas {
-  display: block;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 6px rgba(255,215,0,0.25),
-    0 0 40px rgba(255,150,0,0.3),
-    0 24px 60px rgba(0,0,0,0.6);
-  transition: box-shadow 0.3s;
-  &.spinning {
-    box-shadow:
-      0 0 0 6px rgba(255,215,0,0.5),
-      0 0 60px rgba(255,150,0,0.6),
-      0 24px 60px rgba(0,0,0,0.6);
-  }
+.detail-link {
+  font-size: 11px;
+  color: #FFEAA7;
 }
 
-// ---- 抽奖按钮 ----
-.draw-fab {
-  position: relative;
-  margin-top: 20px;
-  border: none;
-  border-radius: 999px;
-  padding: 0;
-  cursor: pointer;
-  overflow: hidden;
-  width: 220px;
-  height: 54px;
-  -webkit-tap-highlight-color: transparent;
-
-  &:disabled {
-    opacity: 0.8;
-    cursor: not-allowed;
-  }
-}
-.fab-inner {
-  position: relative;
-  z-index: 2;
+.records-empty {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #df8992 0%, #d46b77 100%);
-  box-shadow: 0 8px 24px rgba(212,107,119,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+  padding: 40px 0;
 }
-.draw-fab.loading .fab-inner {
-  background: linear-gradient(90deg, #b0a5a0 0%, #998f8a 100%);
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
 }
-.fab-text {
+.empty-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: #FFF;
+  margin: 0 0 6px;
+}
+.empty-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+// 记录详情卡片
+.detail-card {
+  background: linear-gradient(180deg, #2A090E 0%, #150305 100%);
+  border: 2px solid #F39C12;
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  text-align: center;
+}
+
+.detail-header {
+  font-size: 18px;
+  font-weight: 800;
+  color: #FFEAA7;
+  margin-bottom: 16px;
+}
+
+.detail-img-box {
+  width: 120px;
+  height: 120px;
+  background: #FFF;
+  border-radius: 12px;
+  margin: 0 auto 16px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.detail-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.detail-name {
   font-size: 16px;
   font-weight: 800;
-  color: #fff;
-  letter-spacing: 1px;
-  line-height: 1;
-}
-.fab-count {
-  font-size: 11px;
-  color: rgba(255,255,255,0.8);
-  margin-top: 2px;
-  font-weight: 400;
-}
-.fab-glow {
-  position: absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
-  animation: shimmer 2s linear infinite;
-}
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  color: #FFF;
+  margin-bottom: 14px;
 }
 
-// ---- 奖品展示 ----
-.prizes-section {
-  position: relative;
-  z-index: 1;
-  padding: 24px 20px 0;
-}
-.section-title {
+.detail-field {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.8);
-  margin: 0 0 14px;
-  letter-spacing: 1px;
-}
-.title-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,215,0,0.4), transparent);
-}
-.prize-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.prize-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 6px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  backdrop-filter: blur(8px);
-  transition: transform 0.2s, background 0.2s;
-  &:active { transform: scale(0.95); }
-}
-.prize-icon {
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 900;
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
-}
-.prize-name {
+  justify-content: space-between;
+  padding: 6px 0;
   font-size: 12px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.85);
-  text-align: center;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
-// ---- 信息卡片 ----
-.info-section {
-  position: relative;
-  z-index: 1;
-  padding: 16px 20px 0;
+.field-label {
+  color: rgba(255, 255, 255, 0.6);
 }
-.info-card {
-  display: flex;
-  align-items: center;
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.1);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-.info-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.info-icon {
-  font-size: 22px;
-  width: 36px;
-  text-align: center;
-}
-.info-label {
-  font-size: 11px;
-  color: rgba(255,255,255,0.45);
-  margin-bottom: 2px;
-}
-.info-value {
-  font-size: 20px;
-  font-weight: 800;
-  color: #fff;
-  &.highlight { color: #FFD700; }
-}
-.info-divider {
-  width: 1px;
-  height: 36px;
-  background: rgba(255,255,255,0.1);
-  margin: 0 4px;
-}
+.field-val {
+  color: #FFF;
+  font-weight: 600;
 
-// ---- 操作按钮 ----
-.actions-section {
-  position: relative;
-  z-index: 1;
-  padding: 16px 20px 0;
-}
-.action-btn {
-  width: 100%;
-  border: none;
-  border-radius: 14px;
-  padding: 14px 16px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: transform 0.15s, box-shadow 0.15s;
-  &:active { transform: scale(0.97); }
-}
-.primary-action {
-  background: linear-gradient(90deg, #df8992 0%, #d46b77 100%);
-  color: #fff;
-  box-shadow: 0 8px 24px rgba(212,107,119,0.35);
-  margin-bottom: 10px;
-}
-.action-row-2 {
-  display: flex;
-  gap: 10px;
-}
-.ghost-action {
-  flex: 1;
-  background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.8);
-  font-size: 14px;
-  padding: 12px;
-  backdrop-filter: blur(8px);
-}
-.action-icon { font-size: 16px; }
-
-// ---- 中奖弹窗 ----
-.result-popup {
-  position: relative;
-  min-width: 280px;
-  padding: 32px 24px 28px;
-  text-align: center;
-  border-radius: 28px;
-  overflow: hidden;
-  background: linear-gradient(160deg, #f2c7cb 0%, #e9959e 100%);
-  border: 1px solid rgba(255,255,255,0.4);
-  box-shadow: 0 0 60px rgba(212,107,119,0.3);
-  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes popIn {
-  0% { transform: scale(0.7); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.result-rays {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.ray {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 200%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,215,0,0.12), transparent);
-  transform-origin: left center;
-}
-.result-icon {
-  font-size: 52px;
-  margin-bottom: 8px;
-  animation: bounceIn 0.5s 0.2s both;
-}
-@keyframes bounceIn {
-  0% { transform: scale(0); }
-  60% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-.result-badge-text {
-  font-size: 14px;
-  color: rgba(255,255,255,0.6);
-  margin-bottom: 4px;
-}
-.result-prize {
-  font-size: 36px;
-  font-weight: 900;
-  color: #fff;
-  margin-bottom: 8px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-.result-tip {
-  font-size: 12px;
-  color: rgba(255,255,255,0.4);
-  margin: 0 0 20px;
-}
-.result-btn {
-  width: 100%;
-  border: none;
-  border-radius: 999px;
-  padding: 13px;
-  background: linear-gradient(90deg, #ffffff, #fbe3e6);
-  color: #d46b77;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(255,255,255,0.35);
-  &:active { transform: scale(0.97); }
-}
-
-// ---- 弹窗面板 ----
-.popup-panel {
-  padding: 16px 20px 32px;
-  background: #df8992;
-  color: #fff;
-  border-radius: 28px 28px 0 0;
-}
-.popup-handle {
-  width: 36px; height: 4px;
-  border-radius: 2px;
-  background: rgba(255,255,255,0.2);
-  margin: 0 auto 16px;
-}
-.popup-title {
-  font-size: 18px;
-  font-weight: 800;
-  margin: 0 0 16px;
-  color: #fff;
-}
-.rule-list {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  li {
-    padding: 10px 14px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.05);
-    margin-bottom: 8px;
-    font-size: 14px;
-    color: rgba(255,255,255,0.75);
-    line-height: 1.6;
-    strong { color: #FFD700; }
+  &.highlight {
+    color: #2ECC71;
   }
 }
 
-// 历史记录
-.history-panel {
-  min-height: 300px;
+.detail-instruction {
+  background: rgba(243, 156, 18, 0.15);
+  border: 1px solid rgba(243, 156, 18, 0.3);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 16px 0 16px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #FFEAA7;
+  text-align: left;
 }
-.history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.history-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.05);
+
+.detail-close-btn {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 24px;
+  border: none;
+  background: linear-gradient(90deg, #FF6B35, #FF4757);
+  color: #FFF;
   font-size: 14px;
-}
-.history-time {
-  color: rgba(255,255,255,0.6);
-}
-.history-prize {
-  color: #FFD700;
   font-weight: 700;
-}
-.history-empty {
-  padding: 40px 0;
-  text-align: center;
-  color: rgba(255,255,255,0.4);
-  font-size: 14px;
+  cursor: pointer;
 }
 
-.invite-field {
-  margin-bottom: 14px;
-  border-radius: 14px !important;
+// 规则内容
+.rule-content {
+  padding: 14px 4px 0;
+  overflow-y: auto;
 }
-.full-w {
-  margin-top: 0;
-}
-
-:deep(.van-popup) {
-  background: transparent !important;
-}
-:deep(.van-popup--bottom) {
-  background: transparent !important;
-}
-:deep(.van-field) {
-  background: rgba(255,255,255,0.08) !important;
-  border-radius: 14px !important;
-  color: #fff !important;
-  margin-bottom: 14px;
-}
-:deep(.van-field__control) {
-  color: #fff !important;
-}
-:deep(.van-field__placeholder) {
-  color: rgba(255,255,255,0.35) !important;
-}
-:deep(.van-popup--center) {
-  background: transparent !important;
+.rule-p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 10px;
 }
 </style>

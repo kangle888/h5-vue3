@@ -2,41 +2,50 @@ import { http } from "@/utils/http";
 
 export interface ActivityInitResult {
   device_id: string;
-  invite_code: string;
-  inviter_code?: string | null;
-  points: number;
   draw_chances: number;
-  invite_count: number;
-  can_claim_invite_reward: boolean;
-  reward_taken: boolean;
+  points: number;
+  invite_code?: string;
 }
 
 export interface ActivityInfoResult {
   device_id: string;
-  invite_code: string;
-  points: number;
   draw_chances: number;
-  invite_count: number;
+  points: number;
 }
 
-export interface DrawResult {
-  prize: string;
-  points: number;
-  draw_chances: number;
-}
-
-export interface ActivityInitPayload {
-  device_id: string;
-  invite_code?: string;
+export interface DrawPrizePayloadItem {
+  id: number;
+  name: string;
+  image?: string;
+  weight: number;
 }
 
 export interface ActivityDrawPayload {
   device_id: string;
+  prizes?: DrawPrizePayloadItem[];
+  init_chances?: number;
 }
 
-export interface ActivityInviteClaimPayload {
+export interface DrawResult {
+  prize_id: number;
+  prize_name: string;
+  prize_image?: string;
+  draw_chances: number;
+  record_id?: number;
+}
+
+export interface ActivityInitPayload {
   device_id: string;
-  inviter_code: string;
+  init_chances?: number;
+}
+
+export interface DrawRecordItem {
+  id: number;
+  device_id: string;
+  prize_id: number;
+  prize_name: string;
+  prize_image?: string;
+  created_at: string;
 }
 
 export const activityInitApi = (data: ActivityInitPayload) => {
@@ -63,10 +72,25 @@ export const activityDrawApi = (data: ActivityDrawPayload) => {
   });
 };
 
-export const activityInviteClaimApi = (data: ActivityInviteClaimPayload) => {
-  return http.request<{ device_id: string; invite_code: string; points: number; draw_chances: number; inviter_points: number }>({
-    url: "/activity/claim-invite",
+export const activityRecordsApi = (deviceId: string) => {
+  return http.request<DrawRecordItem[]>({
+    url: "/activity/records",
+    method: "get",
+    params: { device_id: deviceId }
+  });
+};
+
+export const activityRecordDetailApi = (recordId: number) => {
+  return http.request<DrawRecordItem>({
+    url: `/activity/record/${recordId}`,
+    method: "get"
+  });
+};
+
+export const activitySetChancesApi = (deviceId: string, chances: number) => {
+  return http.request<{ device_id: string; draw_chances: number }>({
+    url: "/activity/set-chances",
     method: "post",
-    data
+    params: { device_id: deviceId, chances }
   });
 };
