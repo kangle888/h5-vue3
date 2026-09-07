@@ -771,10 +771,10 @@ onBeforeUnmount(() => {
 <style scoped lang="less">
 .lottery-page {
   min-height: 100vh;
+  width: 100%;
   background: linear-gradient(180deg, #1C0508 0%, #300C12 40%, #150305 100%);
   color: #fff;
   position: relative;
-  overflow-x: hidden;
   padding-bottom: 50px;
 }
 

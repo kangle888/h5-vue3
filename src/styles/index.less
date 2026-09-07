@@ -1,14 +1,18 @@
 @import "./variables.less";
 
 html,
-body {
+body,
+#app {
   min-height: 100%;
+  margin: 0;
+  padding: 0;
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
 }
 
 body {
   min-height: 100%;
+  overflow-x: hidden;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -83,12 +87,7 @@ button,
 }
 
 html {
-  height: 100%;
   box-sizing: border-box;
-}
-
-#app {
-  height: 100%;
 }
 
 a,
