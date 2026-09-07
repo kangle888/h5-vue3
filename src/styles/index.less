@@ -1,7 +1,14 @@
 @import "./variables.less";
 
+html,
 body {
-  height: 100%;
+  min-height: 100%;
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+body {
+  min-height: 100%;
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;

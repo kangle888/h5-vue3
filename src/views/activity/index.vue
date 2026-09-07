@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import {
   showFailToast,
   showLoadingToast,
-  showSuccessToast,
   closeToast
 } from "vant";
 import {
@@ -25,7 +24,6 @@ const deviceId = ref("");
 const drawChances = ref(INITIAL_DRAW_CHANCES);
 const spinning = ref(false);
 const loading = ref(false);
-const refreshing = ref(false);
 
 // 弹窗状态
 const resultVisible = ref(false);
@@ -84,14 +82,15 @@ const preloadImages = async () => {
   await Promise.all(promises);
 };
 
-// ===================== 绘制 6 扇区带图转盘 =====================
+// ===================== 绘制 6 扇区超清带图转盘 =====================
 const drawWheel = (angle: number) => {
   const canvas = wheelCanvas.value;
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const dpr = window.devicePixelRatio || 2;
+  // 使用至少 3x 像素采样，彻底消除手机视网膜屏幕上的模糊现象
+  const dpr = Math.max(window.devicePixelRatio || 1, 3);
   const width = canvas.width / dpr;
   const height = canvas.height / dpr;
   const cx = width / 2;
@@ -101,6 +100,10 @@ const drawWheel = (angle: number) => {
   ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.scale(dpr, dpr);
+
+  // 开启全域高质量多级抗锯齿插值平滑
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   // 1. 最外层金色立体光晕与外圈
   const outerGlow = ctx.createRadialGradient(cx, cy, radius * 0.85, cx, cy, radius + 8);
@@ -130,7 +133,7 @@ const drawWheel = (angle: number) => {
     const bx = cx + (radius + 4) * Math.cos(bulbAngle);
     const by = cy + (radius + 4) * Math.sin(bulbAngle);
     ctx.beginPath();
-    ctx.arc(bx, by, 3, 0, 2 * Math.PI);
+    ctx.arc(bx, by, 3.2, 0, 2 * Math.PI);
     ctx.fillStyle = b % 2 === 0 ? "#FFF9D2" : "#FF7675";
     ctx.shadowColor = b % 2 === 0 ? "#FFD700" : "#FF4757";
     ctx.shadowBlur = 6;
@@ -154,7 +157,7 @@ const drawWheel = (angle: number) => {
     ctx.fill();
 
     // 扇形金边分隔线
-    ctx.strokeStyle = "rgba(224, 164, 88, 0.35)";
+    ctx.strokeStyle = "rgba(224, 164, 88, 0.4)";
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -163,22 +166,22 @@ const drawWheel = (angle: number) => {
     ctx.translate(cx, cy);
     ctx.rotate(startAngle + SEGMENT_ANGLE / 2);
 
-    // 绘制奖品文字 (靠近外圈，横向沿圆弧切线水平排布)
+    // 绘制奖品文字 (靠近外圈，横向沿圆弧切线水平排布，字体清晰锐利)
     ctx.save();
     const textDistance = radius * 0.81;
     ctx.translate(textDistance, 0);
     ctx.rotate(Math.PI / 2); // 旋转 90 度，让文字横着展示！
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "bold 12.5px -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif";
     ctx.fillStyle = prize.textColor;
     ctx.fillText(prize.shortName, 0, 0);
     ctx.restore();
 
-    // 绘制奖品图片 (在扇区中间，带精致圆形遮罩与金边，方向正向)
+    // 绘制奖品图片 (在扇区中段，放大尺寸至 0.33 提升清晰度，正向排列)
     const img = loadedImages.value.get(prize.id);
-    const imgDistance = radius * 0.47; // 图片中心离转盘圆心的距离
-    const imgSize = radius * 0.28; // 图片直径 (约42px)
+    const imgDistance = radius * 0.46; // 图片中心离转盘圆心的距离
+    const imgSize = radius * 0.33; // 图片直径扩大至约 53px，让细节更丰富高清
 
     if (img && img.complete) {
       ctx.save();
@@ -189,16 +192,18 @@ const drawWheel = (angle: number) => {
       ctx.beginPath();
       ctx.arc(0, 0, imgSize / 2, 0, Math.PI * 2);
       ctx.fillStyle = "#FFFFFF";
-      ctx.shadowColor = "rgba(0,0,0,0.12)";
-      ctx.shadowBlur = 4;
+      ctx.shadowColor = "rgba(0,0,0,0.15)";
+      ctx.shadowBlur = 5;
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // 裁剪圆形展示图片
+      // 高清圆形裁剪
       ctx.save();
       ctx.beginPath();
-      ctx.arc(0, 0, imgSize / 2 - 1, 0, Math.PI * 2);
+      ctx.arc(0, 0, imgSize / 2 - 0.5, 0, Math.PI * 2);
       ctx.clip();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(
         img,
         -imgSize / 2,
@@ -208,11 +213,11 @@ const drawWheel = (angle: number) => {
       );
       ctx.restore();
 
-      // 图片外层金色圆环描边
+      // 图片外层金色立体描边
       ctx.beginPath();
       ctx.arc(0, 0, imgSize / 2, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(243, 156, 18, 0.65)";
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(243, 156, 18, 0.75)";
+      ctx.lineWidth = 1.6;
       ctx.stroke();
 
       ctx.restore();
@@ -223,8 +228,8 @@ const drawWheel = (angle: number) => {
 
   // 6. 转盘中心圆盘与底座
   ctx.beginPath();
-  ctx.arc(cx, cy, 32, 0, 2 * Math.PI);
-  const centerBg = ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, 32);
+  ctx.arc(cx, cy, 33, 0, 2 * Math.PI);
+  const centerBg = ctx.createRadialGradient(cx - 3, cy - 3, 2, cx, cy, 33);
   centerBg.addColorStop(0, "#FFFFFF");
   centerBg.addColorStop(0.6, "#FFF2E2");
   centerBg.addColorStop(1, "#FAD390");
@@ -235,18 +240,18 @@ const drawWheel = (angle: number) => {
   ctx.shadowBlur = 0;
 
   ctx.beginPath();
-  ctx.arc(cx, cy, 32, 0, 2 * Math.PI);
+  ctx.arc(cx, cy, 33, 0, 2 * Math.PI);
   ctx.strokeStyle = "#F39C12";
   ctx.lineWidth = 3;
   ctx.stroke();
 
   // 中心文字
-  ctx.font = "bold 12px sans-serif";
+  ctx.font = "bold 12.5px sans-serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#D63031";
   ctx.fillText("LUCKY", cx, cy - 7);
-  ctx.font = "bold 11px sans-serif";
+  ctx.font = "bold 11.5px sans-serif";
   ctx.fillText("抽奖", cx, cy + 8);
 
   ctx.restore();
@@ -263,7 +268,6 @@ const spinWheelToPrize = (targetPrizeIndex: number, onDone: () => void) => {
   const segCenter = targetPrizeIndex * SEGMENT_ANGLE + SEGMENT_ANGLE / 2;
 
   // 指针位于顶部 (12 点钟方向，即 -π/2 或 3π/2)
-  // 要让目标扇区中心停在 -π/2 处：(startAngle + totalDelta + segCenter) ≡ -π/2
   const pointerAngle = -Math.PI / 2;
   const currentNormalized = (startAngle % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
   let targetAngleMod = (pointerAngle - segCenter) % (Math.PI * 2);
@@ -458,6 +462,28 @@ const getPrizeImageByRecord = (record: DrawRecordItem) => {
   return match ? match.image : PRIZE_LIST[0].image;
 };
 
+// ===================== 初始化画布尺寸（高清适配） =====================
+const setupCanvas = () => {
+  // 采样至少 3x 像素比，保证移动端 Retina 屏幕上极其细腻清晰
+  const dpr = Math.max(window.devicePixelRatio || 1, 3);
+  if (wheelCanvas.value) {
+    const displaySize = Math.min(window.innerWidth - 44, 340);
+    wheelCanvas.value.width = Math.round(displaySize * dpr);
+    wheelCanvas.value.height = Math.round(displaySize * dpr);
+    wheelCanvas.value.style.width = `${displaySize}px`;
+    wheelCanvas.value.style.height = `${displaySize}px`;
+  }
+  if (confettiCanvas.value) {
+    confettiCanvas.value.width = window.innerWidth;
+    confettiCanvas.value.height = window.innerHeight;
+  }
+};
+
+const onWindowResize = () => {
+  setupCanvas();
+  drawWheel(wheelAngle.value);
+};
+
 // ===================== 初始化 =====================
 const initPage = async () => {
   const id = ensureDeviceId();
@@ -470,44 +496,19 @@ const initPage = async () => {
   } catch (e) {
     console.error("Init activity failed", e);
   }
+};
 
-  // 初始化画布尺寸 (适配高清屏 DPR)
-  const dpr = window.devicePixelRatio || 2;
-  if (wheelCanvas.value) {
-    const displaySize = Math.min(window.innerWidth - 64, 320);
-    wheelCanvas.value.width = displaySize * dpr;
-    wheelCanvas.value.height = displaySize * dpr;
-    wheelCanvas.value.style.width = `${displaySize}px`;
-    wheelCanvas.value.style.height = `${displaySize}px`;
-  }
-
-  if (confettiCanvas.value) {
-    confettiCanvas.value.width = window.innerWidth;
-    confettiCanvas.value.height = window.innerHeight;
-  }
-
-  // 预加载图片并初次绘制转盘
+onMounted(async () => {
+  setupCanvas();
   await preloadImages();
   drawWheel(wheelAngle.value);
-};
-
-const onRefresh = async () => {
-  try {
-    await initPage();
-    showSuccessToast("刷新成功");
-  } catch {
-    showFailToast("刷新失败");
-  } finally {
-    refreshing.value = false;
-  }
-};
-
-onMounted(() => {
   initPage();
+  window.addEventListener("resize", onWindowResize);
 });
 
 onBeforeUnmount(() => {
   closeToast();
+  window.removeEventListener("resize", onWindowResize);
   if (animationId.value) cancelAnimationFrame(animationId.value);
   if (confettiAnim) cancelAnimationFrame(confettiAnim);
 });
@@ -522,7 +523,7 @@ onBeforeUnmount(() => {
     <!-- 庆祝彩纸烟花 Canvas -->
     <canvas ref="confettiCanvas" class="confetti-canvas" />
 
-    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" class="pull-wrap">
+    <div class="content-wrap">
       <!-- 顶部轻奢标题 -->
       <header class="lottery-header">
         <div class="header-tags">
@@ -571,7 +572,7 @@ onBeforeUnmount(() => {
             </svg>
           </div>
 
-          <!-- Canvas 转盘本体 -->
+          <!-- Canvas 转盘本体 (超高清绘制) -->
           <canvas ref="wheelCanvas" class="wheel-canvas" />
 
           <!-- 中心启动按钮 (点击直接触发抽奖) -->
@@ -584,7 +585,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <!-- 底部大按钮 -->
+        <!-- 底部主按钮 -->
         <div class="action-wrap">
           <button
             class="primary-draw-btn"
@@ -592,6 +593,7 @@ onBeforeUnmount(() => {
             :disabled="spinning || drawChances <= 0"
             @click="onDraw"
           >
+            <span class="btn-sparkle">✨</span>
             <span class="btn-text">{{ spinning ? "好运计算中..." : "立即点击抽奖" }}</span>
             <span class="btn-sub">（剩余 {{ drawChances }} 次机会）</span>
           </button>
@@ -628,7 +630,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </section>
-    </van-pull-refresh>
+    </div>
 
     <!-- 中奖结果弹窗 (带大图与动效) -->
     <van-popup
@@ -773,7 +775,7 @@ onBeforeUnmount(() => {
   color: #fff;
   position: relative;
   overflow-x: hidden;
-  padding-bottom: 40px;
+  padding-bottom: 50px;
 }
 
 // 全屏光晕背景
@@ -810,7 +812,7 @@ onBeforeUnmount(() => {
   z-index: 999;
 }
 
-.pull-wrap {
+.content-wrap {
   position: relative;
   z-index: 1;
 }
@@ -956,6 +958,8 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 2;
   border-radius: 50%;
+  // 硬件加速渲染
+  transform: translateZ(0);
 }
 
 // 中心按钮
@@ -989,8 +993,8 @@ onBeforeUnmount(() => {
 
 .fab-title {
   color: #FFF9E6;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 900;
   letter-spacing: 1px;
 }
 
@@ -1037,7 +1041,7 @@ onBeforeUnmount(() => {
 }
 .btn-text {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 800;
 }
 .btn-sub {
   font-size: 12px;
@@ -1143,12 +1147,12 @@ onBeforeUnmount(() => {
 .card-title {
   font-size: 11px;
   color: #F1F2F6;
-  line-height: 1.35;
+  line-height: 1.25;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  height: 30px;
+  height: 35px;
 }
 
 // 中奖弹窗
