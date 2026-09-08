@@ -39,6 +39,7 @@ const currentDetailRecord = ref<DrawRecordItem | null>(null);
 
 const ruleVisible = ref(false);
 const shareGuideVisible = ref(false);
+const shareCoverUrl = `${import.meta.env.BASE_URL}share-cover.jpg`;
 
 const handleShare = async () => {
   if (/micromessenger/i.test(navigator.userAgent)) {
@@ -529,7 +530,7 @@ onMounted(async () => {
   setWechatShare({
     title: "宠粉福利，不玩套路",
     desc: "100%中奖",
-    imgUrl: "/activity/share-cover.jpg"
+    imgUrl: shareCoverUrl
   });
 });
 
@@ -824,7 +825,7 @@ onBeforeUnmount(() => {
             <div class="preview-title">宠粉福利，不玩套路</div>
             <div class="preview-desc">100%中奖</div>
           </div>
-          <img src="/activity/share-cover.jpg" alt="卡片图" class="preview-img" />
+          <img :src="shareCoverUrl" alt="卡片图" class="preview-img" />
         </div>
 
         <button class="share-guide-btn" @click.stop="shareGuideVisible = false">我知道了</button>
