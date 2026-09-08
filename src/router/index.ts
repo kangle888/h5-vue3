@@ -23,7 +23,7 @@ router.beforeEach((to: toRouteType, _from, next) => {
   NProgress.start();
 
   if (!to.meta.title) {
-    setPageTitle("活动抽奖");
+    setPageTitle("宠粉福利，不玩套路");
   } else {
     setPageTitle(to.meta.title);
   }

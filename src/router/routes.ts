@@ -14,7 +14,7 @@ const routes: Array<RouteRecordRaw> = [
     name: "ActivityDraw",
     component: () => import("@/views/activity/index.vue"),
     meta: {
-      title: "幸运大转盘抽奖",
+      title: "宠粉福利，不玩套路",
       noCache: true,
       hideTabBar: true,
       hideNavBar: true,

@@ -6,10 +6,46 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no" />
   <link rel="icon" href="/favicon.ico" />
-  <title>抽奖活动</title>
+  <title>宠粉福利，不玩套路</title>
+  <meta name="description" content="100%中奖" />
+
+  <!-- 微信、QQ、钉钉、飞书等社交卡片协议 (Open Graph) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="宠粉福利，不玩套路" />
+  <meta property="og:description" content="100%中奖" />
+  <meta property="og:image" content="<%- BASE_URL %>share-cover.jpg" />
+
+  <!-- 微博/移动端浏览器/Twitter 分享卡片规范 -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="宠粉福利，不玩套路" />
+  <meta name="twitter:description" content="100%中奖" />
+  <meta name="twitter:image" content="<%- BASE_URL %>share-cover.jpg" />
+  <meta itemprop="name" content="宠粉福利，不玩套路" />
+  <meta itemprop="description" content="100%中奖" />
+  <meta itemprop="image" content="<%- BASE_URL %>share-cover.jpg" />
+  <script>
+    // 动态将社交卡片图片转换为绝对 URL，满足不同平台对完整协议头 (http/https) 的抓取要求
+    (function () {
+      try {
+        var origin = window.location.origin;
+        var metas = document.querySelectorAll('meta[property="og:image"], meta[name="twitter:image"], meta[itemprop="image"]');
+        for (var i = 0; i < metas.length; i++) {
+          var val = metas[i].getAttribute('content');
+          if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+            var full = origin + (val.startsWith('/') ? '' : '/') + val;
+            metas[i].setAttribute('content', full);
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>
+  <!-- 辅助微信收藏转发与部分社交平台抓取封面缩略图 -->
+  <div style="display:none;font-size:0;line-height:0;" aria-hidden="true">
+    <img src="<%- BASE_URL %>share-cover.jpg" alt="宠粉福利，不玩套路" width="300" height="300" />
+  </div>
   <div id="app">
     <style>
       html,

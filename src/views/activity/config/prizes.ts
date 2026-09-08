@@ -50,7 +50,7 @@ export const PRIZE_LIST: PrizeConfig[] = [
     shortName: "iPhone17/礼盒",
     image: img3,
     rawImageName: "3.jpg",
-    weight: 10,
+    weight: 5,
     bgColor: "#FFF6EF",
     textColor: "#B33928"
   },
@@ -60,7 +60,7 @@ export const PRIZE_LIST: PrizeConfig[] = [
     shortName: "iPhone 16",
     image: img4,
     rawImageName: "4.jpg",
-    weight: 15,
+    weight: 5,
     bgColor: "#FFFFFF",
     textColor: "#B33928"
   },
@@ -70,7 +70,7 @@ export const PRIZE_LIST: PrizeConfig[] = [
     shortName: "珀莱雅套装",
     image: img5,
     rawImageName: "5.jpg",
-    weight: 25,
+    weight: 5,
     bgColor: "#FFF6EF",
     textColor: "#B33928"
   },
@@ -80,7 +80,7 @@ export const PRIZE_LIST: PrizeConfig[] = [
     shortName: "1789红包+免单",
     image: img6,
     rawImageName: "6.jpg",
-    weight: 40,
+    weight: 5,
     bgColor: "#FFFFFF",
     textColor: "#B33928"
   }

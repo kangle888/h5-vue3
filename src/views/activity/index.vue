@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import {
   showFailToast,
   showLoadingToast,
+  showSuccessToast,
   closeToast
 } from "vant";
 import {
@@ -16,6 +17,7 @@ import {
   INITIAL_DRAW_CHANCES,
   type PrizeConfig
 } from "./config/prizes";
+import { setWechatShare } from "@/utils/wechat-share";
 
 defineOptions({ name: "ActivityDraw" });
 
@@ -36,6 +38,24 @@ const recordDetailVisible = ref(false);
 const currentDetailRecord = ref<DrawRecordItem | null>(null);
 
 const ruleVisible = ref(false);
+const shareGuideVisible = ref(false);
+
+const handleShare = async () => {
+  if (/micromessenger/i.test(navigator.userAgent)) {
+    shareGuideVisible.value = true;
+  } else {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(window.location.href);
+        showSuccessToast("活动链接已复制，可直接发给好友！");
+      } else {
+        shareGuideVisible.value = true;
+      }
+    } catch {
+      shareGuideVisible.value = true;
+    }
+  }
+};
 
 // ===================== Canvas 转盘相关 =====================
 const wheelCanvas = ref<HTMLCanvasElement | null>(null);
@@ -504,6 +524,13 @@ onMounted(async () => {
   drawWheel(wheelAngle.value);
   initPage();
   window.addEventListener("resize", onWindowResize);
+
+  // 初始化微信及各社交平台的卡片分享参数
+  setWechatShare({
+    title: "宠粉福利，不玩套路",
+    desc: "100%中奖",
+    imgUrl: "/activity/share-cover.jpg"
+  });
 });
 
 onBeforeUnmount(() => {
@@ -531,9 +558,14 @@ onBeforeUnmount(() => {
             <span class="dot-pulse"></span>
             限时狂欢进行中
           </span>
-          <button class="rule-chip" @click="ruleVisible = true">
-            📜 活动说明
-          </button>
+          <div class="header-action-group">
+            <button class="rule-chip share-chip" @click="handleShare">
+              🎁 分享好友
+            </button>
+            <button class="rule-chip" @click="ruleVisible = true">
+              📜 活动说明
+            </button>
+          </div>
         </div>
 
         <h1 class="main-title">幸运大转盘</h1>
@@ -597,11 +629,15 @@ onBeforeUnmount(() => {
             <span class="btn-sub">（剩余 {{ drawChances }} 次机会）</span>
           </button>
 
-          <!-- 快捷操作栏：查看中奖记录 -->
+          <!-- 快捷操作栏：查看中奖记录与分享 -->
           <div class="quick-nav">
             <button class="nav-btn" @click="openRecords">
               <span class="nav-icon">📜</span>
               <span>查看抽奖记录</span>
+            </button>
+            <button class="nav-btn highlight-btn" @click="handleShare">
+              <span class="nav-icon">🎁</span>
+              <span>分享好友一起抽</span>
             </button>
           </div>
         </div>
@@ -764,6 +800,36 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </van-popup>
+
+    <!-- 微信分享指引浮层 (直观展示即将分享的卡片样式) -->
+    <div
+      v-if="shareGuideVisible"
+      class="share-guide-overlay"
+      @click="shareGuideVisible = false"
+    >
+      <div class="share-arrow-box">
+        <svg class="share-arrow-svg" viewBox="0 0 130 100" fill="none">
+          <path d="M15 85 C 45 85, 95 65, 115 15" stroke="#FFEAA7" stroke-width="3" stroke-dasharray="6 4" />
+          <polygon points="115,8 123,22 107,20" fill="#FFEAA7" />
+        </svg>
+      </div>
+      <div class="share-guide-content">
+        <div class="share-guide-icon">👉</div>
+        <div class="share-guide-title">点击右上角 <span class="share-dots">···</span> 发送</div>
+        <p class="share-guide-desc">选择【发送给朋友】或【分享到朋友圈】</p>
+        
+        <!-- 卡片实时预览展示 -->
+        <div class="share-card-preview">
+          <div class="preview-text">
+            <div class="preview-title">宠粉福利，不玩套路</div>
+            <div class="preview-desc">100%中奖</div>
+          </div>
+          <img src="/activity/share-cover.jpg" alt="卡片图" class="preview-img" />
+        </div>
+
+        <button class="share-guide-btn" @click.stop="shareGuideVisible = false">我知道了</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -855,6 +921,12 @@ onBeforeUnmount(() => {
   50% { opacity: 0.4; transform: scale(0.85); }
 }
 
+.header-action-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .rule-chip {
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -863,6 +935,14 @@ onBeforeUnmount(() => {
   color: #F1F2F6;
   font-size: 11px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.share-chip {
+  background: linear-gradient(135deg, rgba(235, 77, 75, 0.35), rgba(243, 156, 18, 0.35));
+  border-color: rgba(254, 202, 87, 0.5);
+  color: #FFEAA7;
+  font-weight: 600;
 }
 
 .main-title {
@@ -1064,6 +1144,14 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 5px;
   cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.highlight-btn {
+    background: linear-gradient(135deg, rgba(255, 107, 53, 0.3), rgba(243, 156, 18, 0.3));
+    border-color: rgba(254, 202, 87, 0.5);
+    color: #FFEAA7;
+    font-weight: 600;
+  }
 }
 
 // 奖品展台
@@ -1472,5 +1560,120 @@ onBeforeUnmount(() => {
   line-height: 1.7;
   color: rgba(255, 255, 255, 0.85);
   margin: 0 0 10px;
+}
+
+// 微信分享指引浮层
+.share-guide-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.84);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  backdrop-filter: blur(5px);
+  padding: 20px 24px;
+}
+
+.share-arrow-box {
+  align-self: flex-end;
+  margin-top: 10px;
+  margin-right: 20px;
+  width: 100px;
+  height: 80px;
+  animation: floatArrow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes floatArrow {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(6px, -6px); }
+}
+
+.share-arrow-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.share-guide-content {
+  margin-top: 16px;
+  text-align: center;
+  color: #fff;
+  max-width: 320px;
+}
+
+.share-guide-icon {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+
+.share-guide-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFEAA7;
+  margin-bottom: 8px;
+}
+
+.share-dots {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  padding: 0 6px;
+  letter-spacing: 2px;
+}
+
+.share-guide-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 20px;
+}
+
+.share-card-preview {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.preview-text {
+  flex: 1;
+}
+
+.preview-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.35;
+}
+
+.preview-desc {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.preview-img {
+  width: 54px;
+  height: 54px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #eee;
+}
+
+.share-guide-btn {
+  background: linear-gradient(135deg, #FF7675 0%, #D63031 100%);
+  border: 1px solid #FF7675;
+  color: #fff;
+  border-radius: 24px;
+  padding: 10px 40px;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(214, 48, 49, 0.4);
+  cursor: pointer;
 }
 </style>
